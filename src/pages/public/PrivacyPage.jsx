@@ -30,7 +30,7 @@ export default function PrivacyPage() {
                 1. Information We Collect
               </h2>
               <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                JobConnect collects information necessary to provide career discovery, resume parsing, job application forwarding, and Job Mela event admission:
+                NTR VIKASA Job Portal collects information necessary to provide career discovery, resume parsing, job application forwarding, and Job Mela event admission:
               </p>
               <ul style={{ paddingLeft: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', color: 'var(--color-text-muted)' }}>
                 <li><strong>Candidate Data:</strong> Name, email address, phone number, location, educational qualifications, work experience, uploaded resumes, and applied job preferences.</li>
@@ -96,7 +96,7 @@ export default function PrivacyPage() {
               <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', marginTop: 'var(--space-2)' }}>
                 <p><strong>Grievance Officer:</strong> Mr. Vikram K. Singhania</p>
                 <p><strong>Email:</strong> <a href="mailto:privacy-grievance@jobconnect.example.com" style={{ color: 'var(--color-primary-600)' }}>privacy-grievance@jobconnect.example.com</a></p>
-                <p><strong>Address:</strong> JobConnect Legal Cell, Level 4, Prestige Tech Park, Bengaluru, Karnataka 560103</p>
+                <p><strong>Address:</strong> NTR VIKASA Job Portal Legal Cell, Level 4, Prestige Tech Park, Bengaluru, Karnataka 560103</p>
               </div>
             </section>
           </div>

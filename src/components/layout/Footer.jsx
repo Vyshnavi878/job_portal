@@ -94,7 +94,7 @@ export default function Footer() {
       <div style={{ maxWidth: 'var(--container-max)', margin: '0 auto' }}>
         <div className="footer-bottom">
           <p className="footer-bottom-text">
-            © {year} JobConnect. All rights reserved.
+            © {year} NTR VIKASA Job Portal. All rights reserved.
           </p>
           <div className="footer-social">
             {SOCIAL_LINKS.map((s) => (

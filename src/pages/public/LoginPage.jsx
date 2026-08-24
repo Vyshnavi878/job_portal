@@ -13,7 +13,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [roleTab, setRoleTab] = useState('candidate'); // 'candidate' | 'recruiter'
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -23,7 +22,7 @@ export default function LoginPage() {
       toast({
         type: 'info',
         title: 'Authentication Simulation',
-        message: `Signed in as ${roleTab}. Backend auth will be integrated in future phases.`,
+        message: 'Signed in. Backend auth will determine your role in future phases.',
       });
     }, 1000);
   };
@@ -84,74 +83,16 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: 'var(--space-2)', textAlign: 'center' }}>
-            Sign in to JobConnect
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: 'var(--space-6)', textAlign: 'center' }}>
+            Sign in to NTR VIKASA Job Portal
           </h1>
-          <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', marginBottom: 'var(--space-6)', fontSize: 'var(--text-sm)' }}>
-            Select your account type to proceed:
-          </p>
-
-          {/* Role selector tabs */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            background: 'var(--color-gray-100)',
-            padding: 4,
-            borderRadius: 'var(--radius-xl)',
-            marginBottom: 'var(--space-6)'
-          }}>
-            <button
-              type="button"
-              onClick={() => setRoleTab('candidate')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 'var(--space-2)',
-                padding: 'var(--space-2)',
-                border: 'none',
-                borderRadius: 'var(--radius-lg)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                background: roleTab === 'candidate' ? 'var(--color-surface)' : 'transparent',
-                color: roleTab === 'candidate' ? 'var(--color-primary-600)' : 'var(--color-text-muted)',
-                boxShadow: roleTab === 'candidate' ? 'var(--shadow-xs)' : 'none',
-                transition: 'all var(--transition-fast)'
-              }}
-            >
-              <User size={16} /> Candidate
-            </button>
-            <button
-              type="button"
-              onClick={() => setRoleTab('recruiter')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 'var(--space-2)',
-                padding: 'var(--space-2)',
-                border: 'none',
-                borderRadius: 'var(--radius-lg)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                background: roleTab === 'recruiter' ? 'var(--color-surface)' : 'transparent',
-                color: roleTab === 'recruiter' ? 'var(--color-primary-600)' : 'var(--color-text-muted)',
-                boxShadow: roleTab === 'recruiter' ? 'var(--shadow-xs)' : 'none',
-                transition: 'all var(--transition-fast)'
-              }}
-            >
-              <Building2 size={16} /> Recruiter
-            </button>
-          </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <FormField label={`${roleTab === 'recruiter' ? 'Work Email' : 'Email Address'}`} htmlFor="email" required>
+            <FormField label="Email Address" htmlFor="email" required>
               <Input
                 id="email"
                 type="email"
-                placeholder={roleTab === 'recruiter' ? 'hr@company.com' : 'you@example.com'}
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 leftIcon={<Mail size={16} />}
@@ -183,7 +124,7 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" variant="primary" fullWidth size="lg" loading={loading}>
-              Sign In as {roleTab === 'recruiter' ? 'Recruiter' : 'Candidate'}
+              Sign In
             </Button>
           </form>
 
@@ -197,7 +138,7 @@ export default function LoginPage() {
             textAlign: 'center'
           }}>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-              New to JobConnect? Create an account:
+              New to NTR VIKASA Job Portal? Create an account:
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
               <Link to="/register/candidate" style={{ textDecoration: 'none' }}>

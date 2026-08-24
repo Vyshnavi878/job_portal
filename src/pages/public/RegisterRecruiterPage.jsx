@@ -324,7 +324,7 @@ export default function RegisterRecruiterPage() {
                         Mandatory Employer Credential Verification
                       </h3>
                       <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2, lineHeight: 1.4 }}>
-                        To prevent recruitment fraud and protect job seekers, JobConnect Admin manually verifies each employer's corporate identity before activating job posting privileges.
+                        To prevent recruitment fraud and protect job seekers, NTR VIKASA Job Portal Admin manually verifies each employer's corporate identity before activating job posting privileges.
                       </p>
                     </div>
                   </div>

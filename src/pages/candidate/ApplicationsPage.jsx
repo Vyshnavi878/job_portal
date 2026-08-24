@@ -52,7 +52,7 @@ const MOCK_APPLICATIONS = [
     currentStageNumber: 2,
     interviewSchedule: null,
     timeline: [
-      { status: 'APPLIED', title: 'Application Submitted', date: '20 Aug 2026, 02:00 PM', note: 'Direct submission via JobConnect.', done: true },
+      { status: 'APPLIED', title: 'Application Submitted', date: '20 Aug 2026, 02:00 PM', note: 'Direct submission via NTR VIKASA Job Portal.', done: true },
       { status: 'UNDER_REVIEW', title: 'Under Review by Product Guild', date: '21 Aug 2026, 09:30 AM', note: 'Reviewing product execution portfolio.', done: true },
       { status: 'SHORTLISTED', title: 'Shortlisting Decision', date: 'Pending', note: 'Awaiting recruiter feedback.', done: false },
       { status: 'INTERVIEW', title: 'Interview Round', date: 'Pending', note: '', done: false },

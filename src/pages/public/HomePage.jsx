@@ -18,7 +18,7 @@ import {
   WHY_CHOOSE_US,
   LOCATIONS
 } from '../../data/mockData';
-import heroImg from '../../assets/hero.jpg';
+import heroImg from '../../assets/hero.jpeg';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -556,7 +556,7 @@ export default function HomePage() {
         <div className="container">
           <div style={{ textAlign: 'center', maxWidth: 700, margin: '0 auto var(--space-12)' }}>
             <div className="badge badge-primary" style={{ marginBottom: 'var(--space-3)' }}>
-              <ShieldCheck size={14} style={{ marginRight: 4 }} /> Why JobConnect
+              <ShieldCheck size={14} style={{ marginRight: 4 }} /> Why NTR VIKASA Job Portal
             </div>
             <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, marginBottom: 'var(--space-3)' }}>
               Engineered for Candidate Success & Recruiter Efficiency
@@ -632,7 +632,7 @@ export default function HomePage() {
             margin: '0 auto var(--space-8)',
             lineHeight: 'var(--leading-relaxed)'
           }}>
-            Join over 2,80,000+ candidates who found opportunities with top employers through JobConnect.
+            Join over 2,80,000+ candidates who found opportunities with top employers through NTR VIKASA Job Portal.
           </p>
           <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/register/candidate">

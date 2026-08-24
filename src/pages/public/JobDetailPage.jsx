@@ -77,7 +77,7 @@ export default function JobDetailPage() {
       toast({
         type: 'info',
         title: 'Report Received',
-        message: 'Thank you for keeping JobConnect safe. Our trust & safety team will review this listing within 24 hours.',
+        message: 'Thank you for keeping NTR VIKASA Job Portal safe. Our trust & safety team will review this listing within 24 hours.',
       });
     }, 800);
   };
@@ -509,7 +509,7 @@ export default function JobDetailPage() {
             }}>
               <ShieldCheck size={20} style={{ color: 'var(--color-success-600)', flexShrink: 0, marginTop: 2 }} />
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-normal)' }}>
-                <strong>JobConnect Verified:</strong> This recruiter is verified. JobConnect never charges job seekers for interview slots or offer letters.
+                <strong>NTR VIKASA Job Portal Verified:</strong> This recruiter is verified. NTR VIKASA Job Portal never charges job seekers for interview slots or offer letters.
               </p>
             </div>
 

@@ -53,7 +53,7 @@ export default function RegisterCandidatePage() {
         toast({
           type: 'success',
           title: 'Account Created Successfully!',
-          message: 'Welcome to JobConnect! You can now explore jobs and track applications.',
+          message: 'Welcome to NTR VIKASA Job Portal! You can now explore jobs and track applications.',
         });
         navigate('/candidate/dashboard');
       }, 1400);
@@ -250,7 +250,7 @@ export default function RegisterCandidatePage() {
                   <div style={{ background: 'var(--color-success-50)', border: '1px solid var(--color-success-200)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
                     <CheckCircle2 size={20} style={{ color: 'var(--color-success-600)', flexShrink: 0 }} />
                     <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success-700)', lineHeight: 'var(--leading-normal)' }}>
-                      Free registration. JobConnect never charges job seekers for applications or interviews.
+                      Free registration. NTR VIKASA Job Portal never charges job seekers for applications or interviews.
                     </p>
                   </div>
                 </>

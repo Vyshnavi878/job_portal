@@ -233,7 +233,7 @@ export default function CandidateSettingsPage() {
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDeleteAccount}
         title="Permanently Delete Account?"
-        message="Are you sure you want to delete your JobConnect Candidate profile? All saved resumes and application histories will be permanently removed."
+        message="Are you sure you want to delete your NTR VIKASA Job Portal Candidate profile? All saved resumes and application histories will be permanently removed."
         confirmText="Yes, Delete Account"
         danger
       />

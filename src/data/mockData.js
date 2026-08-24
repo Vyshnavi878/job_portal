@@ -1090,7 +1090,7 @@ export const MOCK_JOB_MELAS = [
       'Carry at least 10 printed copies of your updated resume.',
       'Carry original government photo ID proof (Aadhaar / Voter ID / Passport) and 2 passport-size photographs.',
       'Formal / business-casual dress code is mandatory.',
-      'Registration via JobConnect portal is completely free of charge. No entry fees at the venue.',
+      'Registration via NTR VIKASA Job Portal portal is completely free of charge. No entry fees at the venue.',
       'Pre-registered candidates get priority QR-code fast-track entry badge at the counters.',
     ],
     contactEmail: 'jobmela.bengaluru@jobconnect.example.com',

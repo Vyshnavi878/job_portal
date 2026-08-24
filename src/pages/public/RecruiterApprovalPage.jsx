@@ -76,7 +76,7 @@ export default function RecruiterApprovalPage() {
                   1
                 </div>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                  <strong>Manual Verification:</strong> The JobConnect compliance team will verify your Certificate of Incorporation and authorized ID within <strong>1–2 business days</strong>.
+                  <strong>Manual Verification:</strong> The NTR VIKASA Job Portal compliance team will verify your Certificate of Incorporation and authorized ID within <strong>1–2 business days</strong>.
                 </p>
               </div>
 

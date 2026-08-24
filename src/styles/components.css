@@ -161,6 +161,9 @@
   color: var(--color-text-muted);
   pointer-events: none;
   display: flex;
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 .input-wrapper .input-icon-right {
   position: absolute;
@@ -168,6 +171,10 @@
   color: var(--color-text-muted);
   display: flex;
   cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  outline: none;
 }
 
 .input {

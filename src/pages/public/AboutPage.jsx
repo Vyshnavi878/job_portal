@@ -32,7 +32,7 @@ export default function AboutPage() {
             Bridging Talent with Opportunity Across India
           </h1>
           <p style={{ fontSize: 'var(--text-lg)', color: '#cbd5e1', lineHeight: 'var(--leading-relaxed)' }}>
-            JobConnect was founded on a simple principle: every candidate deserves fair, direct access to employment opportunities without scam fees, opaque processes, or dead ends.
+            NTR VIKASA Job Portal was founded on a simple principle: every candidate deserves fair, direct access to employment opportunities without scam fees, opaque processes, or dead ends.
           </p>
         </div>
       </section>
@@ -146,7 +146,7 @@ export default function AboutPage() {
           textAlign: 'center'
         }}>
           <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, marginBottom: 'var(--space-3)', color: '#ffffff' }}>
-            Join the JobConnect Community Today
+            Join the NTR VIKASA Job Portal Community Today
           </h2>
           <p style={{ color: '#cbd5e1', fontSize: 'var(--text-base)', maxWidth: 600, margin: '0 auto var(--space-8)' }}>
             Whether you are looking for your next career breakthrough or hiring top talent, we are here to support your journey.

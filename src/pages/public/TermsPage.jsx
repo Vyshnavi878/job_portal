@@ -30,7 +30,7 @@ export default function TermsPage() {
                 1. Acceptance of Terms
               </h2>
               <p style={{ color: 'var(--color-text-muted)' }}>
-                By accessing, registering, or utilizing the JobConnect portal, mobile interfaces, and Job Mela events, you agree to be bound by these Terms of Service. If you disagree with any portion of these terms, you must discontinue platform use immediately.
+                By accessing, registering, or utilizing the NTR VIKASA Job Portal portal, mobile interfaces, and Job Mela events, you agree to be bound by these Terms of Service. If you disagree with any portion of these terms, you must discontinue platform use immediately.
               </p>
             </section>
 
@@ -40,7 +40,7 @@ export default function TermsPage() {
               </h2>
               <div style={{ background: 'var(--color-success-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-success-200)', marginBottom: 'var(--space-2)' }}>
                 <p style={{ fontWeight: 700, color: 'var(--color-success-800)' }}>
-                  JobConnect is 100% Free for Candidates:
+                  NTR VIKASA Job Portal is 100% Free for Candidates:
                 </p>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success-700)', marginTop: 2 }}>
                   Under no circumstance may any recruiter or hiring company demand processing fees, test charges, uniform deposits, or interview fees from candidates. Violation results in immediate employer account termination, forfeiture of fees, and legal blacklisting.
@@ -76,7 +76,7 @@ export default function TermsPage() {
                 5. Prohibited Activities
               </h2>
               <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                The following actions are strictly prohibited on JobConnect:
+                The following actions are strictly prohibited on NTR VIKASA Job Portal:
               </p>
               <ul style={{ paddingLeft: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', color: 'var(--color-text-muted)' }}>
                 <li>Posting multi-level marketing (MLM), pyramid schemes, or pay-to-work schemes.</li>
@@ -90,7 +90,7 @@ export default function TermsPage() {
                 6. Limitation of Liability & Dispute Resolution
               </h2>
               <p style={{ color: 'var(--color-text-muted)' }}>
-                JobConnect functions as an intermediary platform connecting candidates with hiring employers. While we rigorously verify employers, the final employment contract is directly between the employer and the candidate. Any legal disputes arising out of these terms shall be subject to the exclusive jurisdiction of the courts in <strong>Bengaluru, Karnataka, India</strong>.
+                NTR VIKASA Job Portal functions as an intermediary platform connecting candidates with hiring employers. While we rigorously verify employers, the final employment contract is directly between the employer and the candidate. Any legal disputes arising out of these terms shall be subject to the exclusive jurisdiction of the courts in <strong>Bengaluru, Karnataka, India</strong>.
               </p>
             </section>
           </div>

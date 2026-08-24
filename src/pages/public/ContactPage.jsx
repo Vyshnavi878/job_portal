@@ -12,7 +12,7 @@ import { useToast } from '../../context/ToastContext';
 const FAQS = [
   {
     q: 'Are job applications completely free for job seekers?',
-    a: 'Yes, 100%. JobConnect is completely free for all job seekers. We strictly prohibit any employer or agency from asking for money, registration charges, or training fees for job applications or interview slots.'
+    a: 'Yes, 100%. NTR VIKASA Job Portal is completely free for all job seekers. We strictly prohibit any employer or agency from asking for money, registration charges, or training fees for job applications or interview slots.'
   },
   {
     q: 'How do I participate in upcoming Job Melas?',
@@ -223,7 +223,7 @@ export default function ContactPage() {
                   <div>
                     <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Headquarters</p>
                     <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', lineHeight: 1.4 }}>
-                      JobConnect Digital Solutions Pvt Ltd<br />
+                      NTR VIKASA Job Portal Digital Solutions Pvt Ltd<br />
                       Level 4, Prestige Tech Park, Outer Ring Road, Kadubeesanahalli, Bengaluru, Karnataka 560103
                     </p>
                   </div>

@@ -12,7 +12,7 @@ import { useToast } from '../../context/ToastContext';
 export default function AdminSettingsPage() {
   const { toast } = useToast();
 
-  const [platformName, setPlatformName] = useState('JobConnect Enterprise Portal');
+  const [platformName, setPlatformName] = useState('NTR VIKASA Job Portal Enterprise Portal');
   const [supportEmail, setSupportEmail] = useState('support@jobconnect.example.com');
   const [grievanceEmail, setGrievanceEmail] = useState('grievance@jobconnect.example.com');
 

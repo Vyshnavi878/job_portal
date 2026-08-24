@@ -21,6 +21,7 @@ import InternshipsPage        from './pages/public/InternshipsPage';
 import InternshipDetailPage   from './pages/public/InternshipDetailPage';
 import JobMelasPage           from './pages/public/JobMelasPage';
 import JobMelaDetailPage      from './pages/public/JobMelaDetailPage';
+import TrainingPage           from './pages/public/TrainingPage';
 import AboutPage              from './pages/public/AboutPage';
 import ContactPage            from './pages/public/ContactPage';
 import PrivacyPage            from './pages/public/PrivacyPage';
@@ -95,6 +96,7 @@ export default function App() {
             <Route path="/internships/:id"           element={<InternshipDetailPage />} />
             <Route path="/job-melas"                 element={<JobMelasPage />} />
             <Route path="/job-melas/:id"             element={<JobMelaDetailPage />} />
+            <Route path="/training"                  element={<TrainingPage />} />
             <Route path="/about"                     element={<AboutPage />} />
             <Route path="/contact"                   element={<ContactPage />} />
             <Route path="/privacy"                   element={<PrivacyPage />} />

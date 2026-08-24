@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  MapPin, Clock, Briefcase, DollarSign, Building2, Calendar, Users,
+  MapPin, Clock, Briefcase, Banknote, Building2, Calendar, Users,
   Share2, Bookmark, BookmarkCheck, ArrowLeft, CheckCircle2, Flag,
   ChevronRight, Sparkles, ExternalLink, Mail, Phone, ShieldCheck,
   Send, AlertTriangle
@@ -104,7 +104,7 @@ export default function JobDetailPage() {
   };
 
   return (
-    <div className="job-detail-page" style={{ background: 'var(--color-bg)', minHeight: '100vh', paddingBottom: 'var(--space-16)' }}>
+    <div className="job-detail-page" style={{ background: 'var(--color-bg)', minHeight: '100vh', paddingBottom: 'var(--space-20)' }}>
       {/* Top Breadcrumb navigation */}
       <div style={{ background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', padding: 'var(--space-4) 0' }}>
         <div className="container">
@@ -113,90 +113,94 @@ export default function JobDetailPage() {
       </div>
 
       <div className="container" style={{ paddingTop: 'var(--space-8)' }}>
-        <div className="responsive-split-detail">
+        {/* Header Hero Card */}
+        <div className="card" style={{ marginBottom: 'var(--space-6)', borderRadius: 'var(--radius-2xl)' }}>
+          <div className="card-body" style={{ padding: 'var(--space-8)' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-5)', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <div className="job-card-logo" style={{
+                width: 72, height: 72,
+                borderRadius: 'var(--radius-2xl)',
+                fontSize: 'var(--text-3xl)',
+                background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-accent-500))',
+                color: '#fff',
+                flexShrink: 0
+              }}>
+                {job.company?.[0] || 'J'}
+              </div>
 
-          {/* ── Main Left Column ── */}
-          <div>
-            {/* Header Hero Card */}
-            <div className="card" style={{ marginBottom: 'var(--space-6)', borderRadius: 'var(--radius-2xl)' }}>
-              <div className="card-body" style={{ padding: 'var(--space-8)' }}>
-                <div style={{ display: 'flex', gap: 'var(--space-5)', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  <div className="job-card-logo" style={{
-                    width: 72, height: 72,
-                    borderRadius: 'var(--radius-2xl)',
-                    fontSize: 'var(--text-3xl)',
-                    background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-accent-500))',
-                    color: '#fff',
-                    flexShrink: 0
-                  }}>
-                    {job.company?.[0] || 'J'}
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 260 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-2)' }}>
-                      <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-text)' }}>
-                        {job.title}
-                      </h1>
-                      {job.isNew && <Badge variant="success">New</Badge>}
-                      {job.isFeatured && <Badge variant="primary">Featured</Badge>}
-                      <StatusBadge status={job.status || 'PUBLISHED'} />
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                      <Link
-                        to={`/companies/${job.companyId}`}
-                        style={{ color: 'var(--color-primary-600)', fontWeight: 600, fontSize: 'var(--text-base)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-                      >
-                        <Building2 size={16} /> {job.company}
-                      </Link>
-                      <span style={{ color: 'var(--color-text-muted)' }}>•</span>
-                      <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
-                        {job.department || 'Engineering'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Header action icons */}
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      iconOnly
-                      leftIcon={<Share2 size={16} />}
-                      onClick={handleShare}
-                      aria-label="Share Job"
-                      title="Share Job"
-                    />
-                    <Button
-                      variant={saved ? 'primary' : 'secondary'}
-                      size="sm"
-                      iconOnly
-                      leftIcon={saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-                      onClick={handleToggleSave}
-                      aria-label={saved ? 'Unsave Job' : 'Save Job'}
-                      title={saved ? 'Saved' : 'Save Job'}
-                    />
-                  </div>
+              <div style={{ flex: 1, minWidth: 260 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-2)' }}>
+                  <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-text)' }}>
+                    {job.title}
+                  </h1>
+                  {job.isNew && <Badge variant="success">New</Badge>}
+                  {job.isFeatured && <Badge variant="primary">Featured</Badge>}
+                  <StatusBadge status={job.status || 'PUBLISHED'} />
                 </div>
 
-                {/* Meta Attributes Grid */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                  gap: 'var(--space-4)',
-                  marginTop: 'var(--space-6)',
-                  paddingTop: 'var(--space-6)',
-                  borderTop: '1px solid var(--color-border)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-primary-50)', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <DollarSign size={18} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Offered Salary</p>
-                      <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>{job.salary}</p>
-                    </div>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                  <Link
+                    to={`/companies/${job.companyId}`}
+                    style={{ color: 'var(--color-primary-600)', fontWeight: 600, fontSize: 'var(--text-base)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    <Building2 size={16} /> {job.company}
+                  </Link>
+                  <span style={{ color: 'var(--color-text-muted)' }}>•</span>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+                    {job.department || 'Engineering'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Header action buttons */}
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Button
+                  variant={applied ? 'secondary' : 'primary'}
+                  size="md"
+                  onClick={() => !applied && setApplyModalOpen(true)}
+                  disabled={applied}
+                >
+                  {applied ? '✓ Applied' : 'Apply Now'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  leftIcon={<Share2 size={16} />}
+                  onClick={handleShare}
+                  aria-label="Share Job"
+                  title="Share Job"
+                />
+                <Button
+                  variant={saved ? 'primary' : 'secondary'}
+                  size="sm"
+                  iconOnly
+                  leftIcon={saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                  onClick={handleToggleSave}
+                  aria-label={saved ? 'Unsave Job' : 'Save Job'}
+                  title={saved ? 'Saved' : 'Save Job'}
+                />
+              </div>
+            </div>
+
+            {/* Meta Attributes Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: 'var(--space-4)',
+              marginTop: 'var(--space-6)',
+              paddingTop: 'var(--space-6)',
+              borderTop: '1px solid var(--color-border)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-primary-50)', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Banknote size={18} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Offered Salary</p>
+                  <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>{job.salary}</p>
+                </div>
+              </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                     <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-success-50)', color: 'var(--color-success-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -267,6 +271,11 @@ export default function JobDetailPage() {
               </div>
             </div>
 
+        {/* ── Two Column Responsive Layout ── */}
+        <div className="responsive-split-detail">
+
+          {/* ── Main Left Column ── */}
+          <div>
             {/* 1. Job Description */}
             <div className="card" style={{ marginBottom: 'var(--space-6)', borderRadius: 'var(--radius-2xl)' }}>
               <div className="card-header">
@@ -378,17 +387,6 @@ export default function JobDetailPage() {
               </div>
             </div>
 
-            {/* 6. Similar Jobs Section */}
-            <div>
-              <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, marginBottom: 'var(--space-4)' }}>
-                Similar Job Openings
-              </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 'var(--space-4)' }}>
-                {similarJobs.map((simJob) => (
-                  <JobCard key={simJob.id} job={simJob} />
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* ── Sticky Right Action Sidebar ── */}
@@ -516,6 +514,48 @@ export default function JobDetailPage() {
             </div>
 
           </div>
+        </div>
+
+        {/* 6. Similar Jobs Section — Full Width at Bottom */}
+        <div style={{ marginTop: 'var(--space-12)' }}>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, marginBottom: 'var(--space-4)' }}>
+            Similar Job Openings
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 'var(--space-4)' }}>
+            {similarJobs.map((simJob) => (
+              <JobCard key={simJob.id} job={simJob} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Mobile Sticky Apply Bar (Visible only on <= 1024px) ── */}
+      <div className="mobile-apply-bar">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {job.title}
+          </p>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+            {job.salary} • {job.company}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <Button
+            variant={applied ? 'secondary' : 'primary'}
+            size="sm"
+            onClick={() => !applied && setApplyModalOpen(true)}
+            disabled={applied}
+          >
+            {applied ? '✓ Applied' : 'Apply Now'}
+          </Button>
+          <Button
+            variant={saved ? 'primary' : 'secondary'}
+            size="sm"
+            iconOnly
+            leftIcon={saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+            onClick={handleToggleSave}
+            aria-label={saved ? 'Unsave Job' : 'Save Job'}
+          />
         </div>
       </div>
 

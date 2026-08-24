@@ -113,7 +113,7 @@ export default function RegisterRecruiterPage() {
               {/* ── SECTION 1: Recruiter Contact Info & Credentials ── */}
               {section === 0 && (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div className="form-row">
                     <FormField label="Recruiter / HR Name" htmlFor="recruiterName" required>
                       <Input
                         id="recruiterName"
@@ -137,7 +137,7 @@ export default function RegisterRecruiterPage() {
                     </FormField>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div className="form-row">
                     <FormField label="Work Email Address" htmlFor="email" required hint="Use company domain email">
                       <Input
                         id="email"
@@ -163,7 +163,7 @@ export default function RegisterRecruiterPage() {
                     </FormField>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div className="form-row">
                     <FormField label="Create Password" htmlFor="password" required hint="Min 8 characters">
                       <Input
                         id="password"
@@ -217,7 +217,7 @@ export default function RegisterRecruiterPage() {
                     </FormField>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div className="form-row">
                     <FormField label="Corporate Email" htmlFor="companyEmail">
                       <Input
                         id="companyEmail"
@@ -241,7 +241,7 @@ export default function RegisterRecruiterPage() {
                     </FormField>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div className="form-row">
                     <FormField label="Primary Industry" htmlFor="industry" required>
                       <Select
                         id="industry"
@@ -263,7 +263,7 @@ export default function RegisterRecruiterPage() {
                     </FormField>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div className="form-row">
                     <FormField label="Headquarters City / State" htmlFor="location" required>
                       <Select
                         id="location"

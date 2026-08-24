@@ -112,7 +112,7 @@ export default function RegisterCandidatePage() {
                     />
                   </FormField>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div className="form-row">
                     <FormField label="Email Address" htmlFor="email" required>
                       <Input
                         id="email"

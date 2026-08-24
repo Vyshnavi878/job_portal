@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  MapPin, Clock, Briefcase, DollarSign, Building2, Calendar, Users,
+  MapPin, Clock, Briefcase, Banknote, Building2, Calendar, Users,
   Share2, Bookmark, BookmarkCheck, ArrowLeft, CheckCircle2,
   GraduationCap, Sparkles, ExternalLink, Send, ShieldCheck
 } from 'lucide-react';
@@ -23,15 +23,15 @@ export default function InternshipDetailPage() {
 
   const [saved, setSaved] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [college, setCollege] = useState('');
-  const [gradYear, setGradYear] = useState('2026');
+  const [gradYear, setGradYear] = useState('');
   const [coverNote, setCoverNote] = useState('');
 
   const internship = useMemo(() => {
@@ -42,7 +42,7 @@ export default function InternshipDetailPage() {
     return MOCK_COMPANIES.find((c) => c.id === internship.companyId) || MOCK_COMPANIES[0];
   }, [internship]);
 
-  const otherInternships = useMemo(() => {
+  const similar = useMemo(() => {
     return MOCK_INTERNSHIPS.filter((i) => i.id !== internship.id).slice(0, 2);
   }, [internship]);
 
@@ -55,10 +55,10 @@ export default function InternshipDetailPage() {
       setApplyModalOpen(false);
       toast({
         type: 'success',
-        title: 'Internship Application Submitted!',
+        title: 'Application Submitted!',
         message: `Your application for ${internship.title} at ${internship.company} has been received.`,
       });
-    }, 1200);
+    }, 1000);
   };
 
   const handleToggleSave = () => {
@@ -66,7 +66,7 @@ export default function InternshipDetailPage() {
     setSaved(newState);
     toast({
       type: newState ? 'success' : 'info',
-      title: newState ? 'Internship Saved' : 'Internship Removed',
+      title: newState ? 'Internship Saved' : 'Removed from Saved',
       message: newState ? `Added "${internship.title}" to saved items.` : `Removed from saved items.`,
     });
   };
@@ -83,7 +83,7 @@ export default function InternshipDetailPage() {
   };
 
   return (
-    <div className="internship-detail-page" style={{ background: 'var(--color-bg)', minHeight: '100vh', paddingBottom: 'var(--space-16)' }}>
+    <div className="internship-detail-page" style={{ background: 'var(--color-bg)', minHeight: '100vh', paddingBottom: 'var(--space-20)' }}>
       {/* Breadcrumb Bar */}
       <div style={{ background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', padding: 'var(--space-4) 0' }}>
         <div className="container">
@@ -114,20 +114,34 @@ export default function InternshipDetailPage() {
                   <div style={{ flex: 1, minWidth: 260 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 'var(--space-2)' }}>
                       <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>{internship.title}</h1>
-                      {internship.isNew && <Badge variant="success">New</Badge>}
-                      {internship.isFeatured && <Badge variant="primary">Featured</Badge>}
+                      <Badge variant="info">Internship</Badge>
                       <StatusBadge status={internship.status || 'PUBLISHED'} />
                     </div>
 
-                    <Link
-                      to={`/companies/${internship.companyId}`}
-                      style={{ color: 'var(--color-primary-600)', fontWeight: 600, fontSize: 'var(--text-base)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-                    >
-                      <Building2 size={16} /> {internship.company}
-                    </Link>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                      <Link
+                        to={`/companies/${internship.companyId}`}
+                        style={{ color: 'var(--color-primary-600)', fontWeight: 600, fontSize: 'var(--text-base)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <Building2 size={16} /> {internship.company}
+                      </Link>
+                      <span style={{ color: 'var(--color-text-muted)' }}>•</span>
+                      <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
+                        {internship.department || 'Product & Tech'}
+                      </span>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Button
+                      variant={applied ? 'secondary' : 'primary'}
+                      size="md"
+                      onClick={() => !applied && setApplyModalOpen(true)}
+                      disabled={applied}
+                    >
+                      {applied ? '✓ Applied' : 'Apply Now'}
+                    </Button>
                     <Button variant="ghost" size="sm" iconOnly leftIcon={<Share2 size={16} />} onClick={handleShare} aria-label="Share" />
                     <Button variant={saved ? 'primary' : 'secondary'} size="sm" iconOnly leftIcon={saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />} onClick={handleToggleSave} aria-label="Save" />
                   </div>
@@ -144,7 +158,7 @@ export default function InternshipDetailPage() {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                     <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-success-50)', color: 'var(--color-success-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <DollarSign size={18} />
+                      <Banknote size={18} />
                     </div>
                     <div>
                       <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Monthly Stipend</p>
@@ -326,6 +340,36 @@ export default function InternshipDetailPage() {
             </div>
           </div>
 
+        </div>
+      </div>
+
+      {/* ── Mobile Sticky Apply Bar (Visible only on <= 1024px) ── */}
+      <div className="mobile-apply-bar">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {internship.title}
+          </p>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+            {internship.stipend} • {internship.company}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <Button
+            variant={applied ? 'secondary' : 'primary'}
+            size="sm"
+            onClick={() => !applied && setApplyModalOpen(true)}
+            disabled={applied}
+          >
+            {applied ? '✓ Applied' : 'Apply Now'}
+          </Button>
+          <Button
+            variant={saved ? 'primary' : 'secondary'}
+            size="sm"
+            iconOnly
+            leftIcon={saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+            onClick={handleToggleSave}
+            aria-label="Save"
+          />
         </div>
       </div>
 

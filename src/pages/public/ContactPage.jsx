@@ -85,7 +85,7 @@ export default function ContactPage() {
       </div>
 
       <div className="container" style={{ paddingTop: 'var(--space-12)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 'var(--space-10)', alignItems: 'start' }}>
+        <div className="responsive-split-detail">
 
           {/* ── Left Column: Contact Form ── */}
           <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-8)' }}>
@@ -97,7 +97,7 @@ export default function ContactPage() {
             </p>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div className="form-row">
                 <FormField label="Full Name" htmlFor="name" required>
                   <Input
                     id="name"
@@ -120,7 +120,7 @@ export default function ContactPage() {
                 </FormField>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div className="form-row">
                 <FormField label="Mobile Number" htmlFor="phone">
                   <Input
                     id="phone"

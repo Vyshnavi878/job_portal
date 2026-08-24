@@ -1,0 +1,453 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Search, MapPin, Briefcase, Building2, GraduationCap, CalendarDays,
+  ArrowRight, TrendingUp, Users, CheckCircle2, Award, Sparkles,
+  ChevronRight, ArrowUpRight, ShieldCheck, Clock
+} from 'lucide-react';
+import Button from '../../components/ui/Button';
+import { JobCard, CompanyCard, InternshipCard, JobMelaCard } from '../../components/ui/EntityCards';
+import {
+  MOCK_JOBS,
+  MOCK_COMPANIES,
+  MOCK_INTERNSHIPS,
+  MOCK_JOB_MELAS,
+  MOCK_STATS,
+  WHY_CHOOSE_US,
+  LOCATIONS
+} from '../../data/mockData';
+
+export default function HomePage() {
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState('');
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (searchTerm.trim()) params.set('q', searchTerm.trim());
+    if (selectedLocation && selectedLocation !== 'All Locations') params.set('location', selectedLocation);
+    navigate(`/jobs?${params.toString()}`);
+  };
+
+  const featuredJobs = MOCK_JOBS.filter(j => j.isFeatured).slice(0, 3);
+  const latestJobs = MOCK_JOBS.slice(0, 6);
+  const topCompanies = MOCK_COMPANIES.slice(0, 6);
+  const featuredInternships = MOCK_INTERNSHIPS.slice(0, 3);
+  const upcomingJobMelas = MOCK_JOB_MELAS.filter(m => m.status === 'REGISTRATION_OPEN' || m.status === 'UPCOMING').slice(0, 2);
+
+  const statsList = [
+    { value: MOCK_STATS.totalJobs, label: 'Active Jobs', icon: <Briefcase size={24} /> },
+    { value: MOCK_STATS.totalCompanies, label: 'Verified Companies', icon: <Building2 size={24} /> },
+    { value: MOCK_STATS.totalCandidates, label: 'Registered Candidates', icon: <Users size={24} /> },
+    { value: MOCK_STATS.totalPlacements, label: 'Successful Placements', icon: <TrendingUp size={24} /> },
+  ];
+
+  return (
+    <div className="home-page" style={{ minHeight: '100vh' }}>
+      {/* ── 1. Hero Section ── */}
+      <section style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
+        padding: 'var(--space-20) var(--space-6)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Glow ambient decorations */}
+        <div style={{
+          position: 'absolute', top: -100, right: -100, width: 480, height: 480,
+          borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)',
+          pointerEvents: 'none', filter: 'blur(30px)'
+        }} />
+        <div style={{
+          position: 'absolute', bottom: -150, left: -100, width: 420, height: 420,
+          borderRadius: '50%', background: 'radial-gradient(circle, rgba(217,70,239,0.2) 0%, transparent 70%)',
+          pointerEvents: 'none', filter: 'blur(30px)'
+        }} />
+
+        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ textAlign: 'center', maxWidth: 840, margin: '0 auto' }}>
+            <div className="badge badge-primary" style={{
+              marginBottom: 'var(--space-4)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+              color: '#c7d2fe',
+              background: 'rgba(99,102,241,0.2)',
+              border: '1px solid rgba(165,180,252,0.3)',
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-full)'
+            }}>
+              <Sparkles size={14} style={{ color: '#a5b4fc' }} />
+              <span>India's Most Trusted Career & Job Fair Network</span>
+            </div>
+
+            <h1 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(2.25rem, 5.5vw, 3.75rem)',
+              fontWeight: 800,
+              color: '#ffffff',
+              lineHeight: 1.15,
+              marginBottom: 'var(--space-5)',
+              letterSpacing: '-0.02em',
+            }}>
+              Find Your Dream Job.<br />
+              <span style={{
+                background: 'linear-gradient(135deg, #a5b4fc 0%, #e0e7ff 50%, #f5d0fe 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}>
+                Accelerate Your Career.
+              </span>
+            </h1>
+
+            <p style={{
+              fontSize: 'var(--text-lg)',
+              color: '#cbd5e1',
+              lineHeight: 'var(--leading-relaxed)',
+              marginBottom: 'var(--space-10)',
+              maxWidth: 680,
+              marginInline: 'auto'
+            }}>
+              Connect with top verified recruiters, apply for high-impact internships, and register for nationwide Mega Job Melas — all with transparent tracking.
+            </p>
+
+            {/* Hero Search Bar */}
+            <form onSubmit={handleSearchSubmit} className="search-bar" style={{
+              maxWidth: 780,
+              margin: '0 auto var(--space-6)',
+              boxShadow: '0 20px 35px -10px rgba(0,0,0,0.5)',
+              border: '1px solid rgba(255,255,255,0.2)'
+            }}>
+              <span style={{ padding: '0 var(--space-2) 0 var(--space-5)', color: 'var(--color-text-muted)', display: 'flex' }}>
+                <Search size={20} />
+              </span>
+              <input
+                className="search-bar-input"
+                placeholder="Job title, skill, company, or keyword..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Job search"
+              />
+              <div className="search-bar-divider" />
+              <div style={{ display: 'flex', alignItems: 'center', padding: '0 var(--space-3)' }}>
+                <MapPin size={18} style={{ color: 'var(--color-text-muted)', marginRight: 6 }} />
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--color-text)',
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    outline: 'none',
+                    padding: '8px 4px'
+                  }}
+                  aria-label="Filter location"
+                >
+                  <option value="">All Locations</option>
+                  {LOCATIONS.filter(l => l !== 'All Locations').map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="search-bar-btn">
+                <Search size={16} /> Search Jobs
+              </button>
+            </form>
+
+            {/* Quick skill pills */}
+            <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ color: '#94a3b8', fontSize: 'var(--text-xs)', marginRight: 4 }}>Popular Searches:</span>
+              {['React', 'Python', 'Java', 'Data Science', 'Figma', 'Fintech', 'Freshers'].map((tag) => (
+                <Link
+                  key={tag}
+                  to={`/jobs?q=${tag}`}
+                  style={{
+                    padding: '5px 14px',
+                    background: 'rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 'var(--radius-full)',
+                    color: '#e2e8f0',
+                    fontSize: 'var(--text-xs)',
+                    textDecoration: 'none',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                >
+                  {tag}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 2. Statistics Section ── */}
+      <section style={{ background: 'var(--color-surface)', padding: 'var(--space-10) 0', borderBottom: '1px solid var(--color-border)' }}>
+        <div className="container">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-6)' }}>
+            {statsList.map((stat) => (
+              <div key={stat.label} style={{
+                textAlign: 'center',
+                padding: 'var(--space-4)',
+                borderRight: '1px solid var(--color-gray-100)'
+              }}>
+                <div style={{
+                  width: 54, height: 54,
+                  borderRadius: 'var(--radius-xl)',
+                  background: 'var(--color-primary-50)',
+                  color: 'var(--color-primary-600)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto var(--space-3)',
+                }}>
+                  {stat.icon}
+                </div>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--color-text)' }}>
+                  {stat.value}
+                </p>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)', fontWeight: 500 }}>
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 3. Featured Jobs Section ── */}
+      <section style={{ padding: 'var(--space-16) 0', background: 'var(--color-bg)' }}>
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-8)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+            <div>
+              <div className="badge badge-primary" style={{ marginBottom: 'var(--space-2)' }}>
+                <Sparkles size={12} style={{ marginRight: 4 }} /> Prime Opportunities
+              </div>
+              <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800 }}>Featured Jobs</h2>
+              <p style={{ color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                Curated high-growth roles from industry leaders and verified startups
+              </p>
+            </div>
+            <Link to="/jobs">
+              <Button variant="outline" rightIcon={<ArrowRight size={16} />}>
+                Explore All Jobs
+              </Button>
+            </Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 'var(--space-6)' }}>
+            {featuredJobs.map((job) => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 4. Latest Jobs Section ── */}
+      <section style={{ padding: 'var(--space-16) 0', background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)' }}>
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-8)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+            <div>
+              <div className="badge badge-success" style={{ marginBottom: 'var(--space-2)' }}>
+                <Clock size={12} style={{ marginRight: 4 }} /> Fresh Openings
+              </div>
+              <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800 }}>Latest Job Listings</h2>
+              <p style={{ color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                Recently posted openings across engineering, product, sales, and operations
+              </p>
+            </div>
+            <Link to="/jobs">
+              <Button variant="ghost" rightIcon={<ArrowRight size={16} />}>
+                View All {MOCK_JOBS.length}+ Jobs
+              </Button>
+            </Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 'var(--space-6)' }}>
+            {latestJobs.map((job) => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 5. Top Companies Section ── */}
+      <section style={{ padding: 'var(--space-16) 0', background: 'var(--color-bg)' }}>
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-8)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+            <div>
+              <div className="badge badge-warning" style={{ marginBottom: 'var(--space-2)' }}>
+                <Building2 size={12} style={{ marginRight: 4 }} /> Top Employers
+              </div>
+              <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800 }}>Top Companies Hiring Now</h2>
+              <p style={{ color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                Discover great workplaces with transparent culture ratings, perks, and open positions
+              </p>
+            </div>
+            <Link to="/companies">
+              <Button variant="outline" rightIcon={<ArrowRight size={16} />}>
+                Browse All Companies
+              </Button>
+            </Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 'var(--space-6)' }}>
+            {topCompanies.map((company) => (
+              <CompanyCard key={company.id} company={company} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 6. Featured Internships Section ── */}
+      <section style={{ padding: 'var(--space-16) 0', background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)' }}>
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-8)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+            <div>
+              <div className="badge badge-info" style={{ marginBottom: 'var(--space-2)' }}>
+                <GraduationCap size={12} style={{ marginRight: 4 }} /> Early Career
+              </div>
+              <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800 }}>Featured Internships & Trainee Roles</h2>
+              <p style={{ color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                Paid stipends, pre-placement offers (PPOs), and real-world project mentorship
+              </p>
+            </div>
+            <Link to="/internships">
+              <Button variant="outline" rightIcon={<ArrowRight size={16} />}>
+                Explore Internships
+              </Button>
+            </Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 'var(--space-6)' }}>
+            {featuredInternships.map((internship) => (
+              <InternshipCard key={internship.id} internship={internship} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 7. Upcoming Job Melas Section ── */}
+      <section style={{ padding: 'var(--space-16) 0', background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)', borderTop: '1px solid var(--color-border)' }}>
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 'var(--space-8)', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+            <div>
+              <div className="badge badge-primary" style={{ marginBottom: 'var(--space-2)' }}>
+                <CalendarDays size={12} style={{ marginRight: 4 }} /> Mega Career Fairs
+              </div>
+              <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800 }}>Upcoming & Active Job Melas</h2>
+              <p style={{ color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                Meet 100+ recruiters face-to-face, attend spot interview rounds, and receive offer letters
+              </p>
+            </div>
+            <Link to="/job-melas">
+              <Button variant="primary" rightIcon={<ArrowRight size={16} />}>
+                View All Job Melas
+              </Button>
+            </Link>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 'var(--space-6)' }}>
+            {upcomingJobMelas.map((event) => (
+              <JobMelaCard key={event.id} event={event} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 8. Why Choose Us Section ── */}
+      <section style={{ padding: 'var(--space-20) 0', background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)' }}>
+        <div className="container">
+          <div style={{ textAlign: 'center', maxWidth: 700, margin: '0 auto var(--space-12)' }}>
+            <div className="badge badge-primary" style={{ marginBottom: 'var(--space-3)' }}>
+              <ShieldCheck size={14} style={{ marginRight: 4 }} /> Why JobConnect
+            </div>
+            <h2 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, marginBottom: 'var(--space-3)' }}>
+              Engineered for Candidate Success & Recruiter Efficiency
+            </h2>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-base)', lineHeight: 'var(--leading-relaxed)' }}>
+              We eliminate middleman spam, fake postings, and black-box application cycles through verified employers and direct job mela access.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-6)' }}>
+            {WHY_CHOOSE_US.map((item) => (
+              <div
+                key={item.title}
+                className="card card-hoverable"
+                style={{
+                  padding: 'var(--space-6)',
+                  borderRadius: 'var(--radius-2xl)',
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-3)'
+                }}
+              >
+                <div style={{
+                  fontSize: '2rem',
+                  width: 52,
+                  height: 52,
+                  borderRadius: 'var(--radius-xl)',
+                  background: 'var(--color-gray-50)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid var(--color-border)'
+                }}>
+                  {item.icon}
+                </div>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-text)' }}>
+                  {item.title}
+                </h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 9. Call to Action Banner ── */}
+      <section style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
+        padding: 'var(--space-16) var(--space-6)',
+        color: '#ffffff',
+        textAlign: 'center',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--text-4xl)',
+            fontWeight: 800,
+            marginBottom: 'var(--space-4)',
+            color: '#ffffff'
+          }}>
+            Ready to Take the Next Step in Your Career?
+          </h2>
+          <p style={{
+            color: '#cbd5e1',
+            fontSize: 'var(--text-lg)',
+            maxWidth: 600,
+            margin: '0 auto var(--space-8)',
+            lineHeight: 'var(--leading-relaxed)'
+          }}>
+            Join over 2,80,000+ candidates who found opportunities with top employers through JobConnect.
+          </p>
+          <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link to="/register/candidate">
+              <Button variant="primary" size="lg" style={{ background: '#ffffff', color: '#312e81', fontWeight: 700 }}>
+                Register as Job Seeker (Free)
+              </Button>
+            </Link>
+            <Link to="/register/recruiter">
+              <Button variant="outline" size="lg" style={{ borderColor: 'rgba(255,255,255,0.4)', color: '#ffffff' }}>
+                Post Jobs as Recruiter
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}

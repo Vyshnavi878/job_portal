@@ -7,11 +7,11 @@ import {
 import Button from '../ui/Button';
 
 const NAV_LINKS = [
-  { label: 'Jobs',        href: '/jobs',        icon: <Briefcase size={16} /> },
+  { label: 'Jobs', href: '/jobs', icon: <Briefcase size={16} /> },
   { label: 'Internships', href: '/internships', icon: <BookOpen size={16} /> },
-  { label: 'Companies',   href: '/companies',   icon: <Building2 size={16} /> },
-  { label: 'Job Melas',   href: '/job-melas',   icon: <CalendarDays size={16} /> },
-  { label: 'Training',    href: '/training',    icon: <GraduationCap size={16} /> },
+  { label: 'Companies', href: '/companies', icon: <Building2 size={16} /> },
+  { label: 'Job Melas', href: '/job-melas', icon: <CalendarDays size={16} /> },
+  { label: 'Training', href: '/training', icon: <GraduationCap size={16} /> },
 ];
 
 export default function PublicHeader() {
@@ -41,18 +41,8 @@ export default function PublicHeader() {
       <header className="public-header">
         <div className="public-header-inner">
           {/* ── 1. Official NTR VIKASA Branding ── */}
-          <Link to="/" className="logo" aria-label="NTR Vikasa Home" style={{ textDecoration: 'none' }}>
-            <div className="logo-icon" aria-hidden="true" style={{ flexShrink: 0 }}>
-              <Briefcase size={20} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-              <span className="logo-text" style={{ fontSize: 'var(--text-lg)', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--color-text)' }}>
-                NTR <span style={{ color: 'var(--color-primary-600)' }}>VIKASA</span>
-              </span>
-              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
-                Society for Employment Generation
-              </span>
-            </div>
+          <Link to="/" className="logo" aria-label="NTR Vikasa Home" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <img src="/logo_image.png" alt="NTR Vikasa Logo" style={{ height: '48px', objectFit: 'contain' }} />
           </Link>
 
           {/* ── 2. Desktop Navigation ── */}
@@ -280,7 +270,7 @@ export default function PublicHeader() {
                   {link.label}
                 </NavLink>
               ))}
-              <NavLink to="/about"   className="mobile-nav-link" onClick={() => setMenuOpen(false)}>
+              <NavLink to="/about" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>
                 <Info size={16} /> About Us
               </NavLink>
               <NavLink to="/contact" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>

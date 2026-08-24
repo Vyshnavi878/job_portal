@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   Search, MapPin, Briefcase, Building2, GraduationCap, CalendarDays,
   ArrowRight, TrendingUp, Users, CheckCircle2, Award, Sparkles,
@@ -21,6 +22,9 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
+  const { t } = useLanguage();
+  const hero = t.hero;
+  const wc = t.whyChoose;
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -78,7 +82,7 @@ export default function HomePage() {
               borderRadius: 'var(--radius-full)'
             }}>
               <Sparkles size={14} style={{ color: '#a5b4fc' }} />
-              <span>India's Most Trusted Career & Job Fair Network</span>
+              <span>{hero.badge}</span>
             </div>
 
             <h1 style={{
@@ -90,13 +94,13 @@ export default function HomePage() {
               marginBottom: 'var(--space-5)',
               letterSpacing: '-0.02em',
             }}>
-              Find Your Dream Job.<br />
+              {hero.heading1}<br />
               <span style={{
                 background: 'linear-gradient(135deg, #a5b4fc 0%, #e0e7ff 50%, #f5d0fe 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }}>
-                Accelerate Your Career.
+                {hero.heading2}
               </span>
             </h1>
 
@@ -108,7 +112,7 @@ export default function HomePage() {
               maxWidth: 680,
               marginInline: 'auto'
             }}>
-              Connect with top verified recruiters, apply for high-impact internships, and register for nationwide Mega Job Melas — all with transparent tracking.
+              {hero.subtext}
             </p>
 
             {/* Hero Search Bar */}
@@ -123,7 +127,7 @@ export default function HomePage() {
               </span>
               <input
                 className="search-bar-input"
-                placeholder="Job title, skill, company, or keyword..."
+                placeholder={hero.searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 aria-label="Job search"
@@ -146,20 +150,20 @@ export default function HomePage() {
                   }}
                   aria-label="Filter location"
                 >
-                  <option value="">All Locations</option>
+                  <option value="">{hero.allLocations}</option>
                   {LOCATIONS.filter(l => l !== 'All Locations').map(loc => (
                     <option key={loc} value={loc}>{loc}</option>
                   ))}
                 </select>
               </div>
               <button type="submit" className="search-bar-btn">
-                <Search size={16} /> Search Jobs
+                <Search size={16} /> {hero.searchBtn}
               </button>
             </form>
 
             {/* Quick skill pills */}
             <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ color: '#94a3b8', fontSize: 'var(--text-xs)', marginRight: 4 }}>Popular Searches:</span>
+              <span style={{ color: '#94a3b8', fontSize: 'var(--text-xs)', marginRight: 4 }}>{hero.popularSearches}</span>
               {['React', 'Python', 'Java', 'Data Science', 'Figma', 'Fintech', 'Freshers', 'Remote'].map((tag) => (
                 <Link
                   key={tag}
@@ -189,7 +193,7 @@ export default function HomePage() {
             }}>
               Powered by{' '}
               <span style={{ color: '#a5b4fc', fontWeight: 700 }}>NTR Vikasa</span>
-              {' '}—{' '}Society for Employment Generation
+              {' '}—{' '}{hero.ntrSociety}
             </p>
           </div>
         </div>
@@ -238,8 +242,8 @@ export default function HomePage() {
               color: 'var(--color-text)',
               lineHeight: 1.2,
             }}>
-              Why Choose Our{' '}
-              <span style={{ color: 'var(--color-primary-600)' }}>Job Portal?</span>
+              {wc.heading1}{' '}
+              <span style={{ color: 'var(--color-primary-600)' }}>{wc.heading2}</span>
             </h2>
             <p style={{
               marginTop: 'var(--space-3)',
@@ -248,7 +252,7 @@ export default function HomePage() {
               maxWidth: 560,
               marginInline: 'auto',
             }}>
-              Connecting candidates, recruiters, internships, training opportunities, and Job Melas in one platform.
+              {wc.subtitle}
             </p>
           </div>
 
@@ -260,14 +264,16 @@ export default function HomePage() {
           }}
             className="why-choose-grid"
           >
-            {[
-              { icon: <ShieldCheck size={20} />, title: 'Trusted Opportunities', desc: 'Verified opportunities' },
-              { icon: <GraduationCap size={20} />, title: 'Skill Development',    desc: 'Build your skills' },
-              { icon: <CalendarDays size={20} />, title: 'Job Melas',             desc: 'Find career events' },
-              { icon: <ArrowUpRight size={20} />, title: 'Easy Applications',     desc: 'Apply with ease' },
-              { icon: <TrendingUp size={20} />,   title: 'Application Tracking',  desc: 'Track your progress' },
-              { icon: <Users size={20} />,        title: 'Candidate Support',      desc: 'Get career support' },
-            ].map((item) => (
+            {wc.cards.map((item, i) => {
+              const icons = [
+                <ShieldCheck size={20} />,
+                <GraduationCap size={20} />,
+                <CalendarDays size={20} />,
+                <ArrowUpRight size={20} />,
+                <TrendingUp size={20} />,
+                <Users size={20} />,
+              ];
+              return (
               <div
                 key={item.title}
                 className="card why-choose-card"
@@ -291,7 +297,7 @@ export default function HomePage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0,
                 }}>
-                  {item.icon}
+                  {icons[i]}
                 </div>
                 <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
                   {item.title}
@@ -300,8 +306,8 @@ export default function HomePage() {
                   {item.desc}
                 </p>
               </div>
-            ))}
-          </div>
+              );
+            })}          </div>
         </div>
       </section>
 

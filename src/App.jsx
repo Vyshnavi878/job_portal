@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // Contexts
 import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { LanguageProvider } from './context/LanguageContext';
 import ToastContainer from './components/ui/Toast';
 
 // Layouts
@@ -83,91 +84,93 @@ export default function App() {
   return (
     <ToastProvider>
       <NotificationProvider>
-        <BrowserRouter>
-          <Routes>
-          {/* ── Public Routes (with PublicLayout) ── */}
-          <Route element={<PublicLayout />}>
-            <Route path="/"                          element={<HomePage />} />
-            <Route path="/jobs"                      element={<JobsPage />} />
-            <Route path="/jobs/:jobId"               element={<JobDetailPage />} />
-            <Route path="/companies"                 element={<CompaniesPage />} />
-            <Route path="/companies/:id"             element={<CompanyDetailPage />} />
-            <Route path="/internships"               element={<InternshipsPage />} />
-            <Route path="/internships/:id"           element={<InternshipDetailPage />} />
-            <Route path="/job-melas"                 element={<JobMelasPage />} />
-            <Route path="/job-melas/:id"             element={<JobMelaDetailPage />} />
-            <Route path="/training"                  element={<TrainingPage />} />
-            <Route path="/about"                     element={<AboutPage />} />
-            <Route path="/contact"                   element={<ContactPage />} />
-            <Route path="/privacy"                   element={<PrivacyPage />} />
-            <Route path="/terms"                     element={<TermsPage />} />
-            <Route path="/403"                       element={<ForbiddenPage />} />
-            <Route path="/500"                       element={<ServerErrorPage />} />
-          </Route>
+        <LanguageProvider>
+          <BrowserRouter>
+            <Routes>
+            {/* ── Public Routes (with PublicLayout) ── */}
+            <Route element={<PublicLayout />}>
+              <Route path="/"                          element={<HomePage />} />
+              <Route path="/jobs"                      element={<JobsPage />} />
+              <Route path="/jobs/:jobId"               element={<JobDetailPage />} />
+              <Route path="/companies"                 element={<CompaniesPage />} />
+              <Route path="/companies/:id"             element={<CompanyDetailPage />} />
+              <Route path="/internships"               element={<InternshipsPage />} />
+              <Route path="/internships/:id"           element={<InternshipDetailPage />} />
+              <Route path="/job-melas"                 element={<JobMelasPage />} />
+              <Route path="/job-melas/:id"             element={<JobMelaDetailPage />} />
+              <Route path="/training"                  element={<TrainingPage />} />
+              <Route path="/about"                     element={<AboutPage />} />
+              <Route path="/contact"                   element={<ContactPage />} />
+              <Route path="/privacy"                   element={<PrivacyPage />} />
+              <Route path="/terms"                     element={<TermsPage />} />
+              <Route path="/403"                       element={<ForbiddenPage />} />
+              <Route path="/500"                       element={<ServerErrorPage />} />
+            </Route>
 
-          {/* ── Auth Routes (standalone layout) ── */}
-          <Route path="/login"                       element={<LoginPage />} />
-          <Route path="/register/candidate"          element={<RegisterCandidatePage />} />
-          <Route path="/register/recruiter"          element={<RegisterRecruiterPage />} />
-          <Route path="/register/recruiter/pending"  element={<RecruiterApprovalPage />} />
-          <Route path="/forgot-password"             element={<ForgotPasswordPage />} />
+            {/* ── Auth Routes (standalone layout) ── */}
+            <Route path="/login"                       element={<LoginPage />} />
+            <Route path="/register/candidate"          element={<RegisterCandidatePage />} />
+            <Route path="/register/recruiter"          element={<RegisterRecruiterPage />} />
+            <Route path="/register/recruiter/pending"  element={<RecruiterApprovalPage />} />
+            <Route path="/forgot-password"             element={<ForgotPasswordPage />} />
 
-          {/* ── Candidate Portal ── */}
-          <Route path="/candidate" element={<CandidateLayout />}>
-            <Route index element={<Navigate to="/candidate/dashboard" replace />} />
-            <Route path="dashboard"    element={<CandidateDashboard />} />
-            <Route path="profile"      element={<CandidateProfilePage />} />
-            <Route path="applications" element={<CandidateApplicationsPage />} />
-            <Route path="saved-jobs"   element={<CandidateSavedJobsPage />} />
-            <Route path="job-mela"     element={<CandidateJobMelaPage />} />
-            <Route path="notifications"element={<CandidateNotificationsPage />} />
-            <Route path="settings"     element={<CandidateSettingsPage />} />
-          </Route>
+            {/* ── Candidate Portal ── */}
+            <Route path="/candidate" element={<CandidateLayout />}>
+              <Route index element={<Navigate to="/candidate/dashboard" replace />} />
+              <Route path="dashboard"    element={<CandidateDashboard />} />
+              <Route path="profile"      element={<CandidateProfilePage />} />
+              <Route path="applications" element={<CandidateApplicationsPage />} />
+              <Route path="saved-jobs"   element={<CandidateSavedJobsPage />} />
+              <Route path="job-mela"     element={<CandidateJobMelaPage />} />
+              <Route path="notifications"element={<CandidateNotificationsPage />} />
+              <Route path="settings"     element={<CandidateSettingsPage />} />
+            </Route>
 
-          {/* ── Recruiter Portal ── */}
-          <Route path="/recruiter" element={<RecruiterLayout />}>
-            <Route index element={<Navigate to="/recruiter/dashboard" replace />} />
-            <Route path="dashboard"     element={<RecruiterDashboard />} />
-            <Route path="company"       element={<RecruiterCompanyPage />} />
-            <Route path="jobs"          element={<RecruiterJobsPage />} />
-            <Route path="jobs/create"   element={<RecruiterCreateJobPage />} />
-            <Route path="jobs/:id"      element={<RecruiterJobDetailPage />} />
-            <Route path="jobs/:id/applicants" element={<RecruiterApplicantsPage />} />
-            <Route path="internships"   element={<RecruiterInternshipsPage />} />
-            <Route path="interviews"    element={<RecruiterInterviewsPage />} />
-            <Route path="job-mela"      element={<RecruiterJobMelaPage />} />
-            <Route path="notifications" element={<RecruiterNotificationsPage />} />
-            <Route path="settings"      element={<RecruiterSettingsPage />} />
-          </Route>
+            {/* ── Recruiter Portal ── */}
+            <Route path="/recruiter" element={<RecruiterLayout />}>
+              <Route index element={<Navigate to="/recruiter/dashboard" replace />} />
+              <Route path="dashboard"     element={<RecruiterDashboard />} />
+              <Route path="company"       element={<RecruiterCompanyPage />} />
+              <Route path="jobs"          element={<RecruiterJobsPage />} />
+              <Route path="jobs/create"   element={<RecruiterCreateJobPage />} />
+              <Route path="jobs/:id"      element={<RecruiterJobDetailPage />} />
+              <Route path="jobs/:id/applicants" element={<RecruiterApplicantsPage />} />
+              <Route path="internships"   element={<RecruiterInternshipsPage />} />
+              <Route path="interviews"    element={<RecruiterInterviewsPage />} />
+              <Route path="job-mela"      element={<RecruiterJobMelaPage />} />
+              <Route path="notifications" element={<RecruiterNotificationsPage />} />
+              <Route path="settings"      element={<RecruiterSettingsPage />} />
+            </Route>
 
-          {/* ── Admin Portal ── */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard"                  element={<AdminDashboard />} />
-            <Route path="recruiters/requests"        element={<AdminRecruiterRequestsPage />} />
-            <Route path="recruiters"                 element={<AdminRecruitersPage />} />
-            <Route path="candidates"                 element={<AdminCandidatesPage />} />
-            <Route path="companies"                  element={<AdminCompaniesPage />} />
-            <Route path="jobs/requests"              element={<AdminJobRequestsPage />} />
-            <Route path="jobs"                       element={<AdminJobsPage />} />
-            <Route path="internships/requests"       element={<AdminInternshipRequestsPage />} />
-            <Route path="internships"                element={<AdminInternshipsPage />} />
-            <Route path="applications"               element={<AdminApplicationsPage />} />
-            <Route path="job-melas"                  element={<AdminJobMelasPage />} />
-            <Route path="job-melas/create"           element={<AdminCreateJobMelaPage />} />
-            <Route path="job-melas/participation"    element={<AdminParticipationPage />} />
-            <Route path="job-melas/registrations"    element={<AdminRegistrationsPage />} />
-            <Route path="notifications"              element={<AdminNotificationsPage />} />
-            <Route path="reports"                    element={<AdminReportsPage />} />
-            <Route path="audit-logs"                 element={<AdminAuditLogsPage />} />
-            <Route path="settings"                   element={<AdminSettingsPage />} />
-          </Route>
+            {/* ── Admin Portal ── */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard"                  element={<AdminDashboard />} />
+              <Route path="recruiters/requests"        element={<AdminRecruiterRequestsPage />} />
+              <Route path="recruiters"                 element={<AdminRecruitersPage />} />
+              <Route path="candidates"                 element={<AdminCandidatesPage />} />
+              <Route path="companies"                  element={<AdminCompaniesPage />} />
+              <Route path="jobs/requests"              element={<AdminJobRequestsPage />} />
+              <Route path="jobs"                       element={<AdminJobsPage />} />
+              <Route path="internships/requests"       element={<AdminInternshipRequestsPage />} />
+              <Route path="internships"                element={<AdminInternshipsPage />} />
+              <Route path="applications"               element={<AdminApplicationsPage />} />
+              <Route path="job-melas"                  element={<AdminJobMelasPage />} />
+              <Route path="job-melas/create"           element={<AdminCreateJobMelaPage />} />
+              <Route path="job-melas/participation"    element={<AdminParticipationPage />} />
+              <Route path="job-melas/registrations"    element={<AdminRegistrationsPage />} />
+              <Route path="notifications"              element={<AdminNotificationsPage />} />
+              <Route path="reports"                    element={<AdminReportsPage />} />
+              <Route path="audit-logs"                 element={<AdminAuditLogsPage />} />
+              <Route path="settings"                   element={<AdminSettingsPage />} />
+            </Route>
 
-          {/* ── 404 Fallback ── */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </BrowserRouter>
-      <ToastContainer />
+            {/* ── 404 Fallback ── */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+          </BrowserRouter>
+        </LanguageProvider>
+        <ToastContainer />
       </NotificationProvider>
     </ToastProvider>
   );

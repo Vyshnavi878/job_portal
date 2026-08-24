@@ -2,25 +2,30 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import {
   Menu, X, Briefcase, Building2, BookOpen, CalendarDays,
-  GraduationCap, ChevronDown, User, UserPlus, Info, Sparkles
+  GraduationCap, ChevronDown, User, UserPlus, Info, Sparkles, Globe
 } from 'lucide-react';
 import Button from '../ui/Button';
-
-const NAV_LINKS = [
-  { label: 'Jobs', href: '/jobs', icon: <Briefcase size={16} /> },
-  { label: 'Internships', href: '/internships', icon: <BookOpen size={16} /> },
-  { label: 'Companies', href: '/companies', icon: <Building2 size={16} /> },
-  { label: 'Job Melas', href: '/job-melas', icon: <CalendarDays size={16} /> },
-  { label: 'Training', href: '/training', icon: <GraduationCap size={16} /> },
-];
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function PublicHeader() {
+  const { t, toggle, lang } = useLanguage();
+  const nav = t.nav;
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [getStartedOpen, setGetStartedOpen] = useState(false);
   const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
 
   const getStartedRef = useRef(null);
   const aboutRef = useRef(null);
+
+  // Nav links built from translations so they update on language switch
+  const NAV_LINKS = [
+    { label: nav.jobs,        href: '/jobs',        icon: <Briefcase size={16} /> },
+    { label: nav.internships, href: '/internships', icon: <BookOpen size={16} /> },
+    { label: nav.companies,   href: '/companies',   icon: <Building2 size={16} /> },
+    { label: nav.jobMelas,    href: '/job-melas',   icon: <CalendarDays size={16} /> },
+    { label: nav.training,    href: '/training',    icon: <GraduationCap size={16} /> },
+  ];
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -72,12 +77,9 @@ export default function PublicHeader() {
                   `public-nav-link ${isActive ? 'active' : ''}`
                 }
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                onClick={(e) => {
-                  // If clicking on mobile or desktop, toggle dropdown
-                  setAboutDropdownOpen((v) => !v);
-                }}
+                onClick={() => { setAboutDropdownOpen((v) => !v); }}
               >
-                About <ChevronDown size={14} style={{ opacity: 0.7, transform: aboutDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
+                {nav.about} <ChevronDown size={14} style={{ opacity: 0.7, transform: aboutDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
               </NavLink>
 
               {aboutDropdownOpen && (
@@ -108,8 +110,8 @@ export default function PublicHeader() {
                   >
                     <Info size={16} style={{ color: 'var(--color-primary-600)' }} />
                     <div>
-                      <p style={{ fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>About Us</p>
-                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Mission & organization overview</p>
+                      <p style={{ fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{nav.aboutUs}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{nav.aboutDesc}</p>
                     </div>
                   </Link>
 
@@ -121,8 +123,8 @@ export default function PublicHeader() {
                   >
                     <GraduationCap size={16} style={{ color: 'var(--color-primary-600)' }} />
                     <div>
-                      <p style={{ fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>Skill Development</p>
-                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Certified industry skill courses</p>
+                      <p style={{ fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{nav.skillDev}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{nav.skillDevDesc}</p>
                     </div>
                   </Link>
 
@@ -134,8 +136,8 @@ export default function PublicHeader() {
                   >
                     <Sparkles size={16} style={{ color: 'var(--color-accent-600)' }} />
                     <div>
-                      <p style={{ fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>Training Programs</p>
-                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Vocational & IT labs</p>
+                      <p style={{ fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{nav.training2}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{nav.training2Desc}</p>
                     </div>
                   </Link>
                 </div>
@@ -146,7 +148,7 @@ export default function PublicHeader() {
           {/* ── 3. Action Buttons & Get Started Dropdown ── */}
           <div className="public-header-actions">
             <Link to="/login" className="hide-mobile">
-              <Button variant="ghost" size="sm">Log In</Button>
+              <Button variant="ghost" size="sm">{nav.login}</Button>
             </Link>
 
             {/* Get Started Dropdown (Candidate vs Recruiter) */}
@@ -157,7 +159,7 @@ export default function PublicHeader() {
                 onClick={() => setGetStartedOpen((v) => !v)}
                 rightIcon={<ChevronDown size={14} style={{ transform: getStartedOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />}
               >
-                Get Started
+                {nav.getStarted}
               </Button>
 
               {getStartedOpen && (
@@ -181,7 +183,7 @@ export default function PublicHeader() {
                 >
                   <div style={{ padding: '6px 12px', borderBottom: '1px solid var(--color-gray-100)', marginBottom: 4 }}>
                     <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)' }}>
-                      Create Free Account
+                      {nav.createAccount}
                     </p>
                   </div>
 
@@ -195,8 +197,8 @@ export default function PublicHeader() {
                       <User size={16} />
                     </div>
                     <div>
-                      <p style={{ fontWeight: 700, color: 'var(--color-text)', fontSize: 'var(--text-sm)', lineHeight: 1.2 }}>Candidate Registration</p>
-                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Find jobs, internships & job fairs</p>
+                      <p style={{ fontWeight: 700, color: 'var(--color-text)', fontSize: 'var(--text-sm)', lineHeight: 1.2 }}>{nav.candidateReg}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{nav.candidateDesc}</p>
                     </div>
                   </Link>
 
@@ -210,8 +212,8 @@ export default function PublicHeader() {
                       <Building2 size={16} />
                     </div>
                     <div>
-                      <p style={{ fontWeight: 700, color: 'var(--color-text)', fontSize: 'var(--text-sm)', lineHeight: 1.2 }}>Recruiter Registration</p>
-                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Post jobs & hire verified talent</p>
+                      <p style={{ fontWeight: 700, color: 'var(--color-text)', fontSize: 'var(--text-sm)', lineHeight: 1.2 }}>{nav.recruiterReg}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{nav.recruiterDesc}</p>
                     </div>
                   </Link>
                 </div>
@@ -226,6 +228,32 @@ export default function PublicHeader() {
               aria-expanded={menuOpen}
             >
               <Menu size={22} />
+            </button>
+
+            {/* Language toggle — desktop only */}
+            <button
+              className="hide-mobile"
+              onClick={toggle}
+              aria-label={lang === 'en' ? 'Switch to Telugu' : 'Switch to English'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                background: 'none',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '5px 10px',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 600,
+                color: lang === 'te' ? 'var(--color-primary-600)' : 'var(--color-text-muted)',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'color 150ms ease, border-color 150ms ease',
+                borderColor: lang === 'te' ? 'var(--color-primary-300)' : 'var(--color-border)',
+              }}
+            >
+              <Globe size={14} />
+              {nav.language}
             </button>
           </div>
         </div>
@@ -271,26 +299,47 @@ export default function PublicHeader() {
                 </NavLink>
               ))}
               <NavLink to="/about" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>
-                <Info size={16} /> About Us
+                <Info size={16} /> {nav.aboutUs}
               </NavLink>
               <NavLink to="/contact" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>
-                <UserPlus size={16} /> Contact & Support
+                <UserPlus size={16} /> {nav.contactSupport}
               </NavLink>
+              {/* Language toggle in mobile drawer */}
+              <button
+                className="mobile-nav-link"
+                onClick={() => { toggle(); setMenuOpen(false); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  width: '100%',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  color: lang === 'te' ? 'var(--color-primary-600)' : 'var(--color-text-muted)',
+                  fontWeight: lang === 'te' ? 700 : 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: 0,
+                }}
+                aria-label={lang === 'en' ? 'Switch to Telugu' : 'Switch to English'}
+              >
+                <Globe size={16} /> {nav.language}
+              </button>
             </div>
 
             <div className="mobile-nav-actions">
               <Link to="/login" onClick={() => setMenuOpen(false)}>
-                <Button variant="secondary" fullWidth>Log In</Button>
+                <Button variant="secondary" fullWidth>{nav.login}</Button>
               </Link>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 <Link to="/register/candidate" onClick={() => setMenuOpen(false)}>
                   <Button variant="primary" fullWidth leftIcon={<User size={16} />}>
-                    Register as Candidate
+                    {nav.candidateReg}
                   </Button>
                 </Link>
                 <Link to="/register/recruiter" onClick={() => setMenuOpen(false)}>
                   <Button variant="outline" fullWidth leftIcon={<Building2 size={16} />}>
-                    Register as Recruiter
+                    {nav.recruiterReg}
                   </Button>
                 </Link>
               </div>

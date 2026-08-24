@@ -19,13 +19,31 @@ export function LanguageProvider({ children }) {
   const setLang = useCallback((code) => {
     try { localStorage.setItem(STORAGE_KEY, code); } catch (_) {}
     setLangState(code);
+    
+    // Trigger Google Translate reliably
+    const triggerTranslation = (attempts = 0) => {
+      const selectField = document.querySelector('.goog-te-combo');
+      if (selectField) {
+        let val = code;
+        // Google Translate often uses '' to restore the original pageLanguage if 'en' isn't explicitly an option
+        if (code === 'en' && !Array.from(selectField.options).some(opt => opt.value === 'en')) {
+          val = '';
+        }
+        selectField.value = val;
+        selectField.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+      } else if (attempts < 20) { // Try for up to 2 seconds
+        setTimeout(() => triggerTranslation(attempts + 1), 100);
+      }
+    };
+    triggerTranslation();
   }, []);
 
   const toggle = useCallback(() => {
     setLang(lang === 'en' ? 'te' : 'en');
   }, [lang, setLang]);
 
-  const t = translations[lang];
+  // Always provide English translations so Google Translate handles all translation cleanly
+  const t = translations['en'];
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, toggle, t }}>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Briefcase, User, Mail, Phone, Lock, MapPin, GraduationCap, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Briefcase, User, Mail, Phone, Lock, MapPin, GraduationCap, CheckCircle2, ArrowRight, ArrowLeft, CreditCard } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
@@ -21,6 +21,7 @@ export default function RegisterCandidatePage() {
     fullName: '',
     email: '',
     phone: '',
+    aadhaarNumber: '',
     location: '',
     education: '',
     college: '',
@@ -60,13 +61,20 @@ export default function RegisterCandidatePage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)', padding: 'var(--space-8) var(--space-4)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)', padding: 'var(--space-8) var(--space-4)', position: 'relative' }}>
+      
+      {/* Back to Home Link */}
+      <div className="back-to-home">
+        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none' }}>
+          <ArrowLeft size={16} /> Home
+        </Link>
+      </div>
+
       <div style={{ width: '100%', maxWidth: 620 }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-          <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', marginBottom: 'var(--space-4)' }}>
-            <div className="logo-icon"><Briefcase size={18} /></div>
-            <span className="logo-text">Job<span>Connect</span></span>
+          <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', marginBottom: 'var(--space-4)', alignItems: 'center', textDecoration: 'none' }}>
+            <img src="/logo_image.png" alt="NTR Vikasa Logo" style={{ height: '48px', objectFit: 'contain' }} />
           </Link>
           <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: 'var(--space-1)' }}>
             Create Your Candidate Account
@@ -101,18 +109,18 @@ export default function RegisterCandidatePage() {
               {/* STEP 1: Personal & Contact Details */}
               {step === 0 && (
                 <>
-                  <FormField label="Full Name" htmlFor="fullName" required>
-                    <Input
-                      id="fullName"
-                      placeholder="e.g. Priya Sharma"
-                      value={form.fullName}
-                      onChange={set('fullName')}
-                      leftIcon={<User size={16} />}
-                      required
-                    />
-                  </FormField>
-
                   <div className="form-row">
+                    <FormField label="Full Name" htmlFor="fullName" required>
+                      <Input
+                        id="fullName"
+                        placeholder="e.g. Priya Sharma"
+                        value={form.fullName}
+                        onChange={set('fullName')}
+                        leftIcon={<User size={16} />}
+                        required
+                      />
+                    </FormField>
+
                     <FormField label="Email Address" htmlFor="email" required>
                       <Input
                         id="email"
@@ -121,6 +129,21 @@ export default function RegisterCandidatePage() {
                         value={form.email}
                         onChange={set('email')}
                         leftIcon={<Mail size={16} />}
+                        required
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="form-row">
+                    <FormField label="Aadhaar Number" htmlFor="aadhaarNumber" required>
+                      <Input
+                        id="aadhaarNumber"
+                        type="text"
+                        placeholder="e.g. 1234 5678 9012"
+                        value={form.aadhaarNumber}
+                        onChange={set('aadhaarNumber')}
+                        leftIcon={<CreditCard size={16} />}
+                        pattern="[0-9\s]{12,14}"
                         required
                       />
                     </FormField>
@@ -142,7 +165,7 @@ export default function RegisterCandidatePage() {
                     <Select
                       id="location"
                       options={LOCATIONS.filter(l => l !== 'All Locations')}
-                      placeholder="Select your city"
+                      placeholder="Select your district"
                       value={form.location}
                       onChange={set('location')}
                     />

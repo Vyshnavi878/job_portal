@@ -6,6 +6,7 @@ const translations = {
   en: {
     // Navbar
     nav: {
+      home:         'Home',
       jobs:         'Jobs',
       internships:  'Internships',
       companies:    'Companies',
@@ -14,7 +15,7 @@ const translations = {
       about:        'About',
       login:        'Log In',
       getStarted:   'Get Started',
-      language:     'English',
+      language:     'Telugu',
       aboutUs:      'About Us',
       aboutDesc:    'Mission & organization overview',
       skillDev:     'Skill Development',
@@ -30,7 +31,7 @@ const translations = {
     },
     // Hero
     hero: {
-      badge:        "India's Most Trusted Career & Job Fair Network",
+      badge:        "Most Trusted Career & Job Fair Network",
       heading1:     'Find Your Dream Job.',
       heading2:     'Accelerate Your Career.',
       subtext:      'Connect with top verified recruiters, apply for high-impact internships, and register for nationwide Mega Job Melas — all with transparent tracking.',
@@ -60,6 +61,7 @@ const translations = {
   te: {
     // Navbar
     nav: {
+      home:         'హోమ్',
       jobs:         'ఉద్యోగాలు',
       internships:  'ఇంటర్న్షిప్లు',
       companies:    'కంపెనీలు',
@@ -68,7 +70,7 @@ const translations = {
       about:        'మా గురించి',
       login:        'లాగిన్',
       getStarted:   'ప్రారంభించండి',
-      language:     'తెలుగు',
+      language:     'English',
       aboutUs:      'మా గురించి',
       aboutDesc:    'లక్ష్యం & సంస్థ వివరాలు',
       skillDev:     'నైపుణ్య అభివృద్ధి',

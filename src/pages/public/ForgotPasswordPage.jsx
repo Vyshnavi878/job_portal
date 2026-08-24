@@ -19,9 +19,8 @@ export default function ForgotPasswordPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)', padding: 'var(--space-6)' }}>
       <div style={{ width: '100%', maxWidth: 420, textAlign: 'center' }}>
-        <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', marginBottom: 'var(--space-8)' }}>
-          <div className="logo-icon"><Briefcase size={18} /></div>
-          <span className="logo-text">Job<span>Connect</span></span>
+        <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', marginBottom: 'var(--space-8)', alignItems: 'center', textDecoration: 'none' }}>
+          <img src="/logo_image.png" alt="NTR Vikasa Logo" style={{ height: '48px', objectFit: 'contain' }} />
         </Link>
 
         {sent ? (

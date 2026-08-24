@@ -465,7 +465,7 @@
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  /* Removed overflow: hidden so dropdowns can bleed outside */
   transition: box-shadow var(--transition-base), border-color var(--transition-base);
 }
 .search-bar:focus-within {
@@ -513,7 +513,8 @@
 @media (max-width: 640px) {
   .search-bar { flex-direction: column; border-radius: var(--radius-xl); }
   .search-bar-divider { display: none; }
-  .search-bar-input { width: 100%; border-bottom: 1px solid var(--color-border); }
+  .search-bar-input-wrapper { width: 100%; border-bottom: 1px solid var(--color-border); }
+  .search-bar-input { width: 100%; }
   .search-bar-btn { width: calc(100% - var(--space-4)); margin: var(--space-2); }
 }
 
@@ -705,4 +706,251 @@
   }
 }
 
+/* ══════════════════════════════════════════
+   GLOBAL UI INTERACTIVITY & HOVER EFFECTS (Desktop)
+══════════════════════════════════════════ */
+@media (min-width: 1025px) {
+  /* Cards lift up on hover */
+  .hover-lift {
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+  }
+  
+  /* Inputs deeper focus and hover rings */
+  input:hover, select:hover, textarea:hover {
+    border-color: var(--color-gray-400);
+  }
+  input:focus, select:focus, textarea:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+}
 
+/* ══════════════════════════════════════════
+   AUTH / LOGIN PAGE RESPONSIVE LAYOUT
+══════════════════════════════════════════ */
+.auth-layout {
+  min-height: 100vh;
+}
+
+/* Responsive 2-column detail layout (Main Content + Sidebar Info) */
+.responsive-split-detail {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: var(--space-8);
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .responsive-split-detail {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-6);
+  }
+}
+
+/* Responsive Dashboard Two-Column Grid */
+.responsive-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .responsive-dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Responsive Filter Bar (Search + Dropdowns) */
+.responsive-filter-bar {
+  display: grid;
+  grid-template-columns: 2fr repeat(3, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+@media (max-width: 1024px) {
+  .responsive-filter-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .responsive-filter-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Responsive Card Grid */
+.responsive-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-6);
+}
+@media (max-width: 480px) {
+  .responsive-card-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+
+/* Responsive Stats Grid */
+.responsive-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-4);
+}
+@media (max-width: 480px) {
+  .responsive-stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+}
+
+/* Mobile modal padding polish */
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: var(--space-2);
+  }
+  .modal {
+    max-height: 94vh;
+    border-radius: var(--radius-xl);
+  }
+  .modal-header {
+    padding: var(--space-4);
+  }
+  .modal-body {
+    padding: var(--space-4);
+  }
+  .modal-footer {
+    padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
+  }
+}
+
+/* Table container horizontal scrolling */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Touch-friendly button and inputs */
+@media (max-width: 768px) {
+  .input, .select, .textarea {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS safari */
+  }
+  .btn {
+    min-height: 38px;
+  }
+}
+
+/* Responsive Form Row */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* Mobile Sticky Apply Bar on Detail Pages */
+.mobile-apply-bar {
+  display: none;
+}
+@media (max-width: 1024px) {
+  .mobile-apply-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-3) var(--space-4);
+    z-index: var(--z-sticky);
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+    gap: var(--space-3);
+  }
+}
+
+
+/* ── Why Choose Our Job Portal — responsive grid ── */
+/* Desktop default: 6 columns (set inline in JSX)   */
+
+@media (max-width: 1024px) {
+  .why-choose-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .why-choose-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .why-choose-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ══════════════════════════════════════════
+   GLOBAL UI INTERACTIVITY & HOVER EFFECTS (Desktop)
+══════════════════════════════════════════ */
+@media (min-width: 1025px) {
+  /* Cards lift up on hover */
+  .hover-lift {
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+  }
+  
+  /* Inputs deeper focus and hover rings */
+  input:hover, select:hover, textarea:hover {
+    border-color: var(--color-gray-400);
+  }
+  input:focus, select:focus, textarea:focus {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+}
+
+/* ══════════════════════════════════════════
+   AUTH / LOGIN PAGE RESPONSIVE LAYOUT
+══════════════════════════════════════════ */
+.auth-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--color-bg);
+}
+
+@media (max-width: 1024px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ══════════════════════════════════════════
+   BACK TO HOME BUTTON (Registration pages)
+══════════════════════════════════════════ */
+.back-to-home {
+  position: absolute;
+  top: 24px;
+  left: 32px;
+}
+@media (max-width: 768px) {
+  .back-to-home {
+    position: static;
+    margin-bottom: var(--space-4);
+    align-self: flex-start;
+  }
+}

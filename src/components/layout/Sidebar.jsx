@@ -33,11 +33,8 @@ export default function Sidebar({ navItems = [], user, footerItems = [], portalN
       <aside className={`sidebar ${isOpen ? 'open' : ''}`} aria-label="Sidebar navigation">
         {/* Logo */}
         <div className="sidebar-logo">
-          <Link to="/" className="logo" style={{ flex: 1 }}>
-            <div className="logo-icon"><Briefcase size={18} /></div>
-            <span className="logo-text" style={{ color: '#fff' }}>
-              Job<span style={{ color: 'var(--color-primary-400)' }}>Connect</span>
-            </span>
+          <Link to="/" className="logo" style={{ flex: 1, display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <img src="/logo_image.png" alt="NTR Vikasa Logo" style={{ height: '32px', objectFit: 'contain' }} />
           </Link>
           {/* Mobile close button */}
           <button

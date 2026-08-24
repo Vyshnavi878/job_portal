@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import {
   Menu, X, Briefcase, Building2, BookOpen, CalendarDays,
-  GraduationCap, ChevronDown, User, UserPlus, Info, Sparkles, Globe
+  GraduationCap, ChevronDown, User, UserPlus, Info, Sparkles, Globe, Home
 } from 'lucide-react';
 import Button from '../ui/Button';
 import { useLanguage } from '../../context/LanguageContext';
@@ -20,6 +20,7 @@ export default function PublicHeader() {
 
   // Nav links built from translations so they update on language switch
   const NAV_LINKS = [
+    { label: nav.home,        href: '/',            icon: <Home size={16} /> },
     { label: nav.jobs,        href: '/jobs',        icon: <Briefcase size={16} /> },
     { label: nav.internships, href: '/internships', icon: <BookOpen size={16} /> },
     { label: nav.companies,   href: '/companies',   icon: <Building2 size={16} /> },
@@ -232,7 +233,7 @@ export default function PublicHeader() {
 
             {/* Language toggle — desktop only */}
             <button
-              className="hide-mobile"
+              className="hide-mobile notranslate"
               onClick={toggle}
               aria-label={lang === 'en' ? 'Switch to Telugu' : 'Switch to English'}
               style={{
@@ -253,7 +254,7 @@ export default function PublicHeader() {
               }}
             >
               <Globe size={14} />
-              {nav.language}
+              {lang === 'en' ? 'Telugu' : 'English'}
             </button>
           </div>
         </div>
@@ -264,16 +265,8 @@ export default function PublicHeader() {
         <div className="mobile-nav-drawer">
           <div className="mobile-nav-panel">
             <div className="mobile-nav-header">
-              <Link to="/" className="logo" onClick={() => setMenuOpen(false)} style={{ textDecoration: 'none' }}>
-                <div className="logo-icon"><Briefcase size={18} /></div>
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-                  <span className="logo-text" style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>
-                    NTR <span style={{ color: 'var(--color-primary-600)' }}>VIKASA</span>
-                  </span>
-                  <span style={{ fontSize: '9px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                    Employment Generation
-                  </span>
-                </div>
+              <Link to="/" className="logo" onClick={() => setMenuOpen(false)} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                <img src="/logo_image.png" alt="NTR Vikasa Logo" style={{ height: '36px', objectFit: 'contain' }} />
               </Link>
               <button
                 className="modal-close"
@@ -306,7 +299,7 @@ export default function PublicHeader() {
               </NavLink>
               {/* Language toggle in mobile drawer */}
               <button
-                className="mobile-nav-link"
+                className="mobile-nav-link notranslate"
                 onClick={() => { toggle(); setMenuOpen(false); }}
                 style={{
                   background: 'none',
@@ -323,7 +316,7 @@ export default function PublicHeader() {
                 }}
                 aria-label={lang === 'en' ? 'Switch to Telugu' : 'Switch to English'}
               >
-                <Globe size={16} /> {nav.language}
+                <Globe size={16} /> {lang === 'en' ? 'Telugu' : 'English'}
               </button>
             </div>
 

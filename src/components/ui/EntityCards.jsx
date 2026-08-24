@@ -23,7 +23,7 @@ export function JobCard({ job, saved = false, onSave, loading = false, showStatu
   const timeLeft = deadline ? getTimeLeft(deadline) : null;
 
   return (
-    <div className="job-card fade-in">
+    <div className="job-card fade-in hover-lift">
       <div className="job-card-header">
         <div className="job-card-logo">
           {companyLogo ? (
@@ -133,7 +133,7 @@ export function CompanyCard({ company, loading = false }) {
   const { id, name, industry, logo, openJobs = 0, employees } = company;
 
   return (
-    <Link to={`/companies/${id}`} className="company-card">
+    <Link to={`/companies/${id}`} className="company-card hover-lift">
       <div className="company-card-logo">
         {logo ? <img src={logo} alt={`${name} logo`} /> : <span>{name?.[0] || 'C'}</span>}
       </div>
@@ -165,7 +165,7 @@ export function InternshipCard({ internship, saved = false, onSave, loading = fa
   const { id, title, company, companyLogo, location, duration, stipend, mode, deadline, tags = [] } = internship;
 
   return (
-    <div className="job-card fade-in">
+    <div className="job-card fade-in hover-lift">
       <div className="job-card-header">
         <div className="job-card-logo">
           {companyLogo ? <img src={companyLogo} alt={`${company} logo`} /> : <span>{company?.[0] || 'I'}</span>}
@@ -231,7 +231,7 @@ export function JobMelaCard({ event, loading = false }) {
   const { id, title, date, venue, city, companies = 0, seats, status } = event;
 
   return (
-    <Link to={`/job-melas/${id}`} className="jobmela-card">
+    <Link to={`/job-melas/${id}`} className="jobmela-card hover-lift">
       <div className="jobmela-card-banner">
         <StatusBadge status={status} size="sm" />
       </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Briefcase, Mail, Lock, Eye, EyeOff, Building2, User, ArrowRight } from 'lucide-react';
+import { Briefcase, Mail, Lock, Eye, EyeOff, Building2, User, ArrowRight, ArrowLeft } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
@@ -29,12 +29,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      background: 'var(--color-bg)',
-    }}>
+    <div className="auth-layout">
       {/* Left branding panel */}
       <div style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 100%)',
@@ -45,14 +40,17 @@ export default function LoginPage() {
         padding: 'var(--space-12)',
         color: '#fff',
       }} className="hide-mobile">
-        <div style={{ maxWidth: 460, textAlign: 'center' }}>
+        <div style={{ maxWidth: 560, textAlign: 'center' }}>
           <div style={{ marginBottom: 'var(--space-6)', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: 72, height: 72, background: 'rgba(255,255,255,0.12)', borderRadius: 'var(--radius-2xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 30px rgba(0,0,0,0.3)' }}>
-              <Briefcase size={36} style={{ color: '#a5b4fc' }} />
+            <div style={{ width: 80, height: 80, background: 'rgba(255,255,255,0.95)', borderRadius: 'var(--radius-2xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 20px 30px rgba(0,0,0,0.3)', padding: 12 }}>
+              <img src="/title_logo.png" alt="NTR Vikasa Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
           </div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', fontWeight: 800, marginBottom: 'var(--space-3)' }}>
-            Welcome back to JobConnect
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-3xl)', fontWeight: 800, marginBottom: 'var(--space-3)', whiteSpace: 'nowrap' }}>
+            <span style={{ color: '#fff' }}>Welcome To </span>
+            <span style={{ color: '#F59E0B' }}>NTR </span>
+            <span style={{ color: '#60A5FA' }}>VIKASA </span>
+            <span style={{ color: '#fff' }}>Job Portal</span>
           </h2>
           <p style={{ opacity: 0.85, lineHeight: 'var(--leading-relaxed)', fontSize: 'var(--text-base)', color: '#cbd5e1' }}>
             Your all-in-one portal for full-time jobs, paid internships, and nationwide Job Melas.
@@ -69,13 +67,20 @@ export default function LoginPage() {
       </div>
 
       {/* Right form panel */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-8) var(--space-6)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-8) var(--space-6)', position: 'relative' }}>
+        
+        {/* Back to Home Link */}
+        <div style={{ position: 'absolute', top: 24, right: 32 }}>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none' }}>
+            <ArrowLeft size={16} /> Home
+          </Link>
+        </div>
+
         <div style={{ width: '100%', maxWidth: 440 }}>
           {/* Mobile Logo */}
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-            <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex' }}>
-              <div className="logo-icon"><Briefcase size={18} /></div>
-              <span className="logo-text">Job<span>Connect</span></span>
+            <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+              <img src="/logo_image.png" alt="NTR Vikasa Logo" style={{ height: '48px', objectFit: 'contain' }} />
             </Link>
           </div>
 

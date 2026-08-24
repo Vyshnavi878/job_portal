@@ -108,3 +108,17 @@ ul, ol { list-style: none; }
   display: flex;
   flex-direction: column;
 }
+
+/* ─── Google Translate Overrides ─── */
+body {
+  top: 0 !important;
+}
+.skiptranslate iframe,
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
+  visibility: hidden !important;
+}
+#goog-gt-tt {
+  display: none !important;
+  visibility: hidden !important;
+}

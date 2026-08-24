@@ -15,9 +15,8 @@ export default function RecruiterApprovalPage() {
     }}>
       <div style={{ width: '100%', maxWidth: 580, textAlign: 'center' }}>
         {/* Logo */}
-        <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', marginBottom: 'var(--space-6)' }}>
-          <div className="logo-icon"><Building2 size={18} /></div>
-          <span className="logo-text">Job<span>Connect</span></span>
+        <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', marginBottom: 'var(--space-6)', alignItems: 'center', textDecoration: 'none' }}>
+          <img src="/logo_image.png" alt="NTR Vikasa Logo" style={{ height: '48px', objectFit: 'contain' }} />
         </Link>
 
         <div className="card" style={{ borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden' }}>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2, User, Mail, Phone, Lock, Globe, MapPin,
-  FileText, ShieldCheck, CheckCircle2, ArrowRight, UploadCloud, Briefcase
+  FileText, ShieldCheck, CheckCircle2, ArrowRight, UploadCloud, Briefcase, ArrowLeft
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import FormField from '../../components/ui/FormField';
@@ -72,13 +72,20 @@ export default function RegisterRecruiterPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)', padding: 'var(--space-10) var(--space-4)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg)', padding: 'var(--space-10) var(--space-4)', position: 'relative' }}>
+      
+      {/* Back to Home Link */}
+      <div className="back-to-home">
+        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none' }}>
+          <ArrowLeft size={16} /> Home
+        </Link>
+      </div>
+
       <div style={{ width: '100%', maxWidth: 740 }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-          <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', marginBottom: 'var(--space-4)' }}>
-            <div className="logo-icon"><Building2 size={18} /></div>
-            <span className="logo-text">Job<span>Connect</span> For Employers</span>
+          <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', marginBottom: 'var(--space-4)', alignItems: 'center', textDecoration: 'none' }}>
+            <img src="/logo_image.png" alt="NTR Vikasa Logo" style={{ height: '48px', objectFit: 'contain' }} />
           </Link>
           <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: 'var(--space-1)' }}>
             Register Your Company as a Recruiter

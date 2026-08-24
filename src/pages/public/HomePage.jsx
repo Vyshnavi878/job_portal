@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import { useToast } from '../../context/ToastContext';
 import {
   Search, MapPin, Briefcase, Building2, GraduationCap, CalendarDays,
   ArrowRight, TrendingUp, Users, CheckCircle2, Award, Sparkles,
-  ChevronRight, ArrowUpRight, ShieldCheck, Clock
+  ChevronRight, ArrowUpRight, ShieldCheck, Clock, ChevronDown
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { JobCard, CompanyCard, InternshipCard, JobMelaCard } from '../../components/ui/EntityCards';
@@ -17,11 +18,25 @@ import {
   WHY_CHOOSE_US,
   LOCATIONS
 } from '../../data/mockData';
+import heroImg from '../../assets/hero.jpg';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const locationDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (locationDropdownRef.current && !locationDropdownRef.current.contains(e.target)) {
+        setLocationDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const { t } = useLanguage();
   const hero = t.hero;
   const wc = t.whyChoose;
@@ -36,7 +51,7 @@ export default function HomePage() {
 
   const featuredJobs = MOCK_JOBS.filter(j => j.isFeatured).slice(0, 3);
   const latestJobs = MOCK_JOBS.slice(0, 6);
-  const topCompanies = MOCK_COMPANIES.slice(0, 6);
+  const topCompanies = MOCK_COMPANIES.slice(0, 8);
   const featuredInternships = MOCK_INTERNSHIPS.slice(0, 3);
   const upcomingJobMelas = MOCK_JOB_MELAS.filter(m => m.status === 'REGISTRATION_OPEN' || m.status === 'UPCOMING').slice(0, 2);
 
@@ -52,11 +67,11 @@ export default function HomePage() {
       {/* ── 1. Hero Section ── */}
       <section style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
-        padding: 'var(--space-20) var(--space-6)',
         position: 'relative',
-        overflow: 'hidden',
       }}>
-        {/* Glow ambient decorations */}
+        {/* Background decorations container */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          {/* Glow ambient decorations */}
         <div style={{
           position: 'absolute', top: -100, right: -100, width: 480, height: 480,
           borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)',
@@ -67,53 +82,71 @@ export default function HomePage() {
           borderRadius: '50%', background: 'radial-gradient(circle, rgba(217,70,239,0.2) 0%, transparent 70%)',
           pointerEvents: 'none', filter: 'blur(30px)'
         }} />
+          <div style={{
+            position: 'absolute', top: 0, right: 0, height: '100%', width: '55%',
+            display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+            pointerEvents: 'none', zIndex: 0, opacity: 0.8
+          }} className="hero-img-wrapper hide-mobile">
+          <img
+            src={heroImg}
+            alt="Hero Background"
+            style={{
+              maxWidth: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at center, black 20%, transparent 75%)',
+              maskImage: 'radial-gradient(ellipse 80% 70% at center, black 20%, transparent 75%)'
+            }}
+          />
+          </div>
+        </div>
 
-        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ textAlign: 'center', maxWidth: 840, margin: '0 auto' }}>
-            <div className="badge badge-primary" style={{
-              marginBottom: 'var(--space-4)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-              color: '#c7d2fe',
-              background: 'rgba(99,102,241,0.2)',
-              border: '1px solid rgba(165,180,252,0.3)',
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-full)'
-            }}>
-              <Sparkles size={14} style={{ color: '#a5b4fc' }} />
-              <span>{hero.badge}</span>
-            </div>
-
-            <h1 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(2.25rem, 5.5vw, 3.75rem)',
-              fontWeight: 800,
-              color: '#ffffff',
-              lineHeight: 1.15,
-              marginBottom: 'var(--space-5)',
-              letterSpacing: '-0.02em',
-            }}>
-              {hero.heading1}<br />
-              <span style={{
-                background: 'linear-gradient(135deg, #a5b4fc 0%, #e0e7ff 50%, #f5d0fe 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
+        <div className="container" style={{ position: 'relative', zIndex: 1, maxWidth: '1300px', padding: 'var(--space-20) var(--space-6)' }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+            <div style={{ textAlign: 'left', maxWidth: 680, marginBottom: 'var(--space-8)' }}>
+              <div className="badge badge-primary" style={{
+                marginBottom: 'var(--space-4)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                color: '#c7d2fe',
+                background: 'rgba(99,102,241,0.2)',
+                border: '1px solid rgba(165,180,252,0.3)',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-full)'
               }}>
-                {hero.heading2}
-              </span>
-            </h1>
+                <Sparkles size={14} style={{ color: '#a5b4fc' }} />
+                <span>{hero.badge}</span>
+              </div>
 
-            <p style={{
-              fontSize: 'var(--text-lg)',
-              color: '#cbd5e1',
-              lineHeight: 'var(--leading-relaxed)',
-              marginBottom: 'var(--space-10)',
-              maxWidth: 680,
-              marginInline: 'auto'
-            }}>
-              {hero.subtext}
-            </p>
+              <h1 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(2.25rem, 5.5vw, 3.75rem)',
+                fontWeight: 800,
+                color: '#ffffff',
+                lineHeight: 1.15,
+                marginBottom: 'var(--space-5)',
+                letterSpacing: '-0.02em',
+              }}>
+                {hero.heading1}<br />
+                <span style={{
+                  background: 'linear-gradient(135deg, #a5b4fc 0%, #e0e7ff 50%, #f5d0fe 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>
+                  {hero.heading2}
+                </span>
+              </h1>
+
+              <p style={{
+                fontSize: 'var(--text-lg)',
+                color: '#cbd5e1',
+                lineHeight: 'var(--leading-relaxed)',
+                maxWidth: 680,
+              }}>
+                {hero.subtext}
+              </p>
+            </div>
 
             {/* Hero Search Bar */}
             <form onSubmit={handleSearchSubmit} className="search-bar" style={{
@@ -122,22 +155,24 @@ export default function HomePage() {
               boxShadow: '0 20px 35px -10px rgba(0,0,0,0.5)',
               border: '1px solid rgba(255,255,255,0.2)'
             }}>
-              <span style={{ padding: '0 var(--space-2) 0 var(--space-5)', color: 'var(--color-text-muted)', display: 'flex' }}>
-                <Search size={20} />
-              </span>
-              <input
-                className="search-bar-input"
-                placeholder={hero.searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                aria-label="Job search"
-              />
+              <div className="search-bar-input-wrapper" style={{ display: 'flex', alignItems: 'center', flex: 1, width: '100%' }}>
+                <span style={{ padding: '0 var(--space-2) 0 var(--space-5)', color: 'var(--color-text-muted)', display: 'flex' }}>
+                  <Search size={20} />
+                </span>
+                <input
+                  className="search-bar-input"
+                  placeholder={hero.searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Job search"
+                />
+              </div>
               <div className="search-bar-divider" />
-              <div style={{ display: 'flex', alignItems: 'center', padding: '0 var(--space-3)' }}>
+              <div ref={locationDropdownRef} style={{ display: 'flex', alignItems: 'center', padding: '0 var(--space-3)', position: 'relative' }}>
                 <MapPin size={18} style={{ color: 'var(--color-text-muted)', marginRight: 6 }} />
-                <select
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
+                <button
+                  type="button"
+                  onClick={() => setLocationDropdownOpen(!locationDropdownOpen)}
                   style={{
                     border: 'none',
                     background: 'transparent',
@@ -146,18 +181,82 @@ export default function HomePage() {
                     fontWeight: 500,
                     cursor: 'pointer',
                     outline: 'none',
-                    padding: '8px 4px'
+                    padding: '8px 4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                   }}
                   aria-label="Filter location"
                 >
-                  <option value="">{hero.allLocations}</option>
-                  {LOCATIONS.filter(l => l !== 'All Locations').map(loc => (
-                    <option key={loc} value={loc}>{loc}</option>
-                  ))}
-                </select>
+                  <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {selectedLocation || 'All Locations'}
+                  </span>
+                  <ChevronDown size={14} style={{ color: 'var(--color-text-muted)', transform: locationDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
+                </button>
+
+                {locationDropdownOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      left: 0, // Align dropdown to the left of the button container
+                      width: 240,
+                      background: 'var(--color-surface)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-xl)',
+                      boxShadow: 'var(--shadow-xl)',
+                      padding: 'var(--space-2)',
+                      zIndex: 200,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      maxHeight: '300px', // About 8 items height
+                      overflowY: 'auto'
+                    }}
+                    className="custom-scrollbar"
+                  >
+                    {LOCATIONS.map((loc) => {
+                      const isSelected = selectedLocation === loc || (!selectedLocation && loc === 'All Locations');
+                      return (
+                        <button
+                          key={loc}
+                          type="button"
+                          onClick={() => {
+                            setSelectedLocation(loc === 'All Locations' ? '' : loc);
+                            setLocationDropdownOpen(false);
+                          }}
+                          style={{
+                            textAlign: 'left',
+                            padding: '10px 12px',
+                            borderRadius: 'var(--radius-lg)',
+                            background: isSelected ? 'var(--color-primary-50)' : 'transparent',
+                            color: isSelected ? 'var(--color-primary-600)' : 'var(--color-text)',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: 'var(--text-sm)',
+                            fontWeight: isSelected ? 600 : 500,
+                            transition: 'background 150ms ease, color 150ms ease'
+                          }}
+                          onMouseOver={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.background = 'var(--color-gray-50)';
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.background = 'transparent';
+                            }
+                          }}
+                        >
+                          {loc}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <button type="submit" className="search-bar-btn">
-                <Search size={16} /> {hero.searchBtn}
+                {hero.searchBtn}
               </button>
             </form>
 
@@ -186,6 +285,7 @@ export default function HomePage() {
 
             {/* NTR Vikasa organisation identity */}
             <p style={{
+              textAlign: 'center',
               marginTop: 'var(--space-8)',
               fontSize: 'var(--text-xs)',
               color: 'rgba(148,163,184,0.75)',
@@ -274,38 +374,42 @@ export default function HomePage() {
                 <Users size={20} />,
               ];
               return (
-              <div
-                key={item.title}
-                className="card why-choose-card"
-                style={{
-                  borderRadius: 'var(--radius-xl)',
-                  padding: 'var(--space-4)',
-                  border: '1px solid var(--color-border)',
-                  boxShadow: 'var(--shadow-sm)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textAlign: 'center',
-                  gap: 'var(--space-2)',
-                }}
-              >
-                <div style={{
-                  width: 44, height: 44,
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'var(--color-primary-50)',
-                  color: 'var(--color-primary-600)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  {icons[i]}
-                </div>
-                <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
-                  {item.title}
-                </h3>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.4 }}>
-                  {item.desc}
-                </p>
-              </div>
+                <button
+                  key={item.title}
+                  type="button"
+                  onClick={() => toast({ type: 'success', title: 'Feedback Received', message: 'Thank you for the reply, that helps us.' })}
+                  className="card why-choose-card hover-lift"
+                  style={{
+                    borderRadius: 'var(--radius-xl)',
+                    padding: 'var(--space-4)',
+                    border: '1px solid var(--color-border)',
+                    boxShadow: 'var(--shadow-sm)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    gap: 'var(--space-2)',
+                    background: 'var(--color-surface)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{
+                    width: 44, height: 44,
+                    borderRadius: 'var(--radius-lg)',
+                    background: 'var(--color-primary-50)',
+                    color: 'var(--color-primary-600)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    {icons[i]}
+                  </div>
+                  <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
+                    {item.title}
+                  </h3>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.4 }}>
+                    {item.desc}
+                  </p>
+                </button>
               );
             })}          </div>
         </div>

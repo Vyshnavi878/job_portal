@@ -683,3 +683,26 @@
   }
 }
 
+
+/* ── Why Choose Our Job Portal — responsive grid ── */
+/* Desktop default: 6 columns (set inline in JSX)   */
+
+@media (max-width: 1024px) {
+  .why-choose-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .why-choose-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .why-choose-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+

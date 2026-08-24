@@ -160,7 +160,7 @@ export default function HomePage() {
             {/* Quick skill pills */}
             <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
               <span style={{ color: '#94a3b8', fontSize: 'var(--text-xs)', marginRight: 4 }}>Popular Searches:</span>
-              {['React', 'Python', 'Java', 'Data Science', 'Figma', 'Fintech', 'Freshers'].map((tag) => (
+              {['React', 'Python', 'Java', 'Data Science', 'Figma', 'Fintech', 'Freshers', 'Remote'].map((tag) => (
                 <Link
                   key={tag}
                   to={`/jobs?q=${tag}`}
@@ -179,6 +179,18 @@ export default function HomePage() {
                 </Link>
               ))}
             </div>
+
+            {/* NTR Vikasa organisation identity */}
+            <p style={{
+              marginTop: 'var(--space-8)',
+              fontSize: 'var(--text-xs)',
+              color: 'rgba(148,163,184,0.75)',
+              letterSpacing: '0.03em'
+            }}>
+              Powered by{' '}
+              <span style={{ color: '#a5b4fc', fontWeight: 700 }}>NTR Vikasa</span>
+              {' '}—{' '}Society for Employment Generation
+            </p>
           </div>
         </div>
       </section>
@@ -208,6 +220,84 @@ export default function HomePage() {
                 </p>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)', fontWeight: 500 }}>
                   {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Why Choose Our Job Portal? ── */}
+      <section style={{ padding: 'var(--space-16) 0', background: 'var(--color-bg)' }}>
+        <div className="container">
+          {/* Section header */}
+          <div style={{ textAlign: 'center', marginBottom: 'var(--space-10)' }}>
+            <h2 style={{
+              fontSize: 'clamp(1.5rem, 3vw, var(--text-3xl))',
+              fontWeight: 800,
+              color: 'var(--color-text)',
+              lineHeight: 1.2,
+            }}>
+              Why Choose Our{' '}
+              <span style={{ color: 'var(--color-primary-600)' }}>Job Portal?</span>
+            </h2>
+            <p style={{
+              marginTop: 'var(--space-3)',
+              color: 'var(--color-text-muted)',
+              fontSize: 'var(--text-base)',
+              maxWidth: 560,
+              marginInline: 'auto',
+            }}>
+              Connecting candidates, recruiters, internships, training opportunities, and Job Melas in one platform.
+            </p>
+          </div>
+
+          {/* Feature cards — 6-col desktop · 3-col tablet · 2-col mobile · 1-col xs */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(6, 1fr)',
+            gap: 'var(--space-4)',
+          }}
+            className="why-choose-grid"
+          >
+            {[
+              { icon: <ShieldCheck size={20} />, title: 'Trusted Opportunities', desc: 'Verified opportunities' },
+              { icon: <GraduationCap size={20} />, title: 'Skill Development',    desc: 'Build your skills' },
+              { icon: <CalendarDays size={20} />, title: 'Job Melas',             desc: 'Find career events' },
+              { icon: <ArrowUpRight size={20} />, title: 'Easy Applications',     desc: 'Apply with ease' },
+              { icon: <TrendingUp size={20} />,   title: 'Application Tracking',  desc: 'Track your progress' },
+              { icon: <Users size={20} />,        title: 'Candidate Support',      desc: 'Get career support' },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="card why-choose-card"
+                style={{
+                  borderRadius: 'var(--radius-xl)',
+                  padding: 'var(--space-4)',
+                  border: '1px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-sm)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  gap: 'var(--space-2)',
+                }}
+              >
+                <div style={{
+                  width: 44, height: 44,
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--color-primary-50)',
+                  color: 'var(--color-primary-600)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  {item.icon}
+                </div>
+                <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
+                  {item.title}
+                </h3>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.4 }}>
+                  {item.desc}
                 </p>
               </div>
             ))}

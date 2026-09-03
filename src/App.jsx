@@ -23,6 +23,8 @@ import InternshipDetailPage   from './pages/public/InternshipDetailPage';
 import JobMelasPage           from './pages/public/JobMelasPage';
 import JobMelaDetailPage      from './pages/public/JobMelaDetailPage';
 import TrainingPage           from './pages/public/TrainingPage';
+import SkillDevelopmentOverviewPage from './pages/public/SkillDevelopmentOverviewPage';
+import SkillCoursesPage       from './pages/public/SkillCoursesPage';
 import AboutPage              from './pages/public/AboutPage';
 import ContactPage            from './pages/public/ContactPage';
 import PrivacyPage            from './pages/public/PrivacyPage';
@@ -98,7 +100,11 @@ export default function App() {
               <Route path="/internships/:id"           element={<InternshipDetailPage />} />
               <Route path="/job-melas"                 element={<JobMelasPage />} />
               <Route path="/job-melas/:id"             element={<JobMelaDetailPage />} />
-              <Route path="/training"                  element={<TrainingPage />} />
+              <Route path="/skill-development"          element={<SkillDevelopmentOverviewPage />} />
+              <Route path="/skill-development/overview" element={<SkillDevelopmentOverviewPage />} />
+              <Route path="/skill-development/courses"  element={<SkillCoursesPage />} />
+              <Route path="/training"                  element={<SkillDevelopmentOverviewPage />} />
+              <Route path="/training/courses"          element={<SkillCoursesPage />} />
               <Route path="/about"                     element={<AboutPage />} />
               <Route path="/contact"                   element={<ContactPage />} />
               <Route path="/privacy"                   element={<PrivacyPage />} />
@@ -122,6 +128,7 @@ export default function App() {
               <Route path="applications" element={<CandidateApplicationsPage />} />
               <Route path="saved-jobs"   element={<CandidateSavedJobsPage />} />
               <Route path="job-mela"     element={<CandidateJobMelaPage />} />
+              <Route path="job-melas"    element={<CandidateJobMelaPage />} />
               <Route path="notifications"element={<CandidateNotificationsPage />} />
               <Route path="settings"     element={<CandidateSettingsPage />} />
             </Route>

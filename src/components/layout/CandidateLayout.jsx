@@ -1,24 +1,23 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, User, FileText, Bookmark, CalendarDays,
-  Bell, Settings, LogOut, Briefcase,
+  LayoutDashboard, Briefcase, BookOpen, Bookmark, FileText,
+  CalendarDays, HelpCircle
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import PortalHeader from './PortalHeader';
 import { SidebarProvider } from '../../context/SidebarContext';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',       href: '/candidate/dashboard',     icon: <LayoutDashboard size={18} />, end: true },
-  { label: 'My Profile',      href: '/candidate/profile',       icon: <User size={18} /> },
-  { label: 'Applications',    href: '/candidate/applications',  icon: <FileText size={18} /> },
-  { label: 'Saved Jobs',      href: '/candidate/saved-jobs',    icon: <Bookmark size={18} /> },
-  { label: 'Job Mela',        href: '/candidate/job-mela',      icon: <CalendarDays size={18} /> },
-  { label: 'Notifications',   href: '/candidate/notifications', icon: <Bell size={18} /> },
-];
+  // MAIN
+  { section: 'MAIN', label: 'Dashboard',       href: '/candidate/dashboard',    icon: <LayoutDashboard size={18} />, end: true },
+  { section: 'MAIN', label: 'Jobs',            href: '/jobs',                   icon: <Briefcase size={18} /> },
+  { section: 'MAIN', label: 'Internships',     href: '/internships',            icon: <BookOpen size={18} /> },
+  { section: 'MAIN', label: 'Saved Jobs',      href: '/candidate/saved-jobs',   icon: <Bookmark size={18} /> },
+  { section: 'MAIN', label: 'My Applications', href: '/candidate/applications', icon: <FileText size={18} /> },
+  { section: 'MAIN', label: 'Job Melas',       href: '/candidate/job-mela',     icon: <CalendarDays size={18} /> },
 
-const FOOTER_ITEMS = [
-  { label: 'Settings', href: '/candidate/settings', icon: <Settings size={18} /> },
-  { label: 'Log Out',  href: '/login',               icon: <LogOut size={18} /> },
+  // SUPPORT
+  { section: 'SUPPORT', label: 'Help & Support', href: '/contact',              icon: <HelpCircle size={18} /> },
 ];
 
 // Mock user — replace with real auth context when ready
@@ -30,7 +29,7 @@ function getPageTitle(pathname) {
     '/candidate/profile':      'My Profile',
     '/candidate/applications': 'My Applications',
     '/candidate/saved-jobs':   'Saved Jobs',
-    '/candidate/job-mela':     'Job Mela',
+    '/candidate/job-mela':     'Job Melas',
     '/candidate/notifications':'Notifications',
     '/candidate/settings':     'Settings',
   };
@@ -46,8 +45,6 @@ export default function CandidateLayout() {
       <div className="portal-layout">
         <Sidebar
           navItems={NAV_ITEMS}
-          footerItems={FOOTER_ITEMS}
-          user={MOCK_USER}
           portalName="Candidate"
         />
         <div className="portal-main">

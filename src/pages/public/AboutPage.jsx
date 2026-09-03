@@ -4,6 +4,7 @@ import {
   Target, Sparkles, Award, Heart, ArrowRight, CheckCircle2
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
+import CardCarousel from '../../components/ui/CardCarousel';
 import { MOCK_STATS, WHY_CHOOSE_US } from '../../data/mockData';
 
 export default function AboutPage() {
@@ -116,15 +117,34 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 'var(--space-6)' }}>
-          {leadershipTeam.map((member) => (
-            <div key={member.name} className="card" style={{ padding: 'var(--space-6)', borderRadius: 'var(--radius-2xl)', textAlign: 'center' }}>
+        <CardCarousel
+          items={leadershipTeam}
+          desktopItems={4}
+          tabletItems={2}
+          mobileItems={1}
+          gap={20}
+          renderItem={(member) => (
+            <div
+              key={member.name}
+              className="card"
+              style={{
+                padding: 'var(--space-6)',
+                borderRadius: 'var(--radius-2xl)',
+                textAlign: 'center',
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-start'
+              }}
+            >
               <div style={{
                 width: 72, height: 72, borderRadius: 'var(--radius-full)',
                 background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-accent-500))',
                 color: '#fff', fontSize: 'var(--text-2xl)', fontWeight: 800,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto var(--space-4)'
+                margin: '0 auto var(--space-4)',
+                flexShrink: 0
               }}>
                 {member.name[0]}
               </div>
@@ -132,8 +152,8 @@ export default function AboutPage() {
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>{member.role}</p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>{member.bio}</p>
             </div>
-          ))}
-        </div>
+          )}
+        />
       </section>
 
       {/* ── Bottom CTA ── */}

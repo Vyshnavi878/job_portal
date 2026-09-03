@@ -46,7 +46,7 @@ export default function PortalHeader({ title, breadcrumb, user, actions }) {
   const userMenuItems = [
     { label: `${user?.name || 'User'} (${user?.role || 'Portal'})`, header: `${user?.name || 'User'} (${user?.role || 'Portal'})` },
     { label: isRecruiter ? 'Company Profile' : 'My Profile', icon: <User size={15} />, onClick: () => navigate(profileLink) },
-    { label: 'Account Settings', icon: <Settings size={15} />, onClick: () => navigate(settingsLink) },
+    { label: 'Settings', icon: <Settings size={15} />, onClick: () => navigate(settingsLink) },
     { divider: true },
     { label: 'Log Out', icon: <LogOut size={15} />, danger: true, onClick: () => navigate('/login') },
   ];

@@ -6,7 +6,7 @@ const FOOTER_LINKS = {
     { label: 'Browse Jobs',           href: '/jobs' },
     { label: 'Internships',           href: '/internships' },
     { label: 'Job Melas',             href: '/job-melas' },
-    { label: 'Training Programs',     href: '/training' },
+    { label: 'Training Programs',     href: '/skill-development/courses' },
     { label: 'Companies',             href: '/companies' },
     { label: 'Register as Candidate', href: '/register/candidate' },
   ],
@@ -18,7 +18,7 @@ const FOOTER_LINKS = {
   ],
   'Company': [
     { label: 'About Us',          href: '/about' },
-    { label: 'Skill Development', href: '/training' },
+    { label: 'Skill Development', href: '/skill-development' },
     { label: 'Contact & Helpdesk',href: '/contact' },
     { label: 'Privacy Policy',    href: '/privacy' },
     { label: 'Terms of Service',  href: '/terms' },

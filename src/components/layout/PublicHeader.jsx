@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Menu, X, Briefcase, Building2, BookOpen, CalendarDays,
-  GraduationCap, ChevronDown, User, UserPlus, Info, Sparkles, Globe, Home
+  ChevronDown, User, UserPlus, Info, Sparkles, Globe, Home, ExternalLink
 } from 'lucide-react';
 import Button from '../ui/Button';
 import { useLanguage } from '../../context/LanguageContext';
@@ -10,22 +10,24 @@ import { useLanguage } from '../../context/LanguageContext';
 export default function PublicHeader() {
   const { t, toggle, lang } = useLanguage();
   const nav = t.nav;
+  const location = useLocation();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [getStartedOpen, setGetStartedOpen] = useState(false);
   const [aboutDropdownOpen, setAboutDropdownOpen] = useState(false);
+  const [mobileAboutOpen, setMobileAboutOpen] = useState(false);
 
   const getStartedRef = useRef(null);
   const aboutRef = useRef(null);
 
   // Nav links built from translations so they update on language switch
   const NAV_LINKS = [
-    { label: nav.home,        href: '/',            icon: <Home size={16} /> },
-    { label: nav.jobs,        href: '/jobs',        icon: <Briefcase size={16} /> },
-    { label: nav.internships, href: '/internships', icon: <BookOpen size={16} /> },
-    { label: nav.companies,   href: '/companies',   icon: <Building2 size={16} /> },
-    { label: nav.jobMelas,    href: '/job-melas',   icon: <CalendarDays size={16} /> },
-    { label: nav.training,    href: '/training',    icon: <GraduationCap size={16} /> },
+    { label: nav.home,        href: '/',                  icon: <Home size={16} /> },
+    { label: nav.jobs,        href: '/jobs',              icon: <Briefcase size={16} /> },
+    { label: nav.internships, href: '/internships',       icon: <BookOpen size={16} /> },
+    { label: nav.companies,   href: '/companies',         icon: <Building2 size={16} /> },
+    { label: nav.jobMelas,    href: '/job-melas',         icon: <CalendarDays size={16} /> },
+    { label: nav.skillDev,    href: '/skill-development', icon: <Sparkles size={16} /> },
   ];
 
   // Close dropdowns on outside click
@@ -53,17 +55,22 @@ export default function PublicHeader() {
 
           {/* ── 2. Desktop Navigation ── */}
           <nav className="public-nav" aria-label="Main navigation">
-            {NAV_LINKS.map((link) => (
-              <NavLink
-                key={link.href}
-                to={link.href}
-                className={({ isActive }) =>
-                  `public-nav-link ${isActive ? 'active' : ''}`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+            {NAV_LINKS.map((link) => {
+              const isSkillDevActive = link.href === '/skill-development' && (
+                location.pathname.startsWith('/skill-development') || location.pathname.startsWith('/training')
+              );
+              return (
+                <NavLink
+                  key={link.href}
+                  to={link.href}
+                  className={({ isActive }) =>
+                    `public-nav-link ${isActive || isSkillDevActive ? 'active' : ''}`
+                  }
+                >
+                  {link.label}
+                </NavLink>
+              );
+            })}
 
             {/* About Dropdown */}
             <div
@@ -72,16 +79,24 @@ export default function PublicHeader() {
               onMouseEnter={() => setAboutDropdownOpen(true)}
               onMouseLeave={() => setAboutDropdownOpen(false)}
             >
-              <NavLink
-                to="/about"
-                className={({ isActive }) =>
-                  `public-nav-link ${isActive ? 'active' : ''}`
-                }
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                onClick={() => { setAboutDropdownOpen((v) => !v); }}
+              <button
+                type="button"
+                className={`public-nav-link ${location.pathname.startsWith('/about') ? 'active' : ''}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  font: 'inherit'
+                }}
+                onClick={() => setAboutDropdownOpen((v) => !v)}
+                aria-expanded={aboutDropdownOpen}
+                aria-haspopup="true"
               >
                 {nav.about} <ChevronDown size={14} style={{ opacity: 0.7, transform: aboutDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
-              </NavLink>
+              </button>
 
               {aboutDropdownOpen && (
                 <div
@@ -91,7 +106,7 @@ export default function PublicHeader() {
                     top: 'calc(100% + 4px)',
                     left: 0,
                     right: 'auto',
-                    minWidth: 220,
+                    minWidth: 230,
                     background: 'var(--color-surface)',
                     border: '1px solid var(--color-border)',
                     borderRadius: 'var(--radius-xl)',
@@ -116,31 +131,20 @@ export default function PublicHeader() {
                     </div>
                   </Link>
 
-                  <Link
-                    to="/training"
+                  <a
+                    href="https://naipunyam.ap.gov.in/"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="dropdown-item"
                     onClick={() => setAboutDropdownOpen(false)}
                     style={{ padding: '8px 12px', fontSize: 'var(--text-sm)' }}
                   >
-                    <GraduationCap size={16} style={{ color: 'var(--color-primary-600)' }} />
+                    <ExternalLink size={16} style={{ color: 'var(--color-primary-600)' }} />
                     <div>
-                      <p style={{ fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{nav.skillDev}</p>
-                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{nav.skillDevDesc}</p>
+                      <p style={{ fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{nav.trainingPrograms}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{nav.trainingProgramsDesc}</p>
                     </div>
-                  </Link>
-
-                  <Link
-                    to="/training"
-                    className="dropdown-item"
-                    onClick={() => setAboutDropdownOpen(false)}
-                    style={{ padding: '8px 12px', fontSize: 'var(--text-sm)' }}
-                  >
-                    <Sparkles size={16} style={{ color: 'var(--color-accent-600)' }} />
-                    <div>
-                      <p style={{ fontWeight: 600, color: 'var(--color-text)', lineHeight: 1.2 }}>{nav.training2}</p>
-                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{nav.training2Desc}</p>
-                    </div>
-                  </Link>
+                  </a>
                 </div>
               )}
             </div>
@@ -278,25 +282,85 @@ export default function PublicHeader() {
             </div>
 
             <div className="mobile-nav-links">
-              {NAV_LINKS.map((link) => (
-                <NavLink
-                  key={link.href}
-                  to={link.href}
-                  className={({ isActive }) =>
-                    `mobile-nav-link ${isActive ? 'active' : ''}`
-                  }
-                  onClick={() => setMenuOpen(false)}
+              {NAV_LINKS.map((link) => {
+                const isSkillDevActive = link.href === '/skill-development' && (
+                  location.pathname.startsWith('/skill-development') || location.pathname.startsWith('/training')
+                );
+                return (
+                  <NavLink
+                    key={link.href}
+                    to={link.href}
+                    className={({ isActive }) =>
+                      `mobile-nav-link ${isActive || isSkillDevActive ? 'active' : ''}`
+                    }
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {link.icon}
+                    {link.label}
+                  </NavLink>
+                );
+              })}
+
+              {/* About Collapsible */}
+              <div>
+                <button
+                  type="button"
+                  className={`mobile-nav-link ${location.pathname === '/about' ? 'active' : ''}`}
+                  onClick={() => setMobileAboutOpen((v) => !v)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    font: 'inherit',
+                    textAlign: 'left'
+                  }}
                 >
-                  {link.icon}
-                  {link.label}
-                </NavLink>
-              ))}
-              <NavLink to="/about" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>
-                <Info size={16} /> {nav.aboutUs}
-              </NavLink>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                    <Info size={16} />
+                    {nav.about}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    style={{
+                      transform: mobileAboutOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 150ms ease'
+                    }}
+                  />
+                </button>
+                {mobileAboutOpen && (
+                  <div style={{ paddingLeft: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 'var(--space-2)' }}>
+                    <NavLink
+                      to="/about"
+                      className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}
+                      onClick={() => setMenuOpen(false)}
+                      style={{ fontSize: 'var(--text-sm)', padding: 'var(--space-2) var(--space-3)' }}
+                    >
+                      <Info size={14} />
+                      {nav.aboutUs}
+                    </NavLink>
+                    <a
+                      href="https://naipunyam.ap.gov.in/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mobile-nav-link"
+                      onClick={() => setMenuOpen(false)}
+                      style={{ fontSize: 'var(--text-sm)', padding: 'var(--space-2) var(--space-3)' }}
+                    >
+                      <ExternalLink size={14} />
+                      {nav.trainingPrograms}
+                    </a>
+                  </div>
+                )}
+              </div>
+
               <NavLink to="/contact" className="mobile-nav-link" onClick={() => setMenuOpen(false)}>
                 <UserPlus size={16} /> {nav.contactSupport}
               </NavLink>
+
               {/* Language toggle in mobile drawer */}
               <button
                 className="mobile-nav-link notranslate"
@@ -312,7 +376,7 @@ export default function PublicHeader() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
-                  padding: 0,
+                  padding: 'var(--space-3)',
                 }}
                 aria-label={lang === 'en' ? 'Switch to Telugu' : 'Switch to English'}
               >

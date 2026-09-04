@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Users, Search, Filter, Eye, ShieldAlert, ShieldCheck,
-  Building2, Briefcase, Mail, Phone, MapPin, MoreVertical,
-  CheckCircle2, XCircle, AlertTriangle
+  Building2, Briefcase, Mail, Phone, MapPin, CheckCircle2,
+  XCircle, AlertTriangle, FileText
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -11,84 +10,12 @@ import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
-
-const INITIAL_RECRUITERS = [
-  {
-    id: 'REC-01',
-    name: 'Rahul Mehta',
-    designation: 'Senior Talent Acquisition Lead',
-    email: 'rahul.mehta@techcorp-india.example.com',
-    phone: '+91 80 4920 1000',
-    company: 'TechCorp India Technologies Pvt Ltd',
-    industry: 'Information Technology',
-    location: 'Bengaluru, Karnataka',
-    activeJobsCount: 6,
-    totalApplicantsHired: 18,
-    status: 'APPROVED',
-    joinedDate: '2025-11-12',
-  },
-  {
-    id: 'REC-02',
-    name: 'Kavita Menon',
-    designation: 'HR Business Partner',
-    email: 'kavita.menon@flipkart.example.com',
-    phone: '+91 80 6798 1234',
-    company: 'Flipkart India',
-    industry: 'E-Commerce',
-    location: 'Bengaluru, Karnataka',
-    activeJobsCount: 14,
-    totalApplicantsHired: 42,
-    status: 'APPROVED',
-    joinedDate: '2025-06-18',
-  },
-  {
-    id: 'REC-03',
-    name: 'Sameer Sen',
-    designation: 'Director Recruiting',
-    email: 'sameer.sen@infosys.example.com',
-    phone: '+91 80 2852 0261',
-    company: 'Infosys Ltd',
-    industry: 'Information Technology',
-    location: 'Bengaluru, Karnataka',
-    activeJobsCount: 22,
-    totalApplicantsHired: 89,
-    status: 'APPROVED',
-    joinedDate: '2025-01-10',
-  },
-  {
-    id: 'REC-04',
-    name: 'Pooja Nair',
-    designation: 'Staffing Specialist',
-    email: 'pooja.nair@cryptotrading.example.com',
-    phone: '+91 98765 43219',
-    company: 'Crypto Trading Global',
-    industry: 'Financial Services',
-    location: 'Remote',
-    activeJobsCount: 0,
-    totalApplicantsHired: 0,
-    status: 'SUSPENDED',
-    joinedDate: '2026-03-15',
-  },
-  {
-    id: 'REC-05',
-    name: 'Deepak Varma',
-    designation: 'Tech Recruiter',
-    email: 'deepak.varma@fakefirm.example.com',
-    phone: '+91 91234 56789',
-    company: 'Fake Consultants India',
-    industry: 'Consulting',
-    location: 'Noida, Uttar Pradesh',
-    activeJobsCount: 0,
-    totalApplicantsHired: 0,
-    status: 'REJECTED',
-    joinedDate: '2026-08-01',
-  },
-];
+import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminRecruitersPage() {
-  const { toast } = useToast();
+  const { addToast } = useToast();
+  const { recruiters, verifyRecruiter, suspendRecruiter, activateRecruiter } = useAdmin();
 
-  const [recruiters, setRecruiters] = useState(INITIAL_RECRUITERS);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
@@ -99,102 +26,186 @@ export default function AdminRecruitersPage() {
   // Suspend Dialog
   const [suspendTarget, setSuspendTarget] = useState(null);
 
-  const filterTabs = [
-    { key: 'ALL', label: 'All Recruiters' },
-    { key: 'APPROVED', label: 'Approved & Active' },
-    { key: 'PENDING', label: 'Pending Verification' },
-    { key: 'SUSPENDED', label: 'Suspended' },
-    { key: 'REJECTED', label: 'Rejected' },
-  ];
-
   const filtered = useMemo(() => {
     return recruiters.filter((r) => {
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (!r.name.toLowerCase().includes(q) && !r.company.toLowerCase().includes(q) && !r.email.toLowerCase().includes(q)) {
-          return false;
-        }
+        const matchesName = r.name?.toLowerCase().includes(q);
+        const matchesEmail = r.email?.toLowerCase().includes(q);
+        const matchesCompany = r.company?.toLowerCase().includes(q);
+        const matchesDesignation = r.designation?.toLowerCase().includes(q);
+        if (!matchesName && !matchesEmail && !matchesCompany && !matchesDesignation) return false;
       }
-      if (statusFilter !== 'ALL' && r.status !== statusFilter) return false;
+      if (statusFilter !== 'ALL') {
+        if (statusFilter === 'VERIFIED' && r.verificationStatus !== 'VERIFIED') return false;
+        if (statusFilter === 'PENDING' && r.verificationStatus !== 'PENDING') return false;
+        if (statusFilter === 'SUSPENDED' && r.accountStatus !== 'SUSPENDED') return false;
+      }
       return true;
     });
   }, [recruiters, search, statusFilter]);
 
+  const handleVerify = (r) => {
+    verifyRecruiter(r.id);
+    addToast(`${r.name} (${r.company}) has been marked as VERIFIED.`, 'success');
+  };
+
   const handleActivate = (r) => {
-    setRecruiters(recruiters.map(item => item.id === r.id ? { ...item, status: 'APPROVED' } : item));
-    toast({ type: 'success', title: 'Recruiter Activated', message: `${r.name} has been activated.` });
+    activateRecruiter(r.id);
+    addToast(`${r.name} account is now ACTIVE.`, 'success');
   };
 
   const handleConfirmSuspend = () => {
     if (!suspendTarget) return;
-    setRecruiters(recruiters.map(item => item.id === suspendTarget.id ? { ...item, status: 'SUSPENDED' } : item));
-    toast({ type: 'error', title: 'Recruiter Suspended', message: `${suspendTarget.name} has been suspended.` });
+    suspendRecruiter(suspendTarget.id);
+    addToast(`Recruiter account for ${suspendTarget.name} has been SUSPENDED.`, 'error');
     setSuspendTarget(null);
   };
 
   const columns = [
     {
       key: 'name',
-      label: 'Recruiter & Company',
+      label: 'Recruiter',
+      sortable: true,
+      render: (_, row) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <div style={{
+            width: 38,
+            height: 38,
+            borderRadius: 'var(--radius-lg)',
+            background: 'linear-gradient(135deg, #4338ca, #7c3aed)',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            fontSize: 'var(--text-sm)'
+          }}>
+            {row.name?.[0] || 'R'}
+          </div>
+          <div>
+            <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{row.name}</strong>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.designation || 'Talent Acquisition'}</span>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block' }}>{row.email}</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'company',
+      label: 'Company',
       sortable: true,
       render: (_, row) => (
         <div>
-          <strong style={{ fontSize: 'var(--text-sm)' }}>{row.name}</strong>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.company}</p>
-          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{row.designation}</p>
+          <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{row.company}</strong>
+          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>{row.industry || 'IT & Services'}</span>
+          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>📍 {row.location || 'India'}</span>
         </div>
       )
     },
     {
-      key: 'email',
-      label: 'Contact Info',
-      render: (_, row) => (
-        <div style={{ fontSize: 'var(--text-xs)' }}>
-          <p>{row.email}</p>
-          <p style={{ color: 'var(--color-text-muted)' }}>{row.phone}</p>
-        </div>
-      )
-    },
-    {
-      key: 'activeJobsCount',
-      label: 'Jobs & Hires',
+      key: 'registrationDate',
+      label: 'Registration Date',
       sortable: true,
-      render: (_, row) => (
-        <div style={{ fontSize: 'var(--text-xs)' }}>
-          <span className="badge badge-primary">{row.activeJobsCount} Active Jobs</span>
-          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: 2 }}>{row.totalApplicantsHired} Hired</p>
-        </div>
+      render: (v) => (
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+          {v ? new Date(v).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Aug 2026'}
+        </span>
       )
     },
     {
-      key: 'status',
-      label: 'Status',
-      render: (v) => <StatusBadge status={v} />
+      key: 'verificationStatus',
+      label: 'Verification Status',
+      render: (v) => {
+        const isVerified = v === 'VERIFIED';
+        return (
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '3px 8px',
+            borderRadius: 'var(--radius-full)',
+            background: isVerified ? '#ecfdf5' : '#fffbeb',
+            color: isVerified ? '#047857' : '#b45309',
+            border: isVerified ? '1px solid #a7f3d0' : '1px solid #fde68a',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4
+          }}>
+            {isVerified ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
+            {v || 'PENDING'}
+          </span>
+        );
+      }
+    },
+    {
+      key: 'accountStatus',
+      label: 'Account Status',
+      render: (v) => {
+        const isActive = v === 'ACTIVE';
+        return (
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '3px 8px',
+            borderRadius: 'var(--radius-full)',
+            background: isActive ? '#f0fdf4' : '#fef2f2',
+            color: isActive ? '#15803d' : '#b91c1c',
+            border: isActive ? '1px solid #bbf7d0' : '1px solid #fecaca',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4
+          }}>
+            {isActive ? <ShieldCheck size={12} /> : <ShieldAlert size={12} />}
+            {v || 'ACTIVE'}
+          </span>
+        );
+      }
     },
     {
       key: 'actions',
       label: 'Actions',
       render: (_, row) => (
         <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-          <Button size="xs" variant="outline" leftIcon={<Eye size={12} />} onClick={() => { setSelectedRecruiter(row); setViewModalOpen(true); }}>
-            Profile
+          <Button
+            size="xs"
+            variant="outline"
+            leftIcon={<Eye size={13} />}
+            onClick={() => {
+              setSelectedRecruiter(row);
+              setViewModalOpen(true);
+            }}
+          >
+            View
           </Button>
 
-          <Link to="/admin/jobs">
-            <Button size="xs" variant="ghost" title="View Recruiter Jobs">
-              <Briefcase size={13} />
+          {row.verificationStatus === 'PENDING' && (
+            <Button
+              size="xs"
+              variant="primary"
+              leftIcon={<CheckCircle2 size={12} />}
+              onClick={() => handleVerify(row)}
+            >
+              Verify
             </Button>
-          </Link>
+          )}
 
-          {row.status === 'APPROVED' ? (
-            <Button size="xs" variant="danger" onClick={() => setSuspendTarget(row)} title="Suspend Recruiter">
+          {row.accountStatus === 'ACTIVE' ? (
+            <Button
+              size="xs"
+              variant="danger"
+              onClick={() => setSuspendTarget(row)}
+            >
               Suspend
             </Button>
-          ) : row.status === 'SUSPENDED' ? (
-            <Button size="xs" variant="secondary" onClick={() => handleActivate(row)} title="Activate Recruiter">
+          ) : (
+            <Button
+              size="xs"
+              variant="secondary"
+              onClick={() => handleActivate(row)}
+            >
               Activate
             </Button>
-          ) : null}
+          )}
         </div>
       )
     }
@@ -208,144 +219,203 @@ export default function AdminRecruitersPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
-              <Users size={20} style={{ color: 'var(--color-primary-600)' }} />
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Recruiter Directory & Management</h1>
+              <Building2 size={20} style={{ color: 'var(--color-primary-600)' }} />
+              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Registered Recruiters Management</h1>
             </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-              Manage corporate hiring managers, suspend rogue accounts, and audit recruitment activities
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Audit employer profiles, verify organizational authorizations, and govern platform recruiters.
             </p>
           </div>
 
-          <Link to="/admin/recruiters/requests">
-            <Button variant="primary" size="sm">
-              View Verification Queue
-            </Button>
-          </Link>
-        </div>
-
-        {/* Filter Tabs */}
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-6)', overflowX: 'auto', paddingBottom: 4 }}>
-          {filterTabs.map((tab) => {
-            const count = tab.key === 'ALL' ? recruiters.length : recruiters.filter(r => r.status === tab.key).length;
-            const active = statusFilter === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setStatusFilter(tab.key)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 'var(--radius-full)',
-                  border: active ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                  background: active ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                  color: active ? '#fff' : 'var(--color-text-muted)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6
-                }}
-              >
-                {tab.label}
-                <span style={{
-                  background: active ? 'rgba(255,255,255,0.25)' : 'var(--color-gray-100)',
-                  padding: '1px 6px',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '10px'
-                }}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <span style={{
+              background: '#f5f3ff',
+              color: '#6d28d9',
+              border: '1px solid #ddd6fe',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 700
+            }}>
+              {recruiters.filter(r => r.verificationStatus === 'VERIFIED').length} Verified Recruiters
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Table Card */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div className="input-wrapper" style={{ width: 320 }}>
-            <span className="input-icon-left"><Search size={15} /></span>
+      {/* Search & Filter Toolbar */}
+      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
             <input
-              className="input has-icon-left"
-              placeholder="Search by recruiter, company, or email..."
+              type="text"
+              placeholder="Search recruiter, company, email, designation..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="form-control"
+              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
             />
           </div>
 
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            Showing <strong>{filtered.length}</strong> recruiters
-          </p>
-        </div>
-
-        <div className="card-body" style={{ padding: 0 }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: 'var(--space-10)' }}>
-              <EmptyState icon="default" title="No recruiters found" description="No recruiters match your search filter." />
-            </div>
-          ) : (
-            <Table
-              columns={columns}
-              data={filtered}
-              rowKey="id"
-            />
-          )}
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+            {['ALL', 'VERIFIED', 'PENDING', 'SUSPENDED'].map((filterKey) => (
+              <button
+                key={filterKey}
+                type="button"
+                onClick={() => setStatusFilter(filterKey)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                  background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                  color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
+                  transition: 'all 150ms ease'
+                }}
+              >
+                {filterKey === 'ALL' ? 'All Recruiters' : filterKey}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── Recruiter Profile Details Modal ── */}
-      {selectedRecruiter && (
+      {/* Data Table */}
+      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<Users size={40} />}
+            title="No Recruiters Found"
+            description="No recruiter records match your current search and filter criteria."
+          />
+        ) : (
+          <Table columns={columns} data={filtered} />
+        )}
+      </div>
+
+      {/* ── 1. Recruiter Full Details Modal ── */}
+      {viewModalOpen && selectedRecruiter && (
         <Modal
-          open={viewModalOpen}
+          isOpen={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
           title={`Recruiter Dossier: ${selectedRecruiter.name}`}
-          size="md"
+          size="lg"
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div style={{ padding: 'var(--space-4)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>{selectedRecruiter.name}</h3>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{selectedRecruiter.designation}</p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{selectedRecruiter.company}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            {/* Header Badge */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-4)',
+              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+              color: '#fff',
+              padding: 'var(--space-5)',
+              borderRadius: 'var(--radius-xl)'
+            }}>
+              <div style={{
+                width: 56,
+                height: 56,
+                borderRadius: 'var(--radius-xl)',
+                background: 'rgba(255,255,255,0.2)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 'var(--text-xl)',
+                fontWeight: 800
+              }}>
+                {selectedRecruiter.name?.[0]}
               </div>
-              <StatusBadge status={selectedRecruiter.status} size="lg" />
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedRecruiter.name}</h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: '#c7d2fe', margin: '2px 0 0 0' }}>{selectedRecruiter.designation} • {selectedRecruiter.company}</p>
+                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#e0e7ff' }}>
+                  <span>📍 {selectedRecruiter.location || 'India'}</span>
+                  <span>🏢 {selectedRecruiter.industry || 'Information Technology'}</span>
+                  <span>📅 Joined: {selectedRecruiter.registrationDate || 'Aug 2026'}</span>
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Email</span><strong>{selectedRecruiter.email}</strong></div>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Phone</span><strong>{selectedRecruiter.phone}</strong></div>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Active Job Postings</span><strong>{selectedRecruiter.activeJobsCount}</strong></div>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Total Candidates Hired</span><strong>{selectedRecruiter.totalApplicantsHired}</strong></div>
+            {/* Recruiter Details Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Employer Details
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Company:</strong> {selectedRecruiter.company}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Email:</strong> {selectedRecruiter.email}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Phone:</strong> {selectedRecruiter.phone || '+91 80 4920 1000'}</p>
+              </div>
+
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Verification & Postings
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Verification:</strong> {selectedRecruiter.verificationStatus}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Account:</strong> {selectedRecruiter.accountStatus}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Active Jobs:</strong> {selectedRecruiter.activeJobsCount || 6} Openings</p>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)', marginTop: 'var(--space-2)' }}>
-              <Link to="/admin/jobs">
-                <Button size="sm" variant="outline" leftIcon={<Briefcase size={14} />}>
-                  Inspect All Posted Jobs
-                </Button>
-              </Link>
-              <Button size="sm" variant="secondary" onClick={() => setViewModalOpen(false)}>
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+              <Button variant="outline" onClick={() => setViewModalOpen(false)}>
                 Close
               </Button>
+              {selectedRecruiter.verificationStatus === 'PENDING' && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    handleVerify(selectedRecruiter);
+                    setSelectedRecruiter({ ...selectedRecruiter, verificationStatus: 'VERIFIED' });
+                  }}
+                >
+                  Verify Recruiter
+                </Button>
+              )}
+              {selectedRecruiter.accountStatus === 'ACTIVE' ? (
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    setViewModalOpen(false);
+                    setSuspendTarget(selectedRecruiter);
+                  }}
+                >
+                  Suspend Account
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    handleActivate(selectedRecruiter);
+                    setSelectedRecruiter({ ...selectedRecruiter, accountStatus: 'ACTIVE' });
+                  }}
+                >
+                  Activate Account
+                </Button>
+              )}
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Suspend Confirmation Dialog */}
-      <ConfirmDialog
-        open={!!suspendTarget}
-        onClose={() => setSuspendTarget(null)}
-        onConfirm={handleConfirmSuspend}
-        title="Suspend Recruiter Access?"
-        message={`Are you sure you want to suspend recruiter account "${suspendTarget?.name}"? All active job postings will be hidden and portal login revoked.`}
-        confirmText="Yes, Suspend Recruiter"
-        danger
-      />
-
+      {/* ── 2. Confirm Suspend Dialog ── */}
+      {suspendTarget && (
+        <ConfirmDialog
+          isOpen={Boolean(suspendTarget)}
+          title="Suspend Recruiter Account?"
+          message={`Are you sure you want to suspend recruiter ${suspendTarget.name} (${suspendTarget.company})? Their posted vacancies will be paused from public candidate searches.`}
+          confirmLabel="Confirm Suspension"
+          confirmVariant="danger"
+          onConfirm={handleConfirmSuspend}
+          onCancel={() => setSuspendTarget(null)}
+        />
+      )}
     </div>
   );
 }

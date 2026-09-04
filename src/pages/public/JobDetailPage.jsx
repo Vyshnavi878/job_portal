@@ -9,12 +9,11 @@ import {
 import Button from '../../components/ui/Button';
 import { Badge, StatusBadge } from '../../components/ui/Badge';
 import Breadcrumb from '../../components/ui/Breadcrumb';
-import { Modal, ConfirmDialog } from '../../components/ui/Modal';
+import { Modal } from '../../components/ui/Modal';
 import FormField from '../../components/ui/FormField';
-import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
-import FileUpload from '../../components/ui/FileUpload';
 import { JobCard } from '../../components/ui/EntityCards';
+import ApplyModal from '../../components/ui/ApplyModal';
 import { useToast } from '../../context/ToastContext';
 import { MOCK_JOBS, MOCK_COMPANIES } from '../../data/mockData';
 
@@ -27,12 +26,6 @@ export default function JobDetailPage() {
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [applied, setApplied] = useState(false);
-
-  // Application form fields
-  const [applicantName, setApplicantName] = useState('');
-  const [applicantEmail, setApplicantEmail] = useState('');
-  const [applicantPhone, setApplicantPhone] = useState('');
-  const [coverNote, setCoverNote] = useState('');
 
   // Report job form fields
   const [reportReason, setReportReason] = useState('Misleading salary or job description');
@@ -52,21 +45,6 @@ export default function JobDetailPage() {
   const similarJobs = useMemo(() => {
     return MOCK_JOBS.filter((j) => j.id !== job.id && (j.industry === job.industry || j.type === job.type)).slice(0, 3);
   }, [job]);
-
-  const handleApplySubmit = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setApplied(true);
-      setApplyModalOpen(false);
-      toast({
-        type: 'success',
-        title: 'Application Submitted!',
-        message: `Your application for ${job.title} at ${job.company} was submitted successfully. Track status in your Candidate Portal.`,
-      });
-    }, 1200);
-  };
 
   const handleReportSubmit = (e) => {
     e.preventDefault();
@@ -123,6 +101,9 @@ export default function JobDetailPage() {
                 fontSize: 'var(--text-3xl)',
                 background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-accent-500))',
                 color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 flexShrink: 0
               }}>
                 {job.company?.[0] || 'J'}
@@ -145,6 +126,7 @@ export default function JobDetailPage() {
                   >
                     <Building2 size={16} /> {job.company}
                   </Link>
+                  <ShieldCheck size={16} style={{ color: 'var(--color-primary-600)' }} />
                   <span style={{ color: 'var(--color-text-muted)' }}>•</span>
                   <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
                     {job.department || 'Engineering'}
@@ -197,93 +179,61 @@ export default function JobDetailPage() {
                   <Banknote size={18} />
                 </div>
                 <div>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Offered Salary</p>
-                  <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>{job.salary}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Salary</p>
+                  <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)' }}>{job.salary || '₹14–₹22 LPA'}</p>
                 </div>
               </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-success-50)', color: 'var(--color-success-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <MapPin size={18} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Location & Mode</p>
-                      <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>{job.location} ({job.workMode})</p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-warning-50)', color: 'var(--color-warning-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Clock size={18} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Experience</p>
-                      <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>{job.experience}</p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-info-50)', color: 'var(--color-info-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Briefcase size={18} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Job Type</p>
-                      <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>{job.type}</p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-accent-50)', color: 'var(--color-accent-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Users size={18} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Open Positions</p>
-                      <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>{job.openings} Vacancies</p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-gray-100)', color: 'var(--color-gray-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Calendar size={18} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Apply Deadline</p>
-                      <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700 }}>
-                        {new Date(job.deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </p>
-                    </div>
-                  </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-primary-50)', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin size={18} />
                 </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Location</p>
+                  <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)' }}>{job.location}</p>
+                </div>
+              </div>
 
-                {/* Skills Badges */}
-                <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--color-gray-100)' }}>
-                  <p style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)', textTransform: 'uppercase' }}>
-                    Required Technical Skills
-                  </p>
-                  <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                    {job.skills?.map((skill) => (
-                      <span key={skill} className="badge badge-primary" style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}>
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-primary-50)', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Briefcase size={18} />
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Experience</p>
+                  <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)' }}>{job.experience}</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-primary-50)', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Clock size={18} />
+                </div>
+                <div>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Job Type / Work Mode</p>
+                  <p style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)' }}>{job.type} • {job.workMode}</p>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-        {/* ── Two Column Responsive Layout ── */}
-        <div className="responsive-split-detail">
+        {/* ── Main Two-Column Layout ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 'var(--space-6)', alignItems: 'start' }}>
 
-          {/* ── Main Left Column ── */}
-          <div>
+          {/* Left Column — Detailed Job Breakdown */}
+          <div style={{ gridColumn: 'span 8' }} className="job-detail-main">
+
             {/* 1. Job Description */}
             <div className="card" style={{ marginBottom: 'var(--space-6)', borderRadius: 'var(--radius-2xl)' }}>
               <div className="card-header">
                 <h2 className="card-title">Job Description</h2>
               </div>
               <div className="card-body">
-                <p style={{ fontSize: 'var(--text-base)', lineHeight: 'var(--leading-relaxed)', color: 'var(--color-text)', whiteSpace: 'pre-line' }}>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)', marginBottom: 'var(--space-4)' }}>
                   {job.description}
+                </p>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>
+                  We are looking for passionate engineers with strong problem-solving acumen who thrive in high-autonomy environments. You will collaborate closely with cross-functional product managers, designers, and site reliability engineers.
                 </p>
               </div>
             </div>
@@ -294,71 +244,77 @@ export default function JobDetailPage() {
                 <h2 className="card-title">Key Responsibilities</h2>
               </div>
               <div className="card-body">
-                <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                  {job.responsibilities?.map((item, idx) => (
-                    <li key={idx} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
-                      <CheckCircle2 size={18} style={{ color: 'var(--color-success-600)', flexShrink: 0, marginTop: 2 }} />
-                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', lineHeight: 'var(--leading-normal)' }}>
-                        {item}
-                      </span>
+                <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', paddingLeft: 0, listStyle: 'none' }}>
+                  {[
+                    'Design, build, and maintain efficient, reusable, and testable code across micro-services.',
+                    'Participate in agile code reviews, architecture RFC sessions, and technical design sprints.',
+                    'Optimize database queries and background worker queues for minimal response times.',
+                    'Collaborate with UI/UX designers to translate Figma designs into pixel-perfect components.',
+                    'Mentor junior software engineers and champion engineering best practices.'
+                  ].map((resp, idx) => (
+                    <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+                      <CheckCircle2 size={16} style={{ color: 'var(--color-primary-600)', flexShrink: 0, marginTop: 2 }} />
+                      <span style={{ color: 'var(--color-text)' }}>{resp}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             </div>
 
-            {/* 3. Requirements & Qualifications */}
+            {/* 3. Required Skills & Qualifications */}
             <div className="card" style={{ marginBottom: 'var(--space-6)', borderRadius: 'var(--radius-2xl)' }}>
               <div className="card-header">
-                <h2 className="card-title">Requirements & Qualifications</h2>
+                <h2 className="card-title">Required Skills & Qualifications</h2>
               </div>
-              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-                {job.qualifications && (
-                  <div style={{ background: 'var(--color-primary-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-primary-200)' }}>
-                    <p style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-primary-700)', textTransform: 'uppercase', marginBottom: 2 }}>
-                      Educational Qualification
-                    </p>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', fontWeight: 600 }}>
-                      {job.qualifications}
-                    </p>
-                  </div>
-                )}
-
-                <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                  {job.requirements?.map((req, idx) => (
-                    <li key={idx} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-primary-600)', flexShrink: 0, marginTop: 7 }} />
-                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', lineHeight: 'var(--leading-normal)' }}>
-                        {req}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* 4. Benefits & Perks */}
-            {job.benefits && (
-              <div className="card" style={{ marginBottom: 'var(--space-6)', borderRadius: 'var(--radius-2xl)' }}>
-                <div className="card-header">
-                  <h2 className="card-title">Perks & Benefits</h2>
-                </div>
-                <div className="card-body">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-3)' }}>
-                    {job.benefits.map((benefit, idx) => (
-                      <div key={idx} style={{
-                        display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
-                        padding: 'var(--space-3)', background: 'var(--color-gray-50)',
-                        borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)'
+              <div className="card-body">
+                <div style={{ marginBottom: 'var(--space-5)' }}>
+                  <h3 style={{ fontSize: 'var(--text-xs)', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: 'var(--space-3)' }}>
+                    Technical Skills
+                  </h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                    {job.skills?.map((skill) => (
+                      <span key={skill} style={{
+                        fontSize: 'var(--text-xs)', fontWeight: 600,
+                        color: 'var(--color-primary-700)', background: 'var(--color-primary-50)',
+                        padding: '4px 12px', borderRadius: 'var(--radius-full)', border: '1px solid var(--color-primary-200)'
                       }}>
-                        <Sparkles size={16} style={{ color: 'var(--color-accent-600)', flexShrink: 0 }} />
-                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{benefit}</span>
-                      </div>
+                        {skill}
+                      </span>
                     ))}
                   </div>
                 </div>
+
+                <div>
+                  <h3 style={{ fontSize: 'var(--text-xs)', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: 'var(--space-3)' }}>
+                    Education & Credentials
+                  </h3>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>
+                    {job.education || "Bachelor's / Master's degree in Computer Science, Information Technology, or equivalent practical experience."}
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* 4. Salary & Benefits */}
+            <div className="card" style={{ marginBottom: 'var(--space-6)', borderRadius: 'var(--radius-2xl)' }}>
+              <div className="card-header">
+                <h2 className="card-title">Salary, Perks & Benefits</h2>
+              </div>
+              <div className="card-body">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-3)' }}>
+                  {['Comprehensive Health & Life Insurance', 'Hybrid Work Flexibility', 'Annual Learning Stipend (₹50,000)', 'Performance Bonuses & Stock Grants', 'Free Meals & Shuttle Support'].map((benefit) => (
+                    <div key={benefit} style={{
+                      display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                      padding: 'var(--space-3)', background: 'var(--color-gray-50)',
+                      borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)'
+                    }}>
+                      <Sparkles size={16} style={{ color: 'var(--color-accent-600)', flexShrink: 0 }} />
+                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{benefit}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             {/* 5. About the Hiring Company */}
             <div className="card" style={{ marginBottom: 'var(--space-6)', borderRadius: 'var(--radius-2xl)' }}>
@@ -390,129 +346,131 @@ export default function JobDetailPage() {
           </div>
 
           {/* ── Sticky Right Action Sidebar ── */}
-          <div style={{ position: 'sticky', top: '80px', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+          <div style={{ gridColumn: 'span 4' }} className="hide-mobile">
+            <div style={{ position: 'sticky', top: '80px', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
 
-            {/* Apply Action Card */}
-            <div className="card" style={{ borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-lg)' }}>
-              <div className="card-body" style={{ padding: 'var(--space-6)', textAlign: 'center' }}>
-                <div style={{ marginBottom: 'var(--space-4)' }}>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 4 }}>Total Applications</p>
-                  <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-primary-600)' }}>
-                    {job.applicationsCount || 45}+ Applicants
-                  </p>
-                </div>
-
-                {applied ? (
-                  <div style={{
-                    background: 'var(--color-success-50)',
-                    border: '1px solid var(--color-success-200)',
-                    padding: 'var(--space-4)',
-                    borderRadius: 'var(--radius-lg)',
-                    marginBottom: 'var(--space-4)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 'var(--space-2)'
-                  }}>
-                    <CheckCircle2 size={28} style={{ color: 'var(--color-success-600)' }} />
-                    <p style={{ fontWeight: 700, color: 'var(--color-success-700)', fontSize: 'var(--text-sm)' }}>
-                      Application Submitted!
+              {/* Apply Action Card */}
+              <div className="card" style={{ borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-lg)' }}>
+                <div className="card-body" style={{ padding: 'var(--space-6)', textAlign: 'center' }}>
+                  <div style={{ marginBottom: 'var(--space-4)' }}>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 4 }}>Total Applications</p>
+                    <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-primary-600)' }}>
+                      {job.applicationsCount || 45}+ Applicants
                     </p>
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success-700)', marginBottom: 'var(--space-2)' }}>
-                      Status: <strong>Applied & Under Review</strong>
-                    </p>
-                    <Link to="/candidate/applications" style={{ width: '100%' }}>
-                      <Button variant="primary" size="sm" fullWidth rightIcon={<ChevronRight size={14} />}>
-                        Track on Candidate Portal
-                      </Button>
-                    </Link>
                   </div>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    fullWidth
-                    onClick={() => setApplyModalOpen(true)}
-                    style={{ marginBottom: 'var(--space-3)' }}
-                  >
-                    Apply for this Position
-                  </Button>
-                )}
 
-                <Button
-                  variant="outline"
-                  fullWidth
-                  onClick={handleToggleSave}
-                  leftIcon={saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-                >
-                  {saved ? 'Saved in My Bookmarks' : 'Save for Later'}
-                </Button>
-
-                <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 'var(--space-5)', paddingTop: 'var(--space-4)', display: 'flex', justifyContent: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => setReportModalOpen(true)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--color-text-muted)',
-                      fontSize: 'var(--text-xs)',
+                  {applied ? (
+                    <div style={{
+                      background: 'var(--color-success-50)',
+                      border: '1px solid var(--color-success-200)',
+                      padding: 'var(--space-4)',
+                      borderRadius: 'var(--radius-lg)',
+                      marginBottom: 'var(--space-4)',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
-                      gap: 4,
-                      cursor: 'pointer'
-                    }}
+                      gap: 'var(--space-2)'
+                    }}>
+                      <CheckCircle2 size={28} style={{ color: 'var(--color-success-600)' }} />
+                      <p style={{ fontWeight: 700, color: 'var(--color-success-700)', fontSize: 'var(--text-sm)' }}>
+                        Application Submitted!
+                      </p>
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success-700)', marginBottom: 'var(--space-2)' }}>
+                        Status: <strong>Applied & Under Review</strong>
+                      </p>
+                      <Link to="/candidate/applications" style={{ width: '100%' }}>
+                        <Button variant="primary" size="sm" fullWidth rightIcon={<ChevronRight size={14} />}>
+                          Track on Candidate Portal
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      onClick={() => setApplyModalOpen(true)}
+                      style={{ marginBottom: 'var(--space-3)' }}
+                    >
+                      Apply for this Position
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    onClick={handleToggleSave}
+                    leftIcon={saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                   >
-                    <Flag size={12} /> Report this Job
-                  </button>
+                    {saved ? 'Saved in My Bookmarks' : 'Save for Later'}
+                  </Button>
+
+                  <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 'var(--space-5)', paddingTop: 'var(--space-4)', display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => setReportModalOpen(true)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-text-muted)',
+                        fontSize: 'var(--text-xs)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Flag size={12} /> Report this Job
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Quick Job Summary Info Card */}
-            <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-              <div className="card-header">
-                <h3 className="card-title" style={{ fontSize: 'var(--text-base)' }}>Job Overview</h3>
+              {/* Quick Job Summary Info Card */}
+              <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
+                <div className="card-header">
+                  <h3 className="card-title" style={{ fontSize: 'var(--text-base)' }}>Job Overview</h3>
+                </div>
+                <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', fontSize: 'var(--text-sm)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Posted Date:</span>
+                    <strong>{new Date(job.postedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Industry:</span>
+                    <strong>{job.industry}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Work Mode:</span>
+                    <strong>{job.workMode}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Openings:</span>
+                    <strong>{job.openings}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Location:</span>
+                    <strong>{job.location}</strong>
+                  </div>
+                </div>
               </div>
-              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', fontSize: 'var(--text-sm)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Posted Date:</span>
-                  <strong>{new Date(job.postedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Industry:</span>
-                  <strong>{job.industry}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Work Mode:</span>
-                  <strong>{job.workMode}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Openings:</span>
-                  <strong>{job.openings}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>Location:</span>
-                  <strong>{job.location}</strong>
-                </div>
+
+              {/* Trust & Safety notice */}
+              <div style={{
+                background: 'var(--color-gray-100)',
+                borderRadius: 'var(--radius-xl)',
+                padding: 'var(--space-4)',
+                display: 'flex',
+                gap: 'var(--space-3)',
+                alignItems: 'flex-start'
+              }}>
+                <ShieldCheck size={20} style={{ color: 'var(--color-success-600)', flexShrink: 0, marginTop: 2 }} />
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-normal)' }}>
+                  <strong>NTR VIKASA Job Portal Verified:</strong> This recruiter is verified. NTR VIKASA Job Portal never charges job seekers for interview slots or offer letters.
+                </p>
               </div>
-            </div>
 
-            {/* Trust & Safety notice */}
-            <div style={{
-              background: 'var(--color-gray-100)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-4)',
-              display: 'flex',
-              gap: 'var(--space-3)',
-              alignItems: 'flex-start'
-            }}>
-              <ShieldCheck size={20} style={{ color: 'var(--color-success-600)', flexShrink: 0, marginTop: 2 }} />
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-normal)' }}>
-                <strong>NTR VIKASA Job Portal Verified:</strong> This recruiter is verified. NTR VIKASA Job Portal never charges job seekers for interview slots or offer letters.
-              </p>
             </div>
-
           </div>
         </div>
 
@@ -559,76 +517,13 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      {/* ── 1. Apply Now Modal ── */}
-      <Modal
-        open={applyModalOpen}
+      {/* ── 1. Apply Job Modal ── */}
+      <ApplyModal
+        isOpen={applyModalOpen}
         onClose={() => setApplyModalOpen(false)}
-        title={`Apply for ${job.title}`}
-        size="md"
-      >
-        <form onSubmit={handleApplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-            Applying to <strong>{job.company}</strong> ({job.location})
-          </p>
-
-          <FormField label="Full Name" htmlFor="applicantName" required>
-            <Input
-              id="applicantName"
-              placeholder="e.g. Priya Sharma"
-              value={applicantName}
-              onChange={(e) => setApplicantName(e.target.value)}
-              required
-            />
-          </FormField>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-            <FormField label="Email Address" htmlFor="applicantEmail" required>
-              <Input
-                id="applicantEmail"
-                type="email"
-                placeholder="priya@example.com"
-                value={applicantEmail}
-                onChange={(e) => setApplicantEmail(e.target.value)}
-                required
-              />
-            </FormField>
-
-            <FormField label="Phone Number" htmlFor="applicantPhone" required>
-              <Input
-                id="applicantPhone"
-                type="tel"
-                placeholder="+91 98765 43210"
-                value={applicantPhone}
-                onChange={(e) => setApplicantPhone(e.target.value)}
-                required
-              />
-            </FormField>
-          </div>
-
-          <FormField label="Attach Resume" required hint="PDF, DOC, DOCX up to 5MB">
-            <FileUpload accept=".pdf,.doc,.docx" maxSize="5 MB" />
-          </FormField>
-
-          <FormField label="Brief Cover Note / Why are you a good fit?" htmlFor="coverNote">
-            <Textarea
-              id="coverNote"
-              rows={3}
-              placeholder="Highlight relevant projects, notice period, and why you're interested..."
-              value={coverNote}
-              onChange={(e) => setCoverNote(e.target.value)}
-            />
-          </FormField>
-
-          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
-            <Button variant="secondary" type="button" onClick={() => setApplyModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="submit" loading={isSubmitting} leftIcon={<Send size={16} />}>
-              Submit Application
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        job={job}
+        onAppliedSuccess={() => setApplied(true)}
+      />
 
       {/* ── 2. Report Job Modal ── */}
       <Modal

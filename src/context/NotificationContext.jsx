@@ -3,7 +3,7 @@
  * Provides unread counts, notification list, mark-read, and dismiss.
  * Ready for API integration: replace mock data with real fetch calls.
  */
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 const NotificationContext = createContext(null);
 
@@ -58,7 +58,7 @@ const CANDIDATE_NOTIFS = [
     message: 'Your Fast-Track QR pass for Bengaluru Mega IT Job Mela 2026 is ready. Gate 3 opens at 9:00 AM.',
     time: 'Yesterday',
     read: true,
-    link: '/candidate/job-mela',
+    link: '/candidate/job-melas',
   },
   {
     id: 'cn-5',
@@ -115,7 +115,7 @@ const RECRUITER_NOTIFS = [
     message: 'Your participation request for Bengaluru Mega IT Job Mela was approved. Booth B-14, Hall 3 allocated.',
     time: '1 day ago',
     read: true,
-    link: '/recruiter/job-mela',
+    link: '/recruiter/job-melas',
   },
   {
     id: 'rn-5',
@@ -183,8 +183,36 @@ const PORTAL_NOTIFS = {
   admin:     ADMIN_NOTIFS,
 };
 
+const STORAGE_KEY = 'ntr_portal_notifications_v3';
+
 export function NotificationProvider({ children }) {
-  const [allNotifs, setAllNotifs] = useState(PORTAL_NOTIFS);
+  const [allNotifs, setAllNotifs] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            candidate: parsed.candidate || PORTAL_NOTIFS.candidate,
+            recruiter: parsed.recruiter || PORTAL_NOTIFS.recruiter,
+            admin:     parsed.admin     || PORTAL_NOTIFS.admin,
+          };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return PORTAL_NOTIFS;
+  });
+
+  // Persist notifications to localStorage whenever state changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allNotifs));
+    } catch (e) {
+      // ignore
+    }
+  }, [allNotifs]);
 
   /** Get notifications for a specific portal */
   const getNotifs = useCallback((portal) => allNotifs[portal] || [], [allNotifs]);
@@ -198,7 +226,7 @@ export function NotificationProvider({ children }) {
   const markRead = useCallback((portal, id) => {
     setAllNotifs(prev => ({
       ...prev,
-      [portal]: prev[portal].map(n => n.id === id ? { ...n, read: true } : n),
+      [portal]: (prev[portal] || []).map(n => n.id === id ? { ...n, read: true } : n),
     }));
   }, []);
 
@@ -206,7 +234,7 @@ export function NotificationProvider({ children }) {
   const markAllRead = useCallback((portal) => {
     setAllNotifs(prev => ({
       ...prev,
-      [portal]: prev[portal].map(n => ({ ...n, read: true })),
+      [portal]: (prev[portal] || []).map(n => ({ ...n, read: true })),
     }));
   }, []);
 
@@ -214,7 +242,26 @@ export function NotificationProvider({ children }) {
   const dismiss = useCallback((portal, id) => {
     setAllNotifs(prev => ({
       ...prev,
-      [portal]: prev[portal].filter(n => n.id !== id),
+      [portal]: (prev[portal] || []).filter(n => n.id !== id),
+    }));
+  }, []);
+
+  /** Add a new notification */
+  const addNotification = useCallback((portal, notif) => {
+    setAllNotifs(prev => ({
+      ...prev,
+      [portal]: [
+        {
+          id: notif.id || `notif-${Date.now()}`,
+          category: notif.category || 'SYSTEM',
+          title: notif.title,
+          message: notif.message,
+          time: notif.time || 'Just now',
+          read: false,
+          link: notif.link || null,
+        },
+        ...(prev[portal] || [])
+      ]
     }));
   }, []);
 
@@ -224,7 +271,8 @@ export function NotificationProvider({ children }) {
     markRead,
     markAllRead,
     dismiss,
-  }), [getNotifs, getUnreadCount, markRead, markAllRead, dismiss]);
+    addNotification,
+  }), [getNotifs, getUnreadCount, markRead, markAllRead, dismiss, addNotification]);
 
   return (
     <NotificationContext.Provider value={ctx}>

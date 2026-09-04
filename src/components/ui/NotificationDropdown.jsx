@@ -1,7 +1,8 @@
 /**
  * NotificationDropdown — popup panel shown when the bell icon is clicked.
- * Shows recent notifications with unread/read states, mark-read, and a link
- * to the full notifications page. Uses NotificationContext for state.
+ * Shows only UNREAD notifications with immediate mark-read removal,
+ * unread count badge, empty state ("You're all caught up"), and a link
+ * to the full notifications history page. Uses NotificationContext for state.
  */
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -45,14 +46,15 @@ function CategoryIcon({ category, size = 16 }) {
 }
 
 export default function NotificationDropdown({ portal = 'candidate', notifPageLink }) {
-  const { getNotifs, getUnreadCount, markRead, markAllRead } = useNotifications();
+  const { getNotifs, markRead, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const notifications = getNotifs(portal);
-  const unreadCount = getUnreadCount(portal);
-  const recentNotifs = notifications.slice(0, 6); // Show recent notifications
+  const allNotifications = getNotifs(portal);
+  // Strictly filter to UNREAD notifications only. Read notifications never appear in dropdown.
+  const unreadNotifications = allNotifications.filter(n => !n.read);
+  const unreadCount = unreadNotifications.length;
 
   const fullNotifsRoute = notifPageLink || `/${portal}/notifications`;
 
@@ -86,6 +88,11 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
     }
   };
 
+  const handleMarkReadSingle = (e, notifId) => {
+    e.stopPropagation();
+    markRead(portal, notifId);
+  };
+
   return (
     <div ref={dropdownRef} style={{ position: 'relative' }}>
       {/* Bell trigger button */}
@@ -111,6 +118,7 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
         }}
       >
         <Bell size={20} />
+        {/* Badge displays number of UNREAD notifications only; hidden when unreadCount === 0 */}
         {unreadCount > 0 && (
           <span style={{
             position: 'absolute',
@@ -208,38 +216,75 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
             </div>
           </div>
 
-          {/* Notification Items List */}
+          {/* Notification Items List (UNREAD ONLY) */}
           <div style={{ maxHeight: 380, overflowY: 'auto' }}>
-            {recentNotifs.length === 0 ? (
+            {unreadNotifications.length === 0 ? (
               <div style={{
-                padding: 'var(--space-10)',
+                padding: 'var(--space-8) var(--space-6)',
                 textAlign: 'center',
                 color: 'var(--color-text-muted)',
               }}>
-                <Bell size={32} style={{ margin: '0 auto var(--space-3)', opacity: 0.3, display: 'block' }} />
-                <p style={{ fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: 4 }}>All caught up!</p>
-                <p style={{ fontSize: 'var(--text-xs)' }}>No notifications right now.</p>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '50%',
+                  background: '#f0fdf4',
+                  color: '#16a34a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto var(--space-3)',
+                }}>
+                  <CheckCircle2 size={26} />
+                </div>
+                <p style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-text)', marginBottom: 4 }}>
+                  You're all caught up
+                </p>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
+                  No unread notifications right now.
+                </p>
+                <Link
+                  to={fullNotifsRoute}
+                  onClick={() => setOpen(false)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 700,
+                    color: 'var(--color-primary-600)',
+                    textDecoration: 'none',
+                    padding: '6px 14px',
+                    borderRadius: 'var(--radius-full)',
+                    background: 'var(--color-primary-50)',
+                    border: '1px solid var(--color-primary-100)',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                >
+                  View Notification History <ArrowRight size={12} />
+                </Link>
               </div>
             ) : (
-              recentNotifs.map((notif) => (
+              unreadNotifications.map((notif) => (
                 <div
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
                   style={{
                     padding: 'var(--space-4) var(--space-5)',
                     borderBottom: '1px solid var(--color-gray-100)',
-                    background: notif.read ? 'transparent' : 'rgba(99, 102, 241, 0.05)',
+                    background: 'rgba(99, 102, 241, 0.05)',
                     display: 'flex',
                     gap: 'var(--space-3)',
                     alignItems: 'flex-start',
                     transition: 'background var(--transition-fast)',
                     cursor: 'pointer',
+                    position: 'relative',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = notif.read ? 'var(--color-gray-50)' : 'rgba(99, 102, 241, 0.09)';
+                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.09)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = notif.read ? 'transparent' : 'rgba(99, 102, 241, 0.05)';
+                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.05)';
                   }}
                 >
                   <CategoryIcon category={notif.category} size={15} />
@@ -248,23 +293,21 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
                       <p style={{
                         fontSize: 'var(--text-xs)',
-                        fontWeight: notif.read ? 500 : 700,
+                        fontWeight: 700,
                         color: 'var(--color-text)',
                         lineHeight: 1.4,
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6
                       }}>
-                        {!notif.read && (
-                          <span style={{
-                            display: 'inline-block',
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            background: 'var(--color-primary-600)',
-                            flexShrink: 0,
-                          }} />
-                        )}
+                        <span style={{
+                          display: 'inline-block',
+                          width: 7,
+                          height: 7,
+                          borderRadius: '50%',
+                          background: 'var(--color-primary-600)',
+                          flexShrink: 0,
+                        }} />
                         <span>{notif.title}</span>
                       </p>
                     </div>
@@ -284,18 +327,43 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--space-2)' }}>
                       <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{notif.time}</span>
-                      {notif.link && (
-                        <span style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          color: 'var(--color-primary-600)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 2,
-                        }}>
-                          View <ArrowRight size={10} />
-                        </span>
-                      )}
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => handleMarkReadSingle(e, notif.id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            color: 'var(--color-text-muted)',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 3,
+                            padding: 0,
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-primary-600)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-muted)'; }}
+                          title="Mark as read"
+                        >
+                          <Check size={11} /> Mark read
+                        </button>
+
+                        {notif.link && (
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            color: 'var(--color-primary-600)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 2,
+                          }}>
+                            View <ArrowRight size={10} />
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -303,7 +371,7 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
             )}
           </div>
 
-          {/* Footer / Mark all as read */}
+          {/* Footer / Mark all as read & See All */}
           <div style={{
             padding: 'var(--space-3) var(--space-5)',
             borderTop: '1px solid var(--color-border)',
@@ -332,8 +400,8 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
                 <Check size={14} /> Mark all as read
               </button>
             ) : (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                All notifications read
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Check size={13} style={{ color: '#16a34a' }} /> All caught up
               </span>
             )}
 

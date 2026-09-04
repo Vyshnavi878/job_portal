@@ -1,61 +1,76 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Building2, Briefcase, Users, GraduationCap,
-  CalendarCheck, Bell, Settings, LogOut, CalendarDays,
+  Home, LayoutDashboard, Briefcase, FileText,
+  UserCheck, CalendarCheck, GraduationCap, CalendarDays,
+  BarChart3
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import PortalHeader from './PortalHeader';
 import { SidebarProvider } from '../../context/SidebarContext';
+import { useRecruiter } from '../../context/RecruiterContext';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',    href: '/recruiter/dashboard',      icon: <LayoutDashboard size={18} />, end: true },
-  { label: 'Company',      href: '/recruiter/company',        icon: <Building2 size={18} />,       section: 'Manage' },
-  { label: 'Jobs',         href: '/recruiter/jobs',           icon: <Briefcase size={18} /> },
-  { label: 'Internships',  href: '/recruiter/internships',    icon: <GraduationCap size={18} /> },
-  { label: 'Interviews',   href: '/recruiter/interviews',     icon: <CalendarCheck size={18} /> },
-  { label: 'Job Mela',     href: '/recruiter/job-mela',       icon: <CalendarDays size={18} /> },
-  { label: 'Notifications',href: '/recruiter/notifications',  icon: <Bell size={18} />,            section: 'Other' },
-];
+  // 1. MAIN
+  { label: 'Home',             href: '/',                         icon: <Home size={18} />,           section: 'MAIN' },
+  { label: 'Dashboard',        href: '/recruiter/dashboard',      icon: <LayoutDashboard size={18} />, end: true, section: 'MAIN' },
+  { label: 'My Jobs',          href: '/recruiter/jobs',           icon: <Briefcase size={18} />,      section: 'MAIN' },
+  { label: 'Applications',     href: '/recruiter/applications',   icon: <FileText size={18} />,       section: 'MAIN' },
+  { label: 'Shortlisted',      href: '/recruiter/shortlisted',    icon: <UserCheck size={18} />,      section: 'MAIN' },
+  { label: 'Interviews',       href: '/recruiter/interviews',     icon: <CalendarCheck size={18} />,  section: 'MAIN' },
 
-const FOOTER_ITEMS = [
-  { label: 'Settings', href: '/recruiter/settings', icon: <Settings size={18} /> },
-  { label: 'Log Out',  href: '/login',              icon: <LogOut size={18} /> },
-];
+  // 2. COMPANY
+  { label: 'My Internships',   href: '/recruiter/internships',    icon: <GraduationCap size={18} />,  section: 'COMPANY' },
+  { label: 'Job Melas',        href: '/recruiter/job-melas',      icon: <CalendarDays size={18} />,   section: 'COMPANY' },
 
-const MOCK_USER = { name: 'Rahul Mehta', role: 'Recruiter' };
+  // 3. ANALYTICS
+  { label: 'Hiring Analytics', href: '/recruiter/analytics',      icon: <BarChart3 size={18} />,      section: 'ANALYTICS' },
+];
 
 function getPageTitle(pathname) {
   const map = {
-    '/recruiter/dashboard':    'Dashboard',
-    '/recruiter/company':      'Company Profile',
-    '/recruiter/jobs':         'Jobs',
+    '/recruiter/dashboard':    'Recruiter Dashboard',
+    '/recruiter/jobs':         'My Jobs',
+    '/recruiter/jobs/new':     'Post New Job',
     '/recruiter/jobs/create':  'Post New Job',
-    '/recruiter/internships':  'Internships',
-    '/recruiter/interviews':   'Interviews',
-    '/recruiter/job-mela':     'Job Mela',
+    '/recruiter/candidates':   'Find Candidates',
+    '/recruiter/applications': 'Applications',
+    '/recruiter/shortlisted':  'Shortlisted Candidates',
+    '/recruiter/interviews':   'Interviews Schedule',
+    '/recruiter/company':      'Company Profile',
+    '/recruiter/internships':  'My Internships',
+    '/recruiter/job-melas':    'Job Melas Participation',
+    '/recruiter/job-mela':     'Job Melas Participation',
+    '/recruiter/analytics':    'Hiring Analytics',
     '/recruiter/notifications':'Notifications',
-    '/recruiter/settings':     'Settings',
+    '/recruiter/settings':     'Recruiter Settings',
   };
-  return map[pathname] || 'Recruiter Portal';
+  return map[pathname] || 'Recruiter Workspace';
 }
 
 export default function RecruiterLayout() {
   const location = useLocation();
+  const { recruiter } = useRecruiter();
   const title = getPageTitle(location.pathname);
+
+  const currentUser = {
+    name: recruiter?.name || 'Arjun Reddy',
+    role: recruiter?.company?.name ? `${recruiter.company.name}` : 'Recruiter',
+    avatar: recruiter?.avatar || null
+  };
 
   return (
     <SidebarProvider>
       <div className="portal-layout">
         <Sidebar
           navItems={NAV_ITEMS}
-          footerItems={FOOTER_ITEMS}
-          user={MOCK_USER}
-          portalName="Recruiter"
+          footerItems={[]}
+          user={null}
+          portalName="Recruiter Workspace"
         />
         <div className="portal-main">
           <PortalHeader
             title={title}
-            user={MOCK_USER}
+            user={currentUser}
           />
           <main className="portal-content">
             <Outlet />

@@ -2,15 +2,15 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   Search, MapPin, SlidersHorizontal, X, RotateCcw, Briefcase,
-  DollarSign, Clock, Building2, GraduationCap, Sparkles, AlertCircle
+  DollarSign, Clock, Building2, GraduationCap, Sparkles, AlertCircle,
+  Heart, ShieldCheck, ArrowRight, Filter, Check, Eye
 } from 'lucide-react';
-import { JobCard } from '../../components/ui/EntityCards';
 import Pagination from '../../components/ui/Pagination';
 import { EmptyState, ErrorState } from '../../components/ui/States';
-import { JobCardSkeleton } from '../../components/ui/Skeleton';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
-import FormField from '../../components/ui/FormField';
+import ApplyModal from '../../components/ui/ApplyModal';
+import { useToast } from '../../context/ToastContext';
 import {
   MOCK_JOBS,
   LOCATIONS,
@@ -24,10 +24,205 @@ import {
   POSTED_DATES
 } from '../../data/mockData';
 
+// Extended realistic mock jobs list (10 jobs)
+const EXTENDED_MOCK_JOBS = [
+  {
+    id: '1',
+    title: 'Senior Python Developer',
+    company: 'TechCorp India',
+    verified: true,
+    location: 'Hyderabad, Telangana',
+    salary: '₹6 - ₹10 LPA',
+    salaryMin: 6,
+    salaryMax: 10,
+    experience: '2-4 Years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'Information Technology',
+    skills: ['Python', 'FastAPI', 'SQL', 'PostgreSQL', 'Docker'],
+    matchScore: 92,
+    postedTime: 'Posted 2 days ago',
+    featured: true,
+    description: 'Lead backend microservices design using Python, FastAPI, and scalable PostgreSQL database clusters.'
+  },
+  {
+    id: '2',
+    title: 'Senior Frontend Engineer (React + TypeScript)',
+    company: 'Flipkart',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹14 - ₹22 LPA',
+    salaryMin: 14,
+    salaryMax: 22,
+    experience: '3-5 Years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'E-Commerce & Retail',
+    skills: ['React', 'TypeScript', 'Redux Toolkit', 'Next.js', 'Tailwind CSS'],
+    matchScore: 96,
+    postedTime: 'Posted 1 day ago',
+    featured: true,
+    description: 'Architect customer checkout journeys handling millions of peak requests with sub-second latency.'
+  },
+  {
+    id: '3',
+    title: 'Data & AI Engineer (Machine Learning)',
+    company: 'Infosys',
+    verified: true,
+    location: 'Visakhapatnam, Andhra Pradesh',
+    salary: '₹10 - ₹18 LPA',
+    salaryMin: 10,
+    salaryMax: 18,
+    experience: '3-5 Years',
+    type: 'Full-time',
+    workMode: 'Remote',
+    industry: 'Information Technology',
+    skills: ['Python', 'Machine Learning', 'PyTorch', 'SQL', 'AWS'],
+    matchScore: 89,
+    postedTime: 'Posted 3 days ago',
+    featured: false,
+    description: 'Develop enterprise predictive pipelines and generative AI solutions for Fortune 500 enterprise clients.'
+  },
+  {
+    id: '4',
+    title: 'Full Stack Web Developer (MERN)',
+    company: 'Swiggy',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹12 - ₹20 LPA',
+    salaryMin: 12,
+    salaryMax: 20,
+    experience: '2-4 Years',
+    type: 'Full-time',
+    workMode: 'On-site',
+    industry: 'Information Technology',
+    skills: ['React', 'Node.js', 'MongoDB', 'Express', 'JavaScript'],
+    matchScore: 85,
+    postedTime: 'Posted 4 days ago',
+    featured: false,
+    description: 'Build real-time delivery logistics telemetry portals and merchant dashboards.'
+  },
+  {
+    id: '5',
+    title: 'DevOps & Cloud Infrastructure Engineer',
+    company: 'Wipro Technologies',
+    verified: true,
+    location: 'Hyderabad, Telangana',
+    salary: '₹10 - ₹16 LPA',
+    salaryMin: 10,
+    salaryMax: 16,
+    experience: '3-5 Years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'Information Technology',
+    skills: ['AWS', 'Docker', 'Kubernetes', 'Terraform', 'CI/CD'],
+    matchScore: 88,
+    postedTime: 'Posted 5 days ago',
+    featured: false,
+    description: 'Automate multi-region cloud provisioning and zero-downtime Kubernetes deployments.'
+  },
+  {
+    id: '6',
+    title: 'UI/UX Product Designer',
+    company: 'Razorpay',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹8 - ₹14 LPA',
+    salaryMin: 8,
+    salaryMax: 14,
+    experience: '1-3 years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'Fintech & Banking',
+    skills: ['UI/UX Design', 'Figma', 'Prototyping', 'Design Systems'],
+    matchScore: 90,
+    postedTime: 'Posted 1 day ago',
+    featured: true,
+    description: 'Design frictionless payment checkout interfaces and merchant onboarding workflows.'
+  },
+  {
+    id: '7',
+    title: 'Junior Software Engineer (Fresher)',
+    company: 'Tata Consultancy Services (TCS)',
+    verified: true,
+    location: 'Vijayawada, Andhra Pradesh',
+    salary: '₹3 - ₹6 LPA',
+    salaryMin: 3,
+    salaryMax: 6,
+    experience: 'Fresher (0-1 yr)',
+    type: 'Full-time',
+    workMode: 'On-site',
+    industry: 'Information Technology',
+    skills: ['Java', 'SQL', 'JavaScript', 'HTML/CSS'],
+    matchScore: 82,
+    postedTime: 'Posted today',
+    featured: false,
+    description: 'Exciting entry-level software developer opening for 2025/2026 engineering graduates across Andhra Pradesh.'
+  },
+  {
+    id: '8',
+    title: 'Financial Analyst & Risk Modeler',
+    company: 'HDFC Bank',
+    verified: true,
+    location: 'Visakhapatnam, Andhra Pradesh',
+    salary: '₹6 - ₹10 LPA',
+    salaryMin: 6,
+    salaryMax: 10,
+    experience: '1-3 years',
+    type: 'Full-time',
+    workMode: 'On-site',
+    industry: 'Fintech & Banking',
+    skills: ['Financial Modeling', 'SQL', 'Excel', 'Data Analysis'],
+    matchScore: 78,
+    postedTime: 'Posted 3 days ago',
+    featured: false,
+    description: 'Analyze commercial credit portfolios, risk stress-testing, and compliance metrics.'
+  },
+  {
+    id: '9',
+    title: 'Lead Product Manager',
+    company: 'Zomato',
+    verified: true,
+    location: 'Gurugram, Haryana',
+    salary: '₹28 - ₹42 LPA',
+    salaryMin: 28,
+    salaryMax: 42,
+    experience: '5-8 years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'Information Technology',
+    skills: ['Product Management', 'SQL', 'Data Analytics', 'Roadmapping'],
+    matchScore: 87,
+    postedTime: 'Posted 6 days ago',
+    featured: false,
+    description: 'Own end-to-end customer retention metrics, delivery ETA algorithms, and loyalty funnels.'
+  },
+  {
+    id: '10',
+    title: 'AI Prompt Engineer & Data Evaluator',
+    company: 'Cognizant',
+    verified: true,
+    location: 'Tirupati, Andhra Pradesh',
+    salary: '₹6 - ₹10 LPA',
+    salaryMin: 6,
+    salaryMax: 10,
+    experience: '1-3 years',
+    type: 'Full-time',
+    workMode: 'Remote',
+    industry: 'Information Technology',
+    skills: ['Python', 'Machine Learning', 'Data Evaluation', 'NLP'],
+    matchScore: 86,
+    postedTime: 'Posted 2 days ago',
+    featured: false,
+    description: 'Benchmark large language model outputs and design robust safety evaluation datasets.'
+  }
+];
+
 export default function JobsPage() {
+  const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Filter states (all 9 required filters)
+  // Search & Filter state
   const [search, setSearch] = useState(searchParams.get('q') || '');
   const [location, setLocation] = useState(searchParams.get('location') || '');
   const [experience, setExperience] = useState('');
@@ -35,32 +230,36 @@ export default function JobsPage() {
   const [jobType, setJobType] = useState('');
   const [workMode, setWorkMode] = useState('');
   const [industry, setIndustry] = useState(searchParams.get('industry') || '');
-  const [education, setEducation] = useState('');
   const [selectedSkill, setSelectedSkill] = useState(searchParams.get('skill') || '');
   const [datePosted, setDatePosted] = useState('');
-  const [sortBy, setSortBy] = useState('Newest');
+  const [sortBy, setSortBy] = useState('Relevance');
 
-  const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const [savedJobIds, setSavedJobIds] = useState(['1', '3']);
+  const [selectedJobToApply, setSelectedJobToApply] = useState(null);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Sync URL query params if present
+  // Sync URL query params
   useEffect(() => {
     const q = searchParams.get('q');
     const loc = searchParams.get('location');
-    const ind = searchParams.get('industry');
-    const sk = searchParams.get('skill');
     if (q !== null) setSearch(q);
     if (loc !== null) setLocation(loc);
-    if (ind !== null) setIndustry(ind);
-    if (sk !== null) setSelectedSkill(sk);
   }, [searchParams]);
 
-  // Simulate brief loading when filters change
-  const handleFilterChange = (setter, value) => {
-    setter(value);
-    setPage(1);
+  const handleToggleSave = (jobId, title) => {
+    if (savedJobIds.includes(jobId)) {
+      setSavedJobIds(savedJobIds.filter(id => id !== jobId));
+      toast({ type: 'info', title: 'Removed from Saved', message: `Removed "${title}" from saved jobs.` });
+    } else {
+      setSavedJobIds([...savedJobIds, jobId]);
+      toast({ type: 'success', title: 'Job Saved', message: `Saved "${title}" to your bookmarks.` });
+    }
+  };
+
+  const handleOpenApply = (job) => {
+    setSelectedJobToApply(job);
+    setApplyModalOpen(true);
   };
 
   const handleResetFilters = () => {
@@ -71,471 +270,570 @@ export default function JobsPage() {
     setJobType('');
     setWorkMode('');
     setIndustry('');
-    setEducation('');
     setSelectedSkill('');
     setDatePosted('');
-    setSortBy('Newest');
-    setPage(1);
+    setSortBy('Relevance');
     setSearchParams({});
-    setHasError(false);
   };
 
   // Filter computation
   const filteredJobs = useMemo(() => {
-    return MOCK_JOBS.filter((job) => {
+    let result = EXTENDED_MOCK_JOBS.filter((job) => {
       // 1. Search Query
       if (search.trim()) {
         const query = search.toLowerCase();
         const matchTitle = job.title.toLowerCase().includes(query);
         const matchCompany = job.company.toLowerCase().includes(query);
-        const matchDesc = job.description?.toLowerCase().includes(query);
         const matchSkill = job.skills?.some(s => s.toLowerCase().includes(query));
-        if (!matchTitle && !matchCompany && !matchDesc && !matchSkill) return false;
+        if (!matchTitle && !matchCompany && !matchSkill) return false;
       }
 
-      // 2. Location Filter
+      // 2. Location
       if (location && location !== 'All Locations') {
         if (!job.location.toLowerCase().includes(location.toLowerCase())) return false;
       }
 
-      // 3. Experience Filter
+      // 3. Experience
       if (experience && experience !== 'All Experience') {
-        if (job.experience !== experience) {
-          if (experience.includes('Fresher') && !job.experience.includes('Fresher') && !job.experience.includes('0-1')) return false;
-          if (experience.includes('1-3') && !job.experience.includes('1-3')) return false;
-          if (experience.includes('3-5') && !job.experience.includes('3-5')) return false;
-          if (experience.includes('5-8') && !job.experience.includes('5-8')) return false;
-          if (experience.includes('8+') && !job.experience.includes('8+')) return false;
+        if (!job.experience.toLowerCase().includes(experience.toLowerCase().replace('all experience', ''))) {
+          if (experience.includes('Fresher') && !job.experience.includes('Fresher')) return false;
+          if (experience.includes('1-3') && !job.experience.includes('1-3') && !job.experience.includes('2-4')) return false;
+          if (experience.includes('3-5') && !job.experience.includes('3-5') && !job.experience.includes('2-4')) return false;
         }
       }
 
-      // 4. Salary Filter
+      // 4. Salary
       if (salaryRange && salaryRange !== 'All Salaries') {
         if (salaryRange.includes('0 - ₹3') && job.salaryMin > 3) return false;
         if (salaryRange.includes('3 - ₹6') && (job.salaryMax < 3 || job.salaryMin > 6)) return false;
         if (salaryRange.includes('6 - ₹10') && (job.salaryMax < 6 || job.salaryMin > 10)) return false;
         if (salaryRange.includes('10 - ₹18') && (job.salaryMax < 10 || job.salaryMin > 18)) return false;
         if (salaryRange.includes('18 - ₹30') && (job.salaryMax < 18 || job.salaryMin > 30)) return false;
-        if (salaryRange.includes('30+') && job.salaryMax < 30) return false;
       }
 
-      // 5. Job Type Filter
+      // 5. Job Type
       if (jobType && jobType !== 'All Types') {
         if (job.type.toLowerCase() !== jobType.toLowerCase()) return false;
       }
 
-      // 6. Work Mode Filter
+      // 6. Work Mode
       if (workMode && workMode !== 'All Modes') {
         if (job.workMode.toLowerCase() !== workMode.toLowerCase()) return false;
       }
 
-      // 7. Industry Filter
+      // 7. Industry
       if (industry && industry !== 'All Industries') {
-        if (job.industry.toLowerCase() !== industry.toLowerCase()) return false;
+        if (job.industry !== industry) return false;
       }
 
-      // 8. Education Filter
-      if (education && education !== 'All Qualifications') {
-        if (education.includes("Bachelor") && !job.education.includes("Bachelor")) return false;
-        if (education.includes("Master") && !job.education.includes("Master")) return false;
-      }
-
-      // 9. Skill Filter
-      if (selectedSkill && selectedSkill !== '') {
-        if (!job.skills?.some(s => s.toLowerCase() === selectedSkill.toLowerCase())) return false;
-      }
-
-      // Date Posted Filter
-      if (datePosted && datePosted !== 'Any time') {
-        if (datePosted === 'Past 24 hours' && !job.postedAgo?.includes('1 day')) return false;
-        if (datePosted === 'Past week' && job.postedAgo?.includes('days') && parseInt(job.postedAgo) > 7) return false;
+      // 8. Skill
+      if (selectedSkill) {
+        if (!job.skills.some(s => s.toLowerCase() === selectedSkill.toLowerCase())) return false;
       }
 
       return true;
-    }).sort((a, b) => {
-      if (sortBy === 'Salary: High to Low') return (b.salaryMax || 0) - (a.salaryMax || 0);
-      if (sortBy === 'Salary: Low to High') return (a.salaryMin || 0) - (b.salaryMin || 0);
-      if (sortBy === 'Most Popular') return (b.applicationsCount || 0) - (a.applicationsCount || 0);
-      return new Date(b.postedDate) - new Date(a.postedDate); // Newest default
     });
-  }, [search, location, experience, salaryRange, jobType, workMode, industry, education, selectedSkill, datePosted, sortBy]);
+
+    // Sorting
+    if (sortBy === 'Salary: High to Low') {
+      result.sort((a, b) => b.salaryMax - a.salaryMax);
+    } else if (sortBy === 'Salary: Low to High') {
+      result.sort((a, b) => a.salaryMin - b.salaryMin);
+    } else if (sortBy === 'Latest') {
+      // Keep order
+    } else {
+      // Relevance by match score
+      result.sort((a, b) => b.matchScore - a.matchScore);
+    }
+
+    return result;
+  }, [search, location, experience, salaryRange, jobType, workMode, industry, selectedSkill, sortBy]);
 
   const activeFilterCount = [
-    location && location !== 'All Locations',
-    experience && experience !== 'All Experience',
-    salaryRange && salaryRange !== 'All Salaries',
-    jobType && jobType !== 'All Types',
-    workMode && workMode !== 'All Modes',
-    industry && industry !== 'All Industries',
-    education && education !== 'All Qualifications',
-    selectedSkill,
-    datePosted && datePosted !== 'Any time'
+    experience, salaryRange, jobType, workMode, industry, selectedSkill, datePosted
   ].filter(Boolean).length;
 
-  const PER_PAGE = 6;
-  const totalPages = Math.ceil(filteredJobs.length / PER_PAGE);
-  const paginatedJobs = filteredJobs.slice((page - 1) * PER_PAGE, page * PER_PAGE);
-
   return (
-    <div className="jobs-page" style={{ minHeight: '100vh', background: 'var(--color-bg)', paddingBottom: 'var(--space-16)' }}>
-      {/* Top Header Banner */}
-      <div style={{ background: 'var(--color-surface)', borderBottom: '1px solid var(--color-border)', padding: 'var(--space-8) 0' }}>
-        <div className="container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-            <div>
-              <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800 }}>Explore Job Opportunities</h1>
-              <p style={{ color: 'var(--color-text-muted)', marginTop: 'var(--space-1)', fontSize: 'var(--text-sm)' }}>
-                Showing verified listings with direct applications and live status updates
-              </p>
-            </div>
-            {/* Quick action buttons for demo testing */}
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <Button
-                variant={hasError ? 'danger' : 'ghost'}
-                size="sm"
-                onClick={() => setHasError(v => !v)}
-                title="Toggle simulated error state"
-              >
-                {hasError ? 'Clear Error' : 'Simulate Error'}
-              </Button>
-            </div>
+    <div className="jobs-search-page" style={{ background: 'var(--color-bg)', minHeight: '100vh', paddingBottom: 'var(--space-20)' }}>
+      {/* ── 1. Top Search Header Section ── */}
+      <section style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
+        color: '#ffffff',
+        padding: 'var(--space-12) var(--space-6)',
+        position: 'relative'
+      }}>
+        <div className="container" style={{ maxWidth: 1100 }}>
+          <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#c7d2fe', background: 'rgba(255,255,255,0.15)', padding: '3px 12px', borderRadius: 'var(--radius-full)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Corporate Recruitment Portal
+            </span>
+            <h1 style={{ fontSize: 'clamp(1.85rem, 4vw, 2.75rem)', fontWeight: 800, color: '#ffffff', marginTop: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+              Find Your Dream Job in Andhra Pradesh & India
+            </h1>
+            <p style={{ fontSize: 'var(--text-base)', color: '#cbd5e1' }}>
+              Explore 2,450+ verified corporate job openings with zero placement fees
+            </p>
           </div>
 
-          {/* Primary Quick Search Bar */}
-          <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div className="input-wrapper" style={{ flex: '3 1 280px', minWidth: 240 }}>
-              <span className="input-icon-left"><Search size={16} /></span>
+          {/* Search Inputs Bar */}
+          <div style={{
+            background: 'var(--color-surface)',
+            borderRadius: 'var(--radius-2xl)',
+            padding: 'var(--space-3)',
+            boxShadow: 'var(--shadow-xl)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 'var(--space-2)',
+            alignItems: 'center'
+          }}>
+            {/* Keyword input */}
+            <div style={{ flex: '1 1 280px', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)' }}>
+              <Search size={18} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
               <input
-                className="input has-icon-left"
-                placeholder="Search by job title, skill, company or keyword..."
+                type="text"
+                placeholder="Job title, skills (Python, React...), or company..."
                 value={search}
-                onChange={(e) => handleFilterChange(setSearch, e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  width: '100%',
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-text)',
+                  background: 'transparent'
+                }}
               />
               {search && (
-                <button
-                  type="button"
-                  onClick={() => handleFilterChange(setSearch, '')}
-                  className="input-clear-btn"
-                  aria-label="Clear search"
-                >
+                <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
                   <X size={14} />
                 </button>
               )}
             </div>
 
-            <div style={{ flex: '1 1 180px', minWidth: 150 }}>
-              <Select
-                options={LOCATIONS}
-                placeholder="Location"
-                value={location}
-                onChange={(e) => handleFilterChange(setLocation, e.target.value)}
-              />
-            </div>
+            <div style={{ width: 1, height: 32, background: 'var(--color-border)', alignSelf: 'center' }} className="hide-mobile" />
 
-            <div style={{ flex: '1 1 160px', minWidth: 140 }}>
-              <Select
-                options={JOB_TYPES}
-                placeholder="Job Type"
-                value={jobType}
-                onChange={(e) => handleFilterChange(setJobType, e.target.value)}
+            {/* Location input */}
+            <div style={{ flex: '1 1 220px', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)' }}>
+              <MapPin size={18} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+              <input
+                type="text"
+                placeholder="Location (Hyderabad, Vizag, Bengaluru...)"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  width: '100%',
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-text)',
+                  background: 'transparent'
+                }}
               />
             </div>
 
             <Button
-              variant="secondary"
-              leftIcon={<SlidersHorizontal size={16} />}
-              onClick={() => setShowMobileFilters(v => !v)}
-              className="hide-desktop"
+              variant="primary"
+              size="md"
+              style={{ flex: '0 0 auto', minWidth: 140, fontWeight: 700 }}
+              onClick={() => {}}
             >
-              Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+              Search Jobs
             </Button>
           </div>
 
-          {/* Active Filter Pills Bar */}
-          {activeFilterCount > 0 && (
-            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>Active Filters:</span>
-              {location && location !== 'All Locations' && (
-                <span className="multi-select-tag">
-                  Location: {location}
-                  <X size={12} onClick={() => handleFilterChange(setLocation, '')} style={{ cursor: 'pointer', marginLeft: 4 }} />
-                </span>
-              )}
-              {jobType && jobType !== 'All Types' && (
-                <span className="multi-select-tag">
-                  Type: {jobType}
-                  <X size={12} onClick={() => handleFilterChange(setJobType, '')} style={{ cursor: 'pointer', marginLeft: 4 }} />
-                </span>
-              )}
-              {workMode && workMode !== 'All Modes' && (
-                <span className="multi-select-tag">
-                  Mode: {workMode}
-                  <X size={12} onClick={() => handleFilterChange(setWorkMode, '')} style={{ cursor: 'pointer', marginLeft: 4 }} />
-                </span>
-              )}
-              {experience && experience !== 'All Experience' && (
-                <span className="multi-select-tag">
-                  Exp: {experience}
-                  <X size={12} onClick={() => handleFilterChange(setExperience, '')} style={{ cursor: 'pointer', marginLeft: 4 }} />
-                </span>
-              )}
-              {salaryRange && salaryRange !== 'All Salaries' && (
-                <span className="multi-select-tag">
-                  Salary: {salaryRange}
-                  <X size={12} onClick={() => handleFilterChange(setSalaryRange, '')} style={{ cursor: 'pointer', marginLeft: 4 }} />
-                </span>
-              )}
-              {industry && industry !== 'All Industries' && (
-                <span className="multi-select-tag">
-                  Industry: {industry}
-                  <X size={12} onClick={() => handleFilterChange(setIndustry, '')} style={{ cursor: 'pointer', marginLeft: 4 }} />
-                </span>
-              )}
-              {education && education !== 'All Qualifications' && (
-                <span className="multi-select-tag">
-                  Edu: {education.split(' ')[0]}
-                  <X size={12} onClick={() => handleFilterChange(setEducation, '')} style={{ cursor: 'pointer', marginLeft: 4 }} />
-                </span>
-              )}
-              {selectedSkill && (
-                <span className="multi-select-tag">
-                  Skill: {selectedSkill}
-                  <X size={12} onClick={() => handleFilterChange(setSelectedSkill, '')} style={{ cursor: 'pointer', marginLeft: 4 }} />
-                </span>
-              )}
-              {datePosted && datePosted !== 'Any time' && (
-                <span className="multi-select-tag">
-                  Posted: {datePosted}
-                  <X size={12} onClick={() => handleFilterChange(setDatePosted, '')} style={{ cursor: 'pointer', marginLeft: 4 }} />
-                </span>
-              )}
+          {/* Popular Searches & Recent Searches Chips */}
+          <div style={{ marginTop: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', fontSize: 'var(--text-xs)' }}>
+            <span style={{ color: '#c7d2fe', fontWeight: 700 }}>Popular Searches:</span>
+            {['Python Developer', 'React JS', 'Data Analyst', 'Fresher Jobs', 'Hybrid Work', 'FastAPI'].map((chip) => (
               <button
-                type="button"
-                onClick={handleResetFilters}
+                key={chip}
+                onClick={() => setSearch(chip)}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--color-danger-600)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: '#ffffff',
+                  padding: '3px 10px',
+                  borderRadius: 'var(--radius-full)',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  transition: 'background var(--transition-fast)'
                 }}
               >
-                <RotateCcw size={11} /> Reset All
+                {chip}
               </button>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Main Content Layout: Sidebar Filters + Results Grid */}
-      <div className="container" style={{ padding: 'var(--space-8) var(--space-6)' }}>
-        <div className="responsive-split-sidebar">
+      {/* ── 2. Main Two-Column Layout: Filters on Left, Results on Right ── */}
+      <div className="container" style={{ marginTop: 'var(--space-8)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 'var(--space-6)', alignItems: 'start' }}>
 
-          {/* ── Left Filters Sidebar (All 9 Filters) ── */}
-          <aside className={`jobs-filter-sidebar ${showMobileFilters ? 'open' : ''}`} style={{
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-2xl)',
-            padding: 'var(--space-6)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-5)',
-            position: 'sticky',
-            top: '80px',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-3)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <SlidersHorizontal size={18} style={{ color: 'var(--color-primary-600)' }} />
-                <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 700 }}>All Filters</h2>
-              </div>
-              {activeFilterCount > 0 && (
+          {/* Left Column: Filters Panel */}
+          <aside style={{ gridColumn: 'span 4' }} className="hide-mobile">
+            <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', border: '1px solid var(--color-border)', position: 'sticky', top: 90 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <Filter size={16} style={{ color: 'var(--color-primary-600)' }} />
+                  <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text)' }}>
+                    Filter Jobs
+                  </h2>
+                  {activeFilterCount > 0 && (
+                    <span style={{ fontSize: '11px', fontWeight: 800, background: 'var(--color-primary-50)', color: 'var(--color-primary-700)', padding: '1px 7px', borderRadius: 'var(--radius-full)' }}>
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  style={{ background: 'none', border: 'none', color: 'var(--color-primary-600)', fontSize: 'var(--text-xs)', cursor: 'pointer', fontWeight: 600 }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-primary-600)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}
                 >
-                  Clear ({activeFilterCount})
+                  <RotateCcw size={12} /> Reset
                 </button>
-              )}
-            </div>
-
-            {/* 1. Work Mode Filter */}
-            <div>
-              <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-2)', display: 'block' }}>
-                Work Mode
-              </label>
-              <Select
-                options={WORK_MODES}
-                value={workMode}
-                onChange={(e) => handleFilterChange(setWorkMode, e.target.value)}
-              />
-            </div>
-
-            {/* 2. Experience Level */}
-            <div>
-              <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-2)', display: 'block' }}>
-                Experience Level
-              </label>
-              <Select
-                options={EXPERIENCE_LEVELS}
-                value={experience}
-                onChange={(e) => handleFilterChange(setExperience, e.target.value)}
-              />
-            </div>
-
-            {/* 3. Salary Range */}
-            <div>
-              <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-2)', display: 'block' }}>
-                Salary (LPA)
-              </label>
-              <Select
-                options={SALARY_RANGES}
-                value={salaryRange}
-                onChange={(e) => handleFilterChange(setSalaryRange, e.target.value)}
-              />
-            </div>
-
-            {/* 4. Industry */}
-            <div>
-              <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-2)', display: 'block' }}>
-                Industry
-              </label>
-              <Select
-                options={INDUSTRIES}
-                value={industry}
-                onChange={(e) => handleFilterChange(setIndustry, e.target.value)}
-              />
-            </div>
-
-            {/* 5. Required Skills */}
-            <div>
-              <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-2)', display: 'block' }}>
-                Key Skill
-              </label>
-              <Select
-                options={['All Skills', ...SKILL_OPTIONS]}
-                value={selectedSkill}
-                onChange={(e) => handleFilterChange(setSelectedSkill, e.target.value === 'All Skills' ? '' : e.target.value)}
-              />
-            </div>
-
-            {/* 6. Education Qualification */}
-            <div>
-              <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-2)', display: 'block' }}>
-                Education Level
-              </label>
-              <Select
-                options={EDUCATION_LEVELS}
-                value={education}
-                onChange={(e) => handleFilterChange(setEducation, e.target.value)}
-              />
-            </div>
-
-            {/* 7. Date Posted */}
-            <div>
-              <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 'var(--space-2)', display: 'block' }}>
-                Date Posted
-              </label>
-              <Select
-                options={POSTED_DATES}
-                value={datePosted}
-                onChange={(e) => handleFilterChange(setDatePosted, e.target.value)}
-              />
-            </div>
-
-            {showMobileFilters && (
-              <Button variant="primary" fullWidth onClick={() => setShowMobileFilters(false)}>
-                Apply Filters
-              </Button>
-            )}
-          </aside>
-
-          {/* ── Right Results Grid ── */}
-          <main>
-            {/* Results bar */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 'var(--space-6)',
-              flexWrap: 'wrap',
-              gap: 'var(--space-3)'
-            }}>
-              <div>
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-                  Showing <strong style={{ color: 'var(--color-text)' }}>{filteredJobs.length}</strong> matching positions
-                </p>
               </div>
 
-              {/* Sort selector */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>Sort by:</span>
-                <div style={{ width: 190 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                {/* Experience */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                    Experience Level
+                  </label>
                   <Select
-                    options={['Newest', 'Salary: High to Low', 'Salary: Low to High', 'Most Popular']}
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    value={experience}
+                    onChange={(e) => setExperience(e.target.value)}
+                    options={EXPERIENCE_LEVELS}
+                  />
+                </div>
+
+                {/* Salary Range */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                    Salary Range (CTC)
+                  </label>
+                  <Select
+                    value={salaryRange}
+                    onChange={(e) => setSalaryRange(e.target.value)}
+                    options={SALARY_RANGES}
+                  />
+                </div>
+
+                {/* Work Mode */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                    Work Mode
+                  </label>
+                  <Select
+                    value={workMode}
+                    onChange={(e) => setWorkMode(e.target.value)}
+                    options={WORK_MODES}
+                  />
+                </div>
+
+                {/* Job Type */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                    Job Type
+                  </label>
+                  <Select
+                    value={jobType}
+                    onChange={(e) => setJobType(e.target.value)}
+                    options={JOB_TYPES}
+                  />
+                </div>
+
+                {/* Industry */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                    Industry Sector
+                  </label>
+                  <Select
+                    value={industry}
+                    onChange={(e) => setIndustry(e.target.value)}
+                    options={INDUSTRIES}
+                  />
+                </div>
+
+                {/* Technical Skills */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 6 }}>
+                    Required Technical Skills
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {['Python', 'React', 'TypeScript', 'SQL', 'FastAPI', 'Node.js', 'Docker', 'AWS'].map((s) => {
+                      const isSelected = selectedSkill.toLowerCase() === s.toLowerCase();
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSelectedSkill(isSelected ? '' : s)}
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            padding: '3px 8px',
+                            borderRadius: 'var(--radius-md)',
+                            border: isSelected ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                            background: isSelected ? 'var(--color-primary-50)' : 'var(--color-surface)',
+                            color: isSelected ? 'var(--color-primary-700)' : 'var(--color-text-muted)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {s} {isSelected && '✓'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Date Posted */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                    Date Posted
+                  </label>
+                  <Select
+                    value={datePosted}
+                    onChange={(e) => setDatePosted(e.target.value)}
+                    options={POSTED_DATES}
                   />
                 </div>
               </div>
             </div>
+          </aside>
 
-            {/* Render States */}
-            {hasError ? (
-              <ErrorState
-                title="Unable to load job listings"
-                description="There was an error communicating with the job search index. Please try refreshing."
-                action={<Button variant="primary" onClick={() => setHasError(false)}>Retry Search</Button>}
-              />
-            ) : isLoading ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-5)' }}>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <JobCardSkeleton key={i} />
-                ))}
+          {/* Right Column: Results Section */}
+          <main style={{ gridColumn: 'span 8' }} className="jobs-results-column">
+            {/* Results Header Bar */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 'var(--space-4)',
+              flexWrap: 'wrap',
+              gap: 'var(--space-3)'
+            }}>
+              <div>
+                <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, color: 'var(--color-text)' }}>
+                  2,450 Jobs Found
+                </h2>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                  Showing {filteredJobs.length} active matching positions
+                </p>
               </div>
-            ) : filteredJobs.length === 0 ? (
-              <EmptyState
-                icon="jobs"
-                title="No jobs matched your criteria"
-                description="Try expanding your location, lowering experience requirements, or clearing selected skills."
-                action={
-                  <Button variant="primary" onClick={handleResetFilters}>
-                    Clear All Filters
-                  </Button>
-                }
-              />
-            ) : (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-5)' }}>
-                  {paginatedJobs.map((job) => (
-                    <JobCard key={job.id} job={job} />
-                  ))}
-                </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div style={{ marginTop: 'var(--space-10)' }}>
-                    <Pagination
-                      currentPage={page}
-                      totalPages={totalPages}
-                      totalItems={filteredJobs.length}
-                      pageSize={PER_PAGE}
-                      onPageChange={(p) => {
-                        setPage(p);
-                        window.scrollTo({ top: 180, behavior: 'smooth' });
+              {/* Sort By Dropdown */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>Sort by:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--color-border)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 700,
+                    color: 'var(--color-text)',
+                    background: 'var(--color-surface)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="Relevance">Relevance</option>
+                  <option value="Latest">Latest</option>
+                  <option value="Salary: High to Low">Salary: High to Low</option>
+                  <option value="Salary: Low to High">Salary: Low to High</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Jobs Cards List */}
+            {filteredJobs.length === 0 ? (
+              <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-12)' }}>
+                <EmptyState
+                  icon="jobs"
+                  title="No Jobs Found Matching Filters"
+                  description="Try clearing some of your filter criteria or searching for different keywords."
+                  action={<Button variant="primary" onClick={handleResetFilters}>Reset All Filters</Button>}
+                />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                {filteredJobs.map((job) => {
+                  const isSaved = savedJobIds.includes(job.id);
+                  return (
+                    <div
+                      key={job.id}
+                      className="card card-hoverable"
+                      style={{
+                        borderRadius: 'var(--radius-2xl)',
+                        padding: 'var(--space-6)',
+                        border: '1px solid var(--color-border)',
+                        background: 'var(--color-surface)',
+                        transition: 'all var(--transition-base)'
                       }}
-                    />
-                  </div>
-                )}
-              </>
+                    >
+                      {/* Top Bar: Title & Save Button */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 4 }}>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              color: 'var(--color-primary-700)',
+                              background: 'var(--color-primary-50)',
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4
+                            }}>
+                              <Sparkles size={11} /> {job.matchScore}% Match
+                            </span>
+
+                            {job.featured && (
+                              <span style={{
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                color: 'var(--color-accent-700)',
+                                background: 'var(--color-accent-50)',
+                                padding: '2px 6px',
+                                borderRadius: 'var(--radius-md)'
+                              }}>
+                                ★ Featured Hiring
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, color: 'var(--color-text)', marginBottom: 2 }}>
+                            <Link to={`/jobs/${job.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                              {job.title}
+                            </Link>
+                          </h3>
+
+                          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <strong style={{ color: 'var(--color-text)' }}>{job.company}</strong>
+                            {job.verified && <ShieldCheck size={14} style={{ color: 'var(--color-primary-600)' }} />}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSave(job.id, job.title)}
+                          style={{
+                            background: isSaved ? 'var(--color-primary-50)' : 'none',
+                            border: 'none',
+                            color: isSaved ? 'var(--color-primary-600)' : 'var(--color-text-muted)',
+                            cursor: 'pointer',
+                            padding: '6px',
+                            borderRadius: 'var(--radius-full)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          aria-label={isSaved ? 'Remove Bookmark' : 'Save Job'}
+                        >
+                          <Heart size={18} fill={isSaved ? 'currentColor' : 'none'} />
+                        </button>
+                      </div>
+
+                      {/* Key Attributes Row */}
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 'var(--space-3)',
+                        fontSize: 'var(--text-xs)',
+                        color: 'var(--color-text-muted)',
+                        margin: 'var(--space-3) 0',
+                        alignItems: 'center'
+                      }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <MapPin size={13} /> {job.location}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700, color: 'var(--color-text)' }}>
+                          <DollarSign size={13} /> {job.salary}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Briefcase size={13} /> {job.experience}
+                        </span>
+                        <span style={{ background: 'var(--color-gray-100)', padding: '2px 8px', borderRadius: 'var(--radius-md)', color: 'var(--color-text)' }}>
+                          {job.type}
+                        </span>
+                        <span style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary-700)', padding: '2px 8px', borderRadius: 'var(--radius-md)', fontWeight: 600 }}>
+                          {job.workMode}
+                        </span>
+                      </div>
+
+                      {/* Skills Chips */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-1)', marginBottom: 'var(--space-4)' }}>
+                        {job.skills.map((skill) => (
+                          <span
+                            key={skill}
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: 'var(--color-primary-800)',
+                              background: 'var(--color-primary-50)',
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-md)'
+                            }}
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Footer: Posted time & CTA */}
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        paddingTop: 'var(--space-3)',
+                        borderTop: '1px solid var(--color-gray-100)',
+                        flexWrap: 'wrap',
+                        gap: 'var(--space-2)'
+                      }}>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                          {job.postedTime}
+                        </span>
+
+                        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                          <Link to={`/jobs/${job.id}`}>
+                            <Button variant="outline" size="sm">
+                              View Job
+                            </Button>
+                          </Link>
+                          <Button variant="primary" size="sm" onClick={() => handleOpenApply(job)}>
+                            Apply Now
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </main>
         </div>
       </div>
+
+      {/* Apply Modal */}
+      <ApplyModal
+        isOpen={applyModalOpen}
+        onClose={() => setApplyModalOpen(false)}
+        job={selectedJobToApply}
+      />
     </div>
   );
 }

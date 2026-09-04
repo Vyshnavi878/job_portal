@@ -3,21 +3,24 @@ import { X } from 'lucide-react';
 
 /**
  * Modal / Dialog component
- * @param {boolean}  open
+ * @param {boolean}  open    - controls visibility
+ * @param {boolean}  isOpen  - alias for open
  * @param {Function} onClose
  * @param {string}   title
  * @param {string}   size    - sm | md | lg | xl
  * @param {boolean}  closable
  * @param {ReactNode} footer
  */
-export function Modal({ open, onClose, title, size = 'md', closable = true, footer, children }) {
+export function Modal({ open, isOpen, onClose, title, size = 'md', closable = true, footer, children }) {
+  const isModalOpen = open !== undefined ? open : isOpen;
+
   // Close on Escape
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Escape' && closable) onClose?.();
   }, [closable, onClose]);
 
   useEffect(() => {
-    if (open) {
+    if (isModalOpen) {
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
     }
@@ -25,9 +28,9 @@ export function Modal({ open, onClose, title, size = 'md', closable = true, foot
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [open, handleKeyDown]);
+  }, [isModalOpen, handleKeyDown]);
 
-  if (!open) return null;
+  if (!isModalOpen) return null;
 
   return (
     <div
@@ -60,6 +63,7 @@ export function Modal({ open, onClose, title, size = 'md', closable = true, foot
  */
 export function ConfirmDialog({
   open,
+  isOpen,
   onClose,
   onConfirm,
   title = 'Confirm Action',
@@ -69,6 +73,8 @@ export function ConfirmDialog({
   variant = 'danger',
   loading = false,
 }) {
+  const isDialogOpen = open !== undefined ? open : isOpen;
+
   const iconMap = {
     danger:  { bg: 'var(--color-danger-50)',  color: 'var(--color-danger-500)',  svg: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>) },
     primary: { bg: 'var(--color-primary-50)', color: 'var(--color-primary-600)', svg: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>) },
@@ -77,7 +83,7 @@ export function ConfirmDialog({
   const icon = iconMap[variant] || iconMap.danger;
 
   return (
-    <Modal open={open} onClose={onClose} title={null} size="sm">
+    <Modal open={isDialogOpen} onClose={onClose} title={null} size="sm">
       <div style={{ textAlign: 'center', padding: 'var(--space-2) 0 var(--space-4)' }}>
         {/* Icon */}
         <div style={{

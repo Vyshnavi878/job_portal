@@ -3,340 +3,354 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Briefcase, Plus, Search, Filter, Users, Eye, Edit2,
   XCircle, CheckCircle2, Clock, AlertTriangle, ArrowRight,
-  MoreVertical, Calendar, DollarSign, MapPin
+  MoreVertical, Calendar, DollarSign, MapPin, Sparkles, Building2
 } from 'lucide-react';
+import { useRecruiter } from '../../context/RecruiterContext';
+import { useToast } from '../../context/ToastContext';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
-import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
 import { ConfirmDialog } from '../../components/ui/Modal';
-import { useToast } from '../../context/ToastContext';
 
-const INITIAL_RECRUITER_JOBS = [
-  {
-    id: '1',
-    title: 'Senior Frontend Engineer',
-    department: 'Engineering',
-    type: 'Full-time',
-    workMode: 'Hybrid',
-    location: 'Bengaluru, Karnataka',
-    salary: '₹14 - ₹22 LPA',
-    applicantsCount: 78,
-    status: 'PUBLISHED',
-    createdAt: '2026-08-15',
-    deadline: '2026-09-30',
-  },
-  {
-    id: '2',
-    title: 'Staff Backend Engineer (Golang & Microservices)',
-    department: 'Platform Core',
-    type: 'Full-time',
-    workMode: 'Remote',
-    location: 'Remote',
-    salary: '₹28 - ₹40 LPA',
-    applicantsCount: 45,
-    status: 'PUBLISHED',
-    createdAt: '2026-08-18',
-    deadline: '2026-09-25',
-  },
-  {
-    id: '3',
-    title: 'Cloud Security Architect (AWS / Azure)',
-    department: 'Infra & SecOps',
-    type: 'Full-time',
-    workMode: 'Hybrid',
-    location: 'Bengaluru, Karnataka',
-    salary: '₹32 - ₹48 LPA',
-    applicantsCount: 12,
-    status: 'PENDING',
-    createdAt: '2026-08-23',
-    deadline: '2026-10-15',
-  },
-  {
-    id: '4',
-    title: 'Associate Product Marketing Lead',
-    department: 'Marketing',
-    type: 'Full-time',
-    workMode: 'On-site',
-    location: 'Gurugram, Haryana',
-    salary: '₹10 - ₹16 LPA',
-    applicantsCount: 0,
-    status: 'DRAFT',
-    createdAt: '2026-08-24',
-    deadline: '2026-10-01',
-  },
-  {
-    id: '5',
-    title: 'Data Platform Engineer (Kafka / Spark)',
-    department: 'Data Analytics',
-    type: 'Full-time',
-    workMode: 'Hybrid',
-    location: 'Hyderabad, Telangana',
-    salary: '₹18 - ₹26 LPA',
-    applicantsCount: 52,
-    status: 'CLOSED',
-    createdAt: '2026-07-10',
-    deadline: '2026-08-15',
-  },
-  {
-    id: '6',
-    title: 'Junior QA Automation Tester',
-    department: 'Quality Assurance',
-    type: 'Contract',
-    workMode: 'On-site',
-    location: 'Pune, Maharashtra',
-    salary: '₹6 - ₹9 LPA',
-    applicantsCount: 19,
-    status: 'EXPIRED',
-    createdAt: '2026-06-01',
-    deadline: '2026-07-15',
-  },
-  {
-    id: '7',
-    title: 'Cryptocurrency Arbitrage Analyst',
-    department: 'Trading Tech',
-    type: 'Full-time',
-    workMode: 'Remote',
-    location: 'Remote',
-    salary: '₹15 - ₹25 LPA',
-    applicantsCount: 0,
-    status: 'REJECTED',
-    createdAt: '2026-08-10',
-    deadline: '2026-09-10',
-  },
-];
-
-export default function RecruiterJobsPage() {
+export default function JobsPage() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { recruiter, closeJob, updateJob } = useRecruiter();
+  const { addToast } = useToast();
 
-  const [jobs, setJobs] = useState(INITIAL_RECRUITER_JOBS);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [closeTargetJob, setCloseTargetJob] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatusTab, setSelectedStatusTab] = useState('ALL');
+  const [departmentFilter, setDepartmentFilter] = useState('ALL');
+  const [closingJobId, setClosingJobId] = useState(null);
 
-  const filterTabs = [
-    { key: 'ALL', label: 'All Postings' },
-    { key: 'PUBLISHED', label: 'Published' },
-    { key: 'PENDING', label: 'Pending Review' },
-    { key: 'DRAFT', label: 'Drafts' },
-    { key: 'CLOSED', label: 'Closed' },
-    { key: 'EXPIRED', label: 'Expired' },
-    { key: 'REJECTED', label: 'Rejected' },
-  ];
+  const jobs = recruiter?.jobs || [];
 
+  // Extract unique departments
+  const departments = useMemo(() => {
+    const set = new Set(jobs.map(j => j.department).filter(Boolean));
+    return Array.from(set);
+  }, [jobs]);
+
+  // Tab counts
+  const tabCounts = useMemo(() => {
+    return {
+      all: jobs.length,
+      active: jobs.filter(j => j.status === 'PUBLISHED').length,
+      pending: jobs.filter(j => j.status === 'PENDING').length,
+      draft: jobs.filter(j => j.status === 'DRAFT').length,
+      closed: jobs.filter(j => j.status === 'CLOSED').length,
+    };
+  }, [jobs]);
+
+  // Filtered jobs
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (!job.title.toLowerCase().includes(q) && !job.department.toLowerCase().includes(q)) {
-          return false;
-        }
+      // Status filter
+      if (selectedStatusTab === 'ACTIVE' && job.status !== 'PUBLISHED') return false;
+      if (selectedStatusTab === 'PENDING' && job.status !== 'PENDING') return false;
+      if (selectedStatusTab === 'DRAFT' && job.status !== 'DRAFT') return false;
+      if (selectedStatusTab === 'CLOSED' && job.status !== 'CLOSED') return false;
+
+      // Department filter
+      if (departmentFilter !== 'ALL' && job.department !== departmentFilter) return false;
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchTitle = job.title?.toLowerCase().includes(q);
+        const matchDept = job.department?.toLowerCase().includes(q);
+        const matchLoc = job.location?.toLowerCase().includes(q);
+        const matchSkills = job.skills?.some(s => s.toLowerCase().includes(q));
+        if (!matchTitle && !matchDept && !matchLoc && !matchSkills) return false;
       }
-      if (statusFilter !== 'ALL' && job.status !== statusFilter) {
-        return false;
-      }
+
       return true;
     });
-  }, [jobs, search, statusFilter]);
+  }, [jobs, selectedStatusTab, departmentFilter, searchQuery]);
 
-  const handleCloseJob = () => {
-    if (!closeTargetJob) return;
-    setJobs(jobs.map(j => j.id === closeTargetJob.id ? { ...j, status: 'CLOSED' } : j));
-    toast({
-      type: 'info',
-      title: 'Job Closed',
-      message: `Position "${closeTargetJob.title}" has been closed to new applications.`,
-    });
-    setCloseTargetJob(null);
+  const handleConfirmClose = () => {
+    if (closingJobId) {
+      closeJob(closingJobId);
+      addToast('Job posting has been closed successfully.', 'info');
+      setClosingJobId(null);
+    }
   };
 
-  const columns = [
-    {
-      key: 'title',
-      label: 'Job Title & Department',
-      sortable: true,
-      render: (_, row) => (
-        <div>
-          <Link to={`/recruiter/jobs/${row.id}`} style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-text)', textDecoration: 'none' }}>
-            {row.title}
-          </Link>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
-            {row.department} • {row.workMode} ({row.location})
-          </p>
-        </div>
-      )
-    },
-    {
-      key: 'applicantsCount',
-      label: 'Applicants',
-      sortable: true,
-      render: (count, row) => (
-        <Link to={`/recruiter/jobs/${row.id}/applicants`} style={{ textDecoration: 'none' }}>
-          <span className="badge badge-primary" style={{ cursor: 'pointer' }}>
-            <Users size={12} style={{ marginRight: 4 }} /> {count} Candidates
-          </span>
-        </Link>
-      )
-    },
-    {
-      key: 'createdAt',
-      label: 'Posted / Created',
-      sortable: true,
-      render: (v) => new Date(v).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (v) => <StatusBadge status={v} />
-    },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (_, row) => (
-        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-          <Link to={`/recruiter/jobs/${row.id}`}>
-            <Button size="xs" variant="ghost" title="View Job Details">
-              <Eye size={13} />
-            </Button>
-          </Link>
-
-          <Link to={`/recruiter/jobs/${row.id}/applicants`}>
-            <Button size="xs" variant="outline">
-              Applicants
-            </Button>
-          </Link>
-
-          {row.status === 'PENDING' && (
-            <Link to="/admin/jobs/requests">
-              <Button size="xs" variant="ghost" title="Awaiting Admin Review (Inspect in Admin Portal)">
-                <Clock size={13} style={{ color: 'var(--color-warning-600)' }} />
-              </Button>
-            </Link>
-          )}
-
-          {row.status === 'PUBLISHED' && (
-            <Button size="xs" variant="danger" onClick={() => setCloseTargetJob(row)} title="Close job opening">
-              Close
-            </Button>
-          )}
-        </div>
-      )
-    }
-  ];
+  const handleReopen = (jobId) => {
+    updateJob(jobId, { status: 'PUBLISHED' });
+    addToast('Job posting has been republished and is now active.', 'success');
+  };
 
   return (
-    <div className="recruiter-jobs-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
-
-      {/* Header Bar */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
-              <Briefcase size={20} style={{ color: 'var(--color-primary-600)' }} />
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Manage Job Postings</h1>
-            </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-              Track hiring progress, review candidate submissions, and manage vacancy lifecycles
-            </p>
-          </div>
-
-          <Link to="/recruiter/jobs/create">
-            <Button variant="primary" size="sm" leftIcon={<Plus size={16} />}>
+    <div className="portal-page">
+      {/* Page Header */}
+      <div className="portal-header-actions" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-gray-900)', margin: 0 }}>
+            Job Postings & Requisitions
+          </h1>
+          <p style={{ color: 'var(--color-gray-500)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+            Manage active hiring positions, review incoming applicants, and track recruitment progress.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <Link to="/recruiter/candidates">
+            <Button variant="outline" icon={<Search size={16} />}>
+              Find Talent
+            </Button>
+          </Link>
+          <Link to="/recruiter/jobs/new">
+            <Button variant="primary" icon={<Plus size={16} />}>
               Post New Job
             </Button>
           </Link>
         </div>
-
-        {/* Status Filter Tabs (DRAFT, PENDING, PUBLISHED, REJECTED, CLOSED, EXPIRED) */}
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-6)', overflowX: 'auto', paddingBottom: 4 }}>
-          {filterTabs.map((tab) => {
-            const count = tab.key === 'ALL' ? jobs.length : jobs.filter(j => j.status === tab.key).length;
-            const active = statusFilter === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setStatusFilter(tab.key)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 'var(--radius-full)',
-                  border: active ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                  background: active ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                  color: active ? '#fff' : 'var(--color-text-muted)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6
-                }}
-              >
-                {tab.label}
-                <span style={{
-                  background: active ? 'rgba(255,255,255,0.25)' : 'var(--color-gray-100)',
-                  padding: '1px 6px',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '10px'
-                }}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
       </div>
 
-      {/* Jobs Table Card */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div className="input-wrapper" style={{ width: 320 }}>
-            <span className="input-icon-left"><Search size={15} /></span>
+      {/* Filter Bar & Tabs */}
+      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ flex: '1 1 300px', position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
             <input
-              className="input has-icon-left"
-              placeholder="Search by job title or department..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              type="text"
+              className="form-control"
+              placeholder="Search by job title, department, location, or skill..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
             />
           </div>
 
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            Showing <strong>{filteredJobs.length}</strong> postings
-          </p>
+          <div style={{ width: '220px' }}>
+            <select
+              className="form-control"
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              style={{ height: '42px', borderRadius: '8px' }}
+            >
+              <option value="ALL">All Departments</option>
+              {departments.map(dept => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <div className="card-body" style={{ padding: 0 }}>
-          {filteredJobs.length === 0 ? (
-            <div style={{ padding: 'var(--space-10)' }}>
-              <EmptyState
-                icon="jobs"
-                title="No jobs found"
-                description={statusFilter !== 'ALL' ? `You have no job postings with status "${statusFilter}".` : 'No job openings found matching your search query.'}
-                action={<Link to="/recruiter/jobs/create"><Button variant="primary">Create Job Posting</Button></Link>}
-              />
-            </div>
-          ) : (
-            <Table
-              columns={columns}
-              data={filteredJobs}
-              rowKey="id"
-            />
-          )}
+        {/* Status Tabs */}
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          borderTop: '1px solid var(--color-gray-100)',
+          paddingTop: '0.85rem',
+          overflowX: 'auto'
+        }}>
+          {[
+            { id: 'ALL', label: 'All Jobs', count: tabCounts.all },
+            { id: 'ACTIVE', label: 'Active / Published', count: tabCounts.active },
+            { id: 'PENDING', label: 'Pending Approval', count: tabCounts.pending },
+            { id: 'DRAFT', label: 'Drafts', count: tabCounts.draft },
+            { id: 'CLOSED', label: 'Closed', count: tabCounts.closed },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedStatusTab(tab.id)}
+              style={{
+                background: selectedStatusTab === tab.id ? 'var(--color-primary-50)' : 'transparent',
+                color: selectedStatusTab === tab.id ? 'var(--color-primary-700)' : 'var(--color-gray-600)',
+                fontWeight: selectedStatusTab === tab.id ? 600 : 500,
+                border: selectedStatusTab === tab.id ? '1px solid var(--color-primary-200)' : '1px solid transparent',
+                borderRadius: '6px',
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>{tab.label}</span>
+              <span style={{
+                background: selectedStatusTab === tab.id ? 'var(--color-primary-600)' : 'var(--color-gray-200)',
+                color: selectedStatusTab === tab.id ? '#fff' : 'var(--color-gray-700)',
+                fontSize: '0.75rem',
+                padding: '0.1rem 0.45rem',
+                borderRadius: '10px',
+                fontWeight: 600
+              }}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Confirmation Dialog for Closing Job */}
-      <ConfirmDialog
-        open={!!closeTargetJob}
-        onClose={() => setCloseTargetJob(null)}
-        onConfirm={handleCloseJob}
-        title="Close Job Posting?"
-        message={`Are you sure you want to close "${closeTargetJob?.title}"? Candidates will no longer be able to submit new applications.`}
-        confirmText="Yes, Close Job"
-        danger
-      />
+      {/* Jobs Listing Table */}
+      {filteredJobs.length === 0 ? (
+        <EmptyState
+          icon={<Briefcase size={48} />}
+          title="No job postings found"
+          description="Try changing your search terms or filters, or post a new job requisition to start receiving applicants."
+          action={
+            <Link to="/recruiter/jobs/new">
+              <Button variant="primary" icon={<Plus size={16} />}>Post New Job</Button>
+            </Link>
+          }
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {filteredJobs.map((job) => (
+            <div
+              key={job.id}
+              className="card"
+              style={{
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem',
+                transition: 'box-shadow 0.2s ease',
+                border: job.status === 'PUBLISHED' ? '1px solid #c7d2fe' : '1px solid var(--color-gray-200)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
+                      {job.title}
+                    </h2>
+                    <StatusBadge status={job.status} />
+                    <span style={{
+                      fontSize: '0.75rem',
+                      background: 'var(--color-gray-100)',
+                      color: 'var(--color-gray-700)',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '4px',
+                      fontWeight: 500
+                    }}>
+                      {job.workMode || 'Hybrid'}
+                    </span>
+                  </div>
 
+                  <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginTop: '0.5rem', fontSize: '0.825rem', color: 'var(--color-gray-600)' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Building2 size={14} color="var(--color-gray-400)" />
+                      {job.department}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <MapPin size={14} color="var(--color-gray-400)" />
+                      {job.location || 'India'}
+                    </span>
+                    {job.salary && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600, color: 'var(--color-gray-800)' }}>
+                        <DollarSign size={14} color="var(--color-gray-400)" />
+                        {job.salary}
+                      </span>
+                    )}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Calendar size={14} color="var(--color-gray-400)" />
+                      Posted: {job.createdAt} • Deadline: {job.deadline}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick Pipeline Stats */}
+                <div style={{
+                  display: 'flex',
+                  gap: '1rem',
+                  alignItems: 'center',
+                  background: '#f8fafc',
+                  padding: '0.6rem 1rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--color-gray-200)'
+                }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>{job.applicantsCount || 0}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Applicants</div>
+                  </div>
+                  <div style={{ width: '1px', height: '24px', background: 'var(--color-gray-200)' }} />
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-primary-600)' }}>{job.shortlistedCount || 0}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Shortlisted</div>
+                  </div>
+                  <div style={{ width: '1px', height: '24px', background: 'var(--color-gray-200)' }} />
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#8b5cf6' }}>{job.interviewsCount || 0}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Interviews</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Skills required */}
+              {job.skills && job.skills.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', fontWeight: 600 }}>Skills:</span>
+                  {job.skills.map((s, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        background: 'var(--color-primary-50)',
+                        color: 'var(--color-primary-700)',
+                        fontSize: '0.75rem',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px',
+                        fontWeight: 500
+                      }}
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Actions Footer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <Link to="/recruiter/applications" style={{ textDecoration: 'none' }}>
+                  <Button variant="primary" size="sm" icon={<Users size={14} />}>
+                    View Applicants ({job.applicantsCount || 0})
+                  </Button>
+                </Link>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {job.status === 'CLOSED' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={<CheckCircle2 size={14} />}
+                      onClick={() => handleReopen(job.id)}
+                    >
+                      Reopen Job
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      style={{ color: 'var(--color-danger-600)' }}
+                      icon={<XCircle size={14} />}
+                      onClick={() => setClosingJobId(job.id)}
+                    >
+                      Close Job
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Close Job Confirm Dialog */}
+      {closingJobId && (
+        <ConfirmDialog
+          isOpen={!!closingJobId}
+          onClose={() => setClosingJobId(null)}
+          onConfirm={handleConfirmClose}
+          title="Close Job Posting?"
+          message="Are you sure you want to close this job posting? Candidates will no longer be able to submit new applications for this role."
+          confirmText="Yes, Close Job"
+          variant="danger"
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,354 @@
+import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  TrendingUp, Users, CalendarCheck, CheckCircle2, Clock, Award,
+  Briefcase, BarChart3, Filter, Download, ArrowUpRight, ArrowDownRight,
+  Sparkles, Target, Zap
+} from 'lucide-react';
+import { useRecruiter } from '../../context/RecruiterContext';
+import { useToast } from '../../context/ToastContext';
+import Button from '../../components/ui/Button';
+
+export default function AnalyticsPage() {
+  const { recruiter } = useRecruiter();
+  const { addToast } = useToast();
+  const [timeRange, setTimeRange] = useState('30d');
+
+  const jobs = recruiter?.jobs || [];
+  const applicants = recruiter?.applicants || [];
+  const interviews = recruiter?.interviews || [];
+
+  const totalApplicants = applicants.length;
+  const totalShortlisted = applicants.filter(a => a.status === 'SHORTLISTED' || a.status === 'INTERVIEW' || a.status === 'SELECTED' || a.status === 'HIRED').length;
+  const totalInterviews = interviews.length;
+  const totalOffers = applicants.filter(a => a.status === 'SELECTED' || a.status === 'HIRED').length;
+
+  const shortlistRate = totalApplicants > 0 ? Math.round((totalShortlisted / totalApplicants) * 100) : 0;
+  const interviewRate = totalShortlisted > 0 ? Math.round((totalInterviews / totalShortlisted) * 100) : 0;
+  const offerRate = totalInterviews > 0 ? Math.round((totalOffers / totalInterviews) * 100) : 0;
+
+  // Monthly trends mock
+  const monthlyTrends = [
+    { month: 'Apr', applicants: 32, interviews: 8, hired: 2 },
+    { month: 'May', applicants: 45, interviews: 12, hired: 3 },
+    { month: 'Jun', applicants: 58, interviews: 14, hired: 4 },
+    { month: 'Jul', applicants: 72, interviews: 19, hired: 5 },
+    { month: 'Aug', applicants: 94, interviews: 26, hired: 7 },
+    { month: 'Sep (Current)', applicants: 65, interviews: 18, hired: 4 },
+  ];
+
+  const maxAppCount = Math.max(...monthlyTrends.map(m => m.applicants));
+
+  // Sources breakdown
+  const candidateSources = [
+    { source: 'NTR Vikasa Job Portal Direct', count: 128, percentage: 56, color: 'var(--color-primary-600)' },
+    { source: 'NTR Vikasa Mega Job Melas', count: 54, percentage: 24, color: '#8b5cf6' },
+    { source: 'Skill Training Direct Pool', count: 32, percentage: 14, color: '#10b981' },
+    { source: 'Employee Referrals', count: 14, percentage: 6, color: '#f59e0b' },
+  ];
+
+  return (
+    <div className="portal-page">
+      {/* Header */}
+      <div className="portal-header-actions" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-gray-900)', margin: 0 }}>
+            Hiring & Recruitment Analytics
+          </h1>
+          <p style={{ color: 'var(--color-gray-500)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+            Comprehensive performance metrics, pipeline health, and hiring velocity for {recruiter?.company?.name}.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <select
+            className="form-control"
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value)}
+            style={{ height: '38px', borderRadius: '6px', fontSize: '0.85rem' }}
+          >
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="90d">Last 90 Days</option>
+            <option value="1y">Past 12 Months</option>
+          </select>
+          <Button
+            variant="outline"
+            icon={<Download size={14} />}
+            onClick={() => addToast('Exporting recruitment report (PDF/CSV)...', 'success')}
+          >
+            Export Report
+          </Button>
+        </div>
+      </div>
+
+      {/* Top 4 KPI Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '1.25rem',
+        marginBottom: '1.5rem'
+      }}>
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', fontWeight: 600, textTransform: 'uppercase' }}>Total Applications</span>
+              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-gray-900)', marginTop: '0.35rem' }}>
+                {totalApplicants}
+              </div>
+            </div>
+            <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--color-primary-50)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary-600)' }}>
+              <Users size={20} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.75rem', fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
+            <ArrowUpRight size={14} /> +24% vs last period
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', fontWeight: 600, textTransform: 'uppercase' }}>Shortlist Conversion</span>
+              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--color-primary-600)', marginTop: '0.35rem' }}>
+                {shortlistRate}%
+              </div>
+            </div>
+            <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-primary-600)' }}>
+              <Sparkles size={20} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.75rem', fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
+            <ArrowUpRight size={14} /> +5.2% quality improvement
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', fontWeight: 600, textTransform: 'uppercase' }}>Interviews Conducted</span>
+              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#8b5cf6', marginTop: '0.35rem' }}>
+                {totalInterviews}
+              </div>
+            </div>
+            <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b5cf6' }}>
+              <CalendarCheck size={20} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>
+            <span>Interview-to-Offer: <strong>{offerRate}%</strong></span>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', fontWeight: 600, textTransform: 'uppercase' }}>Avg Time-to-Hire</span>
+              <div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#10b981', marginTop: '0.35rem' }}>
+                16 Days
+              </div>
+            </div>
+            <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
+              <Clock size={20} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.75rem', fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
+            <Zap size={14} /> 4 days faster than industry avg
+          </div>
+        </div>
+      </div>
+
+      {/* Middle Grid: Hiring Funnel & Monthly Trend */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        {/* Visual Funnel */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)', margin: '0 0 0.5rem 0' }}>
+            Full Recruitment Funnel
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-gray-500)', marginBottom: '1.5rem' }}>
+            Stage-by-stage progression from talent discovery to final onboarding.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {[
+              { stage: '1. Applications Received', count: totalApplicants, percent: 100, color: 'var(--color-primary-600)', sub: 'Top of funnel' },
+              { stage: '2. Profile Shortlisted', count: totalShortlisted, percent: shortlistRate, color: '#6366f1', sub: `${shortlistRate}% pass rate` },
+              { stage: '3. Technical Interviews', count: totalInterviews, percent: Math.round((totalInterviews / (totalApplicants || 1)) * 100), color: '#8b5cf6', sub: `${interviewRate}% interview conversion` },
+              { stage: '4. Final Offers & Hires', count: totalOffers, percent: Math.round((totalOffers / (totalApplicants || 1)) * 100), color: '#10b981', sub: 'Final selections' },
+            ].map((st, i) => (
+              <div key={i} style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid var(--color-gray-200)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-gray-800)' }}>{st.stage}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: st.color }}>{st.count} candidates</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>({st.sub})</span>
+                  </div>
+                </div>
+                <div style={{ width: '100%', height: '8px', background: 'var(--color-gray-200)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.max(st.percent, 8)}%`, height: '100%', background: st.color, borderRadius: '4px', transition: 'width 0.5s ease' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Application Volume Graph */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)', margin: '0 0 0.5rem 0' }}>
+            Application Velocity & Hires Trend
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-gray-500)', marginBottom: '1.5rem' }}>
+            Monthly candidate volume across all posted jobs.
+          </p>
+
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '180px', paddingTop: '1rem', gap: '0.75rem' }}>
+            {monthlyTrends.map((item, idx) => {
+              const heightPct = Math.round((item.applicants / maxAppCount) * 100);
+              return (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-primary-700)', marginBottom: '0.35rem' }}>
+                    {item.applicants}
+                  </div>
+                  <div style={{
+                    width: '100%',
+                    maxWidth: '42px',
+                    height: `${heightPct}%`,
+                    background: 'linear-gradient(180deg, var(--color-primary-600) 0%, #818cf8 100%)',
+                    borderRadius: '6px 6px 0 0',
+                    position: 'relative'
+                  }}>
+                    {/* Hired mini dot */}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '4px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      fontSize: '0.65rem',
+                      color: '#fff',
+                      fontWeight: 700
+                    }}>
+                      {item.hired}h
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-600)', marginTop: '0.5rem', fontWeight: 500 }}>
+                    {item.month}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--color-gray-600)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span style={{ width: '12px', height: '12px', background: 'var(--color-primary-600)', borderRadius: '3px' }} />
+              Total Applicants
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span style={{ width: '12px', height: '12px', background: '#10b981', borderRadius: '3px' }} />
+              Hired Candidates
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Grid: Job Performance Table & Sourcing Channels */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.5rem' }}>
+        {/* Job Performance breakdown */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)', margin: 0 }}>
+              Job Posting Performance
+            </h3>
+            <Link to="/recruiter/jobs" style={{ fontSize: '0.85rem', color: 'var(--color-primary-600)', fontWeight: 600, textDecoration: 'none' }}>
+              Manage Jobs →
+            </Link>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-gray-200)', textAlign: 'left', color: 'var(--color-gray-500)' }}>
+                  <th style={{ padding: '0.6rem 0.5rem', fontWeight: 600 }}>Job Position</th>
+                  <th style={{ padding: '0.6rem 0.5rem', fontWeight: 600, textAlign: 'center' }}>Applicants</th>
+                  <th style={{ padding: '0.6rem 0.5rem', fontWeight: 600, textAlign: 'center' }}>Shortlisted</th>
+                  <th style={{ padding: '0.6rem 0.5rem', fontWeight: 600, textAlign: 'center' }}>Interviews</th>
+                  <th style={{ padding: '0.6rem 0.5rem', fontWeight: 600, textAlign: 'right' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((job) => (
+                  <tr key={job.id} style={{ borderBottom: '1px solid var(--color-gray-100)' }}>
+                    <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--color-gray-900)' }}>
+                      {job.title}
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', fontWeight: 400 }}>{job.department} • {job.workMode}</div>
+                    </td>
+                    <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 600 }}>
+                      {job.applicantsCount || 0}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+                      {job.shortlistedCount || 0}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#8b5cf6', fontWeight: 600 }}>
+                      {job.interviewsCount || 0}
+                    </td>
+                    <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '4px',
+                        background: job.status === 'PUBLISHED' ? '#ecfdf5' : '#fffbeb',
+                        color: job.status === 'PUBLISHED' ? '#059669' : '#d97706'
+                      }}>
+                        {job.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Candidate Sourcing Channels */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)', margin: '0 0 0.5rem 0' }}>
+            Candidate Sourcing Breakdown
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-gray-500)', marginBottom: '1.25rem' }}>
+            Where your best applicants and successful hires are originating from.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+            {candidateSources.map((ch, idx) => (
+              <div key={idx}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--color-gray-800)' }}>{ch.source}</span>
+                  <span style={{ color: 'var(--color-gray-600)', fontWeight: 500 }}>{ch.count} applicants ({ch.percentage}%)</span>
+                </div>
+                <div style={{ width: '100%', height: '8px', background: 'var(--color-gray-200)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${ch.percentage}%`, height: '100%', background: ch.color, borderRadius: '4px' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            marginTop: '1.5rem',
+            padding: '1rem',
+            borderRadius: '8px',
+            background: 'var(--color-primary-50)',
+            border: '1px solid var(--color-primary-100)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem'
+          }}>
+            <Target size={24} color="var(--color-primary-600)" style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: '0.85rem', color: 'var(--color-primary-900)' }}>
+              <strong>Job Mela Participation Boost:</strong> Registering for upcoming NTR Vikasa Job Melas increases qualified applicant influx by <strong>+38%</strong>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

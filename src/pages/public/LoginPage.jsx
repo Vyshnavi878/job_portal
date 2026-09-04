@@ -1,30 +1,108 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Briefcase, Mail, Lock, Eye, EyeOff, Building2, User, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Briefcase, Mail, Lock, Building2, User, ArrowLeft, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
 import { Checkbox } from '../../components/ui/FormControls';
 import { useToast } from '../../context/ToastContext';
+import { useCandidate } from '../../context/CandidateContext';
+import { useRecruiter } from '../../context/RecruiterContext';
+import { useAdmin } from '../../context/AdminContext';
 
 export default function LoginPage() {
-  const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
+  const { addToast } = useToast();
+  const navigate = useNavigate();
+  const { login: loginCandidate } = useCandidate();
+  const { loginRecruiter } = useRecruiter();
+  const { loginAdmin } = useAdmin();
+
+  const [email, setEmail] = useState('candidate1@ntrvikasa.com');
+  const [password, setPassword] = useState('password123');
+  const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  const handleSignIn = (targetEmail) => {
+    const loginEmail = targetEmail || email;
+    setLoading(true);
+
+    setTimeout(() => {
+      setLoading(false);
+
+      if (loginEmail.includes('admin')) {
+        loginAdmin(loginEmail, password);
+        navigate('/admin/dashboard');
+        const adminName = loginEmail.includes('admin2') ? 'Super Admin' : 'Admin User';
+        addToast(`Welcome ${adminName}! Logged into NTR Vikasa Administration.`, 'success');
+        return;
+      }
+
+      // Check if it's a recruiter / hiring team account or candidate
+      if (
+        loginEmail.includes('recruiter') ||
+        loginEmail.includes('tech') ||
+        loginEmail.includes('abc') ||
+        loginEmail.includes('example.com') ||
+        loginEmail.includes('abctech')
+      ) {
+        const recruiterResult = loginRecruiter(loginEmail, password);
+        if (recruiterResult?.success) {
+          navigate('/recruiter/dashboard');
+          const recName = recruiterResult.user?.name || 'Recruiter';
+          const compName = recruiterResult.company?.name || 'Company Workspace';
+          addToast(`Welcome back, ${recName}! Logged into ${compName}.`, 'success');
+          return;
+        }
+      }
+
+      // Candidate login fallback
+      loginCandidate(loginEmail);
+      navigate('/candidate/dashboard');
+      const candidateName = loginEmail.includes('candidate2') || loginEmail.includes('rahul') ? 'Rahul Kumar' : 'Priya Sharma';
+      addToast(`Welcome back, ${candidateName}! Logged into Candidate Workspace.`, 'success');
+    }, 400);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      toast({
-        type: 'info',
-        title: 'Authentication Simulation',
-        message: 'Signed in. Backend auth will determine your role in future phases.',
-      });
-    }, 1000);
+    handleSignIn(email);
+  };
+
+  // Quick Demo Buttons
+  const handleDemoCandidate1 = () => {
+    setEmail('candidate1@ntrvikasa.com');
+    setPassword('password123');
+    handleSignIn('candidate1@ntrvikasa.com');
+  };
+
+  const handleDemoCandidate2 = () => {
+    setEmail('candidate2@ntrvikasa.com');
+    setPassword('password123');
+    handleSignIn('candidate2@ntrvikasa.com');
+  };
+
+  const handleDemoRecruiter1 = () => {
+    setEmail('recruiter1@ntrvikasa.com');
+    setPassword('password123');
+    handleSignIn('recruiter1@ntrvikasa.com');
+  };
+
+  const handleDemoRecruiter2 = () => {
+    setEmail('recruiter2@ntrvikasa.com');
+    setPassword('password123');
+    handleSignIn('recruiter2@ntrvikasa.com');
+  };
+
+  const handleDemoAdmin1 = () => {
+    setEmail('admin1@ntrvikasa.com');
+    setPassword('password123');
+    handleSignIn('admin1@ntrvikasa.com');
+  };
+
+  const handleDemoAdmin2 = () => {
+    setEmail('admin2@ntrvikasa.com');
+    setPassword('password123');
+    handleSignIn('admin2@ntrvikasa.com');
   };
 
   return (
@@ -52,7 +130,7 @@ export default function LoginPage() {
             <span style={{ color: '#fff' }}>Job Portal</span>
           </h2>
           <p style={{ opacity: 0.85, lineHeight: 'var(--leading-relaxed)', fontSize: 'var(--text-base)', color: '#cbd5e1' }}>
-            Your all-in-one portal for full-time jobs, paid internships, and nationwide Job Melas.
+            Your all-in-one portal for full-time jobs, paid internships, recruiter talent acquisition, and nationwide Job Melas.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginTop: 'var(--space-8)' }}>
             {[{ v: '52,000+', l: 'Active Jobs' }, { v: '14,000+', l: 'Verified Companies' }, { v: '2,80,000+', l: 'Candidates' }, { v: '96.4%', l: 'Placement Rate' }].map((s) => (
@@ -75,7 +153,7 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <div style={{ width: '100%', maxWidth: 440 }}>
+        <div style={{ width: '100%', maxWidth: 460 }}>
           {/* Mobile Logo */}
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
             <Link to="/" className="logo" style={{ justifyContent: 'center', display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
@@ -83,16 +161,157 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: 'var(--space-6)', textAlign: 'center' }}>
-            Sign in to NTR VIKASA Job Portal
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: 'var(--space-2)', textAlign: 'center' }}>
+            Sign in to NTR VIKASA
           </h1>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textAlign: 'center', marginBottom: 'var(--space-4)' }}>
+            Select a demo account below or enter your credentials to access your workspace.
+          </p>
+
+          {/* Quick Demo Credentials Switchers */}
+          <div style={{
+            background: 'var(--color-primary-50)',
+            border: '1px solid var(--color-primary-200)',
+            borderRadius: 'var(--radius-xl)',
+            padding: 'var(--space-3) var(--space-4)',
+            marginBottom: 'var(--space-4)'
+          }}>
+            {/* Candidate Demos */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 'var(--space-1)' }}>
+              <Sparkles size={14} style={{ color: 'var(--color-primary-600)' }} />
+              <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-primary-700)' }}>
+                Demo Candidate Profiles:
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+              <button
+                type="button"
+                onClick={handleDemoCandidate1}
+                style={{
+                  background: '#fff',
+                  border: '1.5px solid var(--color-primary-400)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '6px 8px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                <strong style={{ display: 'block', color: 'var(--color-primary-800)' }}>Candidate 1: Priya</strong>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>Frontend Dev (4 yrs)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDemoCandidate2}
+                style={{
+                  background: '#fff',
+                  border: '1.5px solid var(--color-primary-400)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '6px 8px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                <strong style={{ display: 'block', color: 'var(--color-primary-800)' }}>Candidate 2: Rahul</strong>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>Python Backend (3.5 yrs)</span>
+              </button>
+            </div>
+
+            {/* Recruiter Demos */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 'var(--space-1)' }}>
+              <Building2 size={14} style={{ color: '#7c3aed' }} />
+              <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6d28d9' }}>
+                Demo Recruiter Profiles:
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+              <button
+                type="button"
+                onClick={handleDemoRecruiter1}
+                style={{
+                  background: '#fff',
+                  border: '1.5px solid #a78bfa',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '6px 8px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                <strong style={{ display: 'block', color: '#5b21b6' }}>Recruiter 1: Arjun</strong>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>ABC Technologies</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDemoRecruiter2}
+                style={{
+                  background: '#fff',
+                  border: '1.5px solid #a78bfa',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '6px 8px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                <strong style={{ display: 'block', color: '#5b21b6' }}>Recruiter 2: Sneha</strong>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>Tech Solutions</span>
+              </button>
+            </div>
+
+            {/* Admin Demos */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 'var(--space-1)' }}>
+              <ShieldCheck size={14} style={{ color: '#0369a1' }} />
+              <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#0369a1' }}>
+                Demo Admin Profiles:
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
+              <button
+                type="button"
+                onClick={handleDemoAdmin1}
+                style={{
+                  background: '#fff',
+                  border: '1.5px solid #7dd3fc',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '6px 8px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                <strong style={{ display: 'block', color: '#0c4a6e' }}>Admin 1: Admin User</strong>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>admin1@ntrvikasa.com</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDemoAdmin2}
+                style={{
+                  background: '#fff',
+                  border: '1.5px solid #7dd3fc',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '6px 8px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                <strong style={{ display: 'block', color: '#0c4a6e' }}>Admin 2: Super Admin</strong>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>admin2@ntrvikasa.com</span>
+              </button>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             <FormField label="Email Address" htmlFor="email" required>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="user@ntrvikasa.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 leftIcon={<Mail size={16} />}
@@ -104,7 +323,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your account password"
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -124,7 +343,7 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" variant="primary" fullWidth size="lg" loading={loading}>
-              Sign In
+              Sign In to Workspace
             </Button>
           </form>
 

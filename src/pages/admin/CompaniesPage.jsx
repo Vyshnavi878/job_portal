@@ -1,60 +1,76 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Building2, Search, Filter, Eye, ShieldCheck, ShieldAlert,
   Users, Briefcase, Globe, Mail, Phone, MapPin, CheckCircle2,
-  XCircle, AlertTriangle
+  XCircle, AlertTriangle, FileText
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
+import FormField from '../../components/ui/FormField';
+import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
-import { MOCK_COMPANIES, INDUSTRIES } from '../../data/mockData';
+import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminCompaniesPage() {
-  const { toast } = useToast();
-
-  const [companies, setCompanies] = useState(MOCK_COMPANIES.map(c => ({
-    ...c,
-    status: c.verified ? 'VERIFIED' : 'PENDING',
-    recruitersCount: Math.floor(2 + Math.random() * 8),
-    cinNumber: 'U72200KA2014PTC089100',
-    gstNumber: '29AAACH1234F1Z5',
-  })));
+  const { addToast } = useToast();
+  const { companies, approveCompany, rejectCompany } = useAdmin();
 
   const [search, setSearch] = useState('');
   const [industryFilter, setIndustryFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   // View modal
   const [selectedComp, setSelectedComp] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
-  // Suspend Dialog
-  const [suspendTarget, setSuspendTarget] = useState(null);
+  // Reject modal
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return companies.filter((c) => {
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (!c.name.toLowerCase().includes(q) && !c.industry.toLowerCase().includes(q)) return false;
+        const matchesName = c.name?.toLowerCase().includes(q);
+        const matchesIndustry = c.industry?.toLowerCase().includes(q);
+        const matchesRecruiter = c.recruiter?.toLowerCase().includes(q);
+        const matchesLocation = c.location?.toLowerCase().includes(q);
+        if (!matchesName && !matchesIndustry && !matchesRecruiter && !matchesLocation) return false;
       }
       if (industryFilter !== 'ALL' && c.industry !== industryFilter) return false;
+      if (statusFilter !== 'ALL' && c.verificationStatus !== statusFilter) return false;
       return true;
     });
-  }, [companies, search, industryFilter]);
+  }, [companies, search, industryFilter, statusFilter]);
 
-  const handleVerify = (c) => {
-    setCompanies(companies.map(item => item.id === c.id ? { ...item, status: 'VERIFIED', verified: true } : item));
-    toast({ type: 'success', title: 'Company Verified', message: `${c.name} has been marked as Verified Employer.` });
+  const handleApprove = (c) => {
+    approveCompany(c.id);
+    addToast(`${c.name} has been marked as VERIFIED & APPROVED.`, 'success');
+    if (selectedComp?.id === c.id) {
+      setSelectedComp({ ...selectedComp, verificationStatus: 'VERIFIED' });
+    }
   };
 
-  const handleConfirmSuspend = () => {
-    if (!suspendTarget) return;
-    setCompanies(companies.map(item => item.id === suspendTarget.id ? { ...item, status: 'SUSPENDED', verified: false } : item));
-    toast({ type: 'error', title: 'Company Suspended', message: `${suspendTarget.name} has been suspended.` });
-    setSuspendTarget(null);
+  const handleOpenReject = (c) => {
+    setRejectTarget(c);
+    setRejectionReason('Company business incorporation and GST credentials could not be verified.');
+    setRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = (e) => {
+    e.preventDefault();
+    if (!rejectTarget) return;
+    rejectCompany(rejectTarget.id, rejectionReason || 'Verification rejected by administrator.');
+    addToast(`${rejectTarget.name} verification has been REJECTED.`, 'info');
+    setRejectModalOpen(false);
+    if (selectedComp?.id === rejectTarget.id) {
+      setSelectedComp({ ...selectedComp, verificationStatus: 'REJECTED' });
+    }
+    setRejectTarget(null);
   };
 
   const columns = [
@@ -68,7 +84,7 @@ export default function AdminCompaniesPage() {
             width: 38,
             height: 38,
             borderRadius: 'var(--radius-lg)',
-            background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-accent-500))',
+            background: 'linear-gradient(135deg, #1e1b4b, #3b82f6)',
             color: '#fff',
             display: 'flex',
             alignItems: 'center',
@@ -76,57 +92,109 @@ export default function AdminCompaniesPage() {
             fontWeight: 800,
             fontSize: 'var(--text-sm)'
           }}>
-            {row.name[0]}
+            {row.name?.[0] || 'C'}
           </div>
           <div>
-            <strong style={{ fontSize: 'var(--text-sm)' }}>{row.name}</strong>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{row.location}</p>
+            <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{row.name}</strong>
+            <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.website || 'Official Employer'}</span>
           </div>
+        </div>
+      )
+    },
+    {
+      key: 'recruiter',
+      label: 'Recruiter Lead',
+      render: (_, row) => (
+        <div style={{ fontSize: 'var(--text-xs)' }}>
+          <strong>{row.recruiter}</strong>
+          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>{row.email || 'hr@company.com'}</span>
         </div>
       )
     },
     {
       key: 'industry',
-      label: 'Industry & Size',
+      label: 'Industry',
       render: (_, row) => (
         <div style={{ fontSize: 'var(--text-xs)' }}>
           <strong>{row.industry}</strong>
-          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{row.size}</p>
+          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>{row.size || '100-500 emp'}</span>
         </div>
       )
     },
     {
-      key: 'openJobs',
-      label: 'Open Jobs',
+      key: 'location',
+      label: 'Location',
+      render: (v) => <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>📍 {v}</span>
+    },
+    {
+      key: 'registrationDate',
+      label: 'Registration Date',
       sortable: true,
-      render: (v) => <span className="badge badge-primary">{v} Openings</span>
+      render: (v) => (
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+          {v ? new Date(v).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Aug 2026'}
+        </span>
+      )
     },
     {
-      key: 'recruitersCount',
-      label: 'Recruiters',
-      render: (v) => <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{v} verified staff</span>
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (v) => <span className={`badge ${v === 'VERIFIED' ? 'badge-success' : v === 'SUSPENDED' ? 'badge-danger' : 'badge-warning'}`}>{v}</span>
+      key: 'verificationStatus',
+      label: 'Verification Status',
+      render: (v) => {
+        const isVerified = v === 'VERIFIED';
+        const isPending = v === 'PENDING';
+        return (
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '3px 8px',
+            borderRadius: 'var(--radius-full)',
+            background: isVerified ? '#ecfdf5' : isPending ? '#fffbeb' : '#fef2f2',
+            color: isVerified ? '#047857' : isPending ? '#b45309' : '#b91c1c',
+            border: isVerified ? '1px solid #a7f3d0' : isPending ? '1px solid #fde68a' : '1px solid #fecaca',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4
+          }}>
+            {isVerified ? <CheckCircle2 size={12} /> : isPending ? <AlertTriangle size={12} /> : <XCircle size={12} />}
+            {v || 'PENDING'}
+          </span>
+        );
+      }
     },
     {
       key: 'actions',
       label: 'Actions',
       render: (_, row) => (
         <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-          <Button size="xs" variant="outline" leftIcon={<Eye size={12} />} onClick={() => { setSelectedComp(row); setViewModalOpen(true); }}>
-            Inspect
+          <Button
+            size="xs"
+            variant="outline"
+            leftIcon={<Eye size={12} />}
+            onClick={() => {
+              setSelectedComp(row);
+              setViewModalOpen(true);
+            }}
+          >
+            View
           </Button>
 
-          {row.status !== 'VERIFIED' ? (
-            <Button size="xs" variant="primary" onClick={() => handleVerify(row)}>
-              Verify
+          {row.verificationStatus !== 'VERIFIED' && (
+            <Button
+              size="xs"
+              variant="primary"
+              onClick={() => handleApprove(row)}
+            >
+              Approve
             </Button>
-          ) : (
-            <Button size="xs" variant="danger" onClick={() => setSuspendTarget(row)}>
-              Suspend
+          )}
+
+          {row.verificationStatus !== 'REJECTED' && (
+            <Button
+              size="xs"
+              variant="danger"
+              onClick={() => handleOpenReject(row)}
+            >
+              Reject
             </Button>
           )}
         </div>
@@ -143,96 +211,173 @@ export default function AdminCompaniesPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
               <Building2 size={20} style={{ color: 'var(--color-primary-600)' }} />
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Corporate Enterprise Registry</h1>
+              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Registered Companies Directory</h1>
             </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-              Audit enterprise employer accounts, legal credentials, and recruiter authorization rights
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Audit enterprise credentials, industry classifications, and manage verified employer records.
             </p>
           </div>
 
-          <Link to="/companies" target="_blank">
-            <Button variant="secondary" size="sm">
-              Public Directory View
-            </Button>
-          </Link>
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <span style={{
+              background: '#eff6ff',
+              color: '#1d4ed8',
+              border: '1px solid #bfdbfe',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 700
+            }}>
+              {companies.filter(c => c.verificationStatus === 'VERIFIED').length} Verified Organizations
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Table Card */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div className="input-wrapper" style={{ width: 320 }}>
-            <span className="input-icon-left"><Search size={15} /></span>
+      {/* Search & Filter Toolbar */}
+      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
             <input
-              className="input has-icon-left"
-              placeholder="Search companies by name or industry..."
+              type="text"
+              placeholder="Search company name, industry, recruiter lead, location..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="form-control"
+              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
             />
           </div>
 
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            Showing <strong>{filtered.length}</strong> enterprise accounts
-          </p>
-        </div>
-
-        <div className="card-body" style={{ padding: 0 }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: 'var(--space-10)' }}>
-              <EmptyState icon="companies" title="No companies found" description="No registered enterprise accounts match your search query." />
-            </div>
-          ) : (
-            <Table
-              columns={columns}
-              data={filtered}
-              rowKey="id"
-            />
-          )}
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+            <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+            {['ALL', 'VERIFIED', 'PENDING', 'REJECTED'].map((filterKey) => (
+              <button
+                key={filterKey}
+                type="button"
+                onClick={() => setStatusFilter(filterKey)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                  background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                  color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
+                  transition: 'all 150ms ease'
+                }}
+              >
+                {filterKey === 'ALL' ? 'All Status' : filterKey}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── Company Details Modal ── */}
-      {selectedComp && (
+      {/* Data Table */}
+      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<Building2 size={40} />}
+            title="No Companies Found"
+            description="No company records match your current search and filter criteria."
+          />
+        ) : (
+          <Table columns={columns} data={filtered} />
+        )}
+      </div>
+
+      {/* ── 1. Company View Modal ── */}
+      {viewModalOpen && selectedComp && (
         <Modal
-          open={viewModalOpen}
+          isOpen={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
-          title={`Enterprise Account: ${selectedComp.name}`}
-          size="md"
+          title={`Company Record: ${selectedComp.name}`}
+          size="lg"
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div style={{ padding: 'var(--space-4)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>{selectedComp.name}</h3>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{selectedComp.industry} • {selectedComp.size}</p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{selectedComp.location}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            {/* Header Badge */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-4)',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+              color: '#fff',
+              padding: 'var(--space-5)',
+              borderRadius: 'var(--radius-xl)'
+            }}>
+              <div style={{
+                width: 56,
+                height: 56,
+                borderRadius: 'var(--radius-xl)',
+                background: 'rgba(255,255,255,0.2)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 'var(--text-xl)',
+                fontWeight: 800
+              }}>
+                {selectedComp.name?.[0]}
               </div>
-              <span className={`badge ${selectedComp.status === 'VERIFIED' ? 'badge-success' : selectedComp.status === 'SUSPENDED' ? 'badge-danger' : 'badge-warning'}`}>
-                {selectedComp.status}
-              </span>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedComp.name}</h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '2px 0 0 0' }}>{selectedComp.industry} • {selectedComp.location}</p>
+                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#cbd5e1' }}>
+                  <span>🌐 {selectedComp.website || 'https://example.com'}</span>
+                  <span>📅 Registered: {selectedComp.registrationDate || 'Aug 2026'}</span>
+                  <span>🛡️ Status: {selectedComp.verificationStatus}</span>
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>CIN Number</span><strong>{selectedComp.cinNumber}</strong></div>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>GSTIN</span><strong>{selectedComp.gstNumber}</strong></div>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Active Openings</span><strong>{selectedComp.openJobs} Jobs</strong></div>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Authorized Recruiters</span><strong>{selectedComp.recruitersCount} Members</strong></div>
+            {/* Legal / Corporate Info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Corporate Identity
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>CIN:</strong> {selectedComp.cinNumber || 'U72200KA2012PTC064123'}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>GSTIN:</strong> {selectedComp.gstNumber || '29ABCDE1234F1Z5'}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Company Size:</strong> {selectedComp.size || '500-1000 employees'}</p>
+              </div>
+
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Recruiter Contact
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Authorized Lead:</strong> {selectedComp.recruiter}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Official Email:</strong> {selectedComp.email || 'hr@company.com'}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Phone:</strong> {selectedComp.phone || '+91 80 4920 1000'}</p>
+              </div>
             </div>
 
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>
-              {selectedComp.description}
-            </p>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-              <Button size="sm" variant="secondary" onClick={() => setViewModalOpen(false)}>
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+              <Button variant="outline" onClick={() => setViewModalOpen(false)}>
                 Close
               </Button>
-              {selectedComp.status !== 'VERIFIED' ? (
-                <Button size="sm" variant="primary" onClick={() => { handleVerify(selectedComp); setViewModalOpen(false); }}>
-                  Verify & Approve
+              {selectedComp.verificationStatus !== 'VERIFIED' && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    handleApprove(selectedComp);
+                    setSelectedComp({ ...selectedComp, verificationStatus: 'VERIFIED' });
+                  }}
+                >
+                  Approve Company
                 </Button>
-              ) : (
-                <Button size="sm" variant="danger" onClick={() => { setViewModalOpen(false); setSuspendTarget(selectedComp); }}>
-                  Suspend Company
+              )}
+              {selectedComp.verificationStatus !== 'REJECTED' && (
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    setViewModalOpen(false);
+                    handleOpenReject(selectedComp);
+                  }}
+                >
+                  Reject Company
                 </Button>
               )}
             </div>
@@ -240,17 +385,40 @@ export default function AdminCompaniesPage() {
         </Modal>
       )}
 
-      {/* Suspend Confirmation Dialog */}
-      <ConfirmDialog
-        open={!!suspendTarget}
-        onClose={() => setSuspendTarget(null)}
-        onConfirm={handleConfirmSuspend}
-        title="Suspend Company Account?"
-        message={`Are you sure you want to suspend "${suspendTarget?.name}"? All associated recruiter accounts and active job postings will be disabled.`}
-        confirmText="Yes, Suspend Company"
-        danger
-      />
+      {/* ── 2. Reject Reason Modal ── */}
+      {rejectModalOpen && rejectTarget && (
+        <Modal
+          isOpen={rejectModalOpen}
+          onClose={() => setRejectModalOpen(false)}
+          title={`Reject Verification: ${rejectTarget.name}`}
+          size="md"
+        >
+          <form onSubmit={handleConfirmReject} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Specify the administrative reason for rejecting {rejectTarget.name}.
+            </p>
 
+            <FormField label="Rejection Notes" required>
+              <Textarea
+                rows={3}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Reason for rejection..."
+                required
+              />
+            </FormField>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+              <Button type="button" variant="outline" onClick={() => setRejectModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="danger">
+                Confirm Rejection
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

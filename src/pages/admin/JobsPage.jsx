@@ -1,140 +1,231 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Briefcase, Search, Filter, Eye, CheckCircle2, XCircle,
-  Building2, MapPin, DollarSign, Clock, ShieldAlert, AlertTriangle
+  Building2, MapPin, DollarSign, Clock, ShieldAlert, AlertTriangle,
+  FileEdit, HelpCircle
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
+import FormField from '../../components/ui/FormField';
+import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
-import { MOCK_JOBS } from '../../data/mockData';
-
-const ALL_ADMIN_JOBS = [
-  ...MOCK_JOBS.map(j => ({ ...j, applicantsCount: Math.floor(12 + Math.random() * 80) })),
-  {
-    id: '99',
-    title: 'Senior Cloud Security Architect',
-    company: 'TechCorp India',
-    salary: '₹32 - ₹48 LPA',
-    location: 'Bengaluru',
-    type: 'Full-time',
-    status: 'PENDING',
-    postedDate: '2026-08-24',
-    applicantsCount: 0,
-  },
-  {
-    id: '100',
-    title: 'Spam Casino Operator',
-    company: 'Rogue Offshores',
-    salary: '₹50 LPA',
-    location: 'Remote',
-    type: 'Full-time',
-    status: 'SUSPENDED',
-    postedDate: '2026-08-10',
-    applicantsCount: 3,
-  },
-];
+import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminJobsPage() {
-  const { toast } = useToast();
+  const { addToast } = useToast();
+  const { jobs, approveJob, rejectJob, requestJobChanges } = useAdmin();
 
-  const [jobs, setJobs] = useState(ALL_ADMIN_JOBS);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  // Suspend / Close target
-  const [suspendTarget, setSuspendTarget] = useState(null);
+  // View modal
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+
+  // Reject modal
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+
+  // Request Changes modal
+  const [changesTarget, setChangesTarget] = useState(null);
+  const [changeNotes, setChangeNotes] = useState('');
+  const [changesModalOpen, setChangesModalOpen] = useState(false);
 
   const filterTabs = [
     { key: 'ALL', label: 'All Jobs' },
-    { key: 'PUBLISHED', label: 'Published' },
+    { key: 'ACTIVE', label: 'Active' },
     { key: 'PENDING', label: 'Pending' },
-    { key: 'DRAFT', label: 'Draft' },
-    { key: 'CLOSED', label: 'Closed' },
-    { key: 'EXPIRED', label: 'Expired' },
-    { key: 'SUSPENDED', label: 'Suspended' },
+    { key: 'APPROVED', label: 'Approved' },
     { key: 'REJECTED', label: 'Rejected' },
+    { key: 'CLOSED', label: 'Closed' },
   ];
 
   const filtered = useMemo(() => {
     return jobs.filter((j) => {
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (!j.title.toLowerCase().includes(q) && !j.company.toLowerCase().includes(q)) return false;
+        const matchesTitle = j.title?.toLowerCase().includes(q);
+        const matchesCompany = j.company?.toLowerCase().includes(q);
+        const matchesRecruiter = j.recruiter?.toLowerCase().includes(q);
+        const matchesLocation = j.location?.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesCompany && !matchesRecruiter && !matchesLocation) return false;
       }
-      if (statusFilter !== 'ALL' && j.status !== statusFilter) return false;
+      if (statusFilter !== 'ALL') {
+        if (statusFilter === 'APPROVED' && (j.status !== 'APPROVED' && j.status !== 'PUBLISHED')) return false;
+        if (statusFilter === 'ACTIVE' && (j.status !== 'ACTIVE' && j.status !== 'PUBLISHED' && j.status !== 'APPROVED')) return false;
+        if (statusFilter === 'PENDING' && j.status !== 'PENDING') return false;
+        if (statusFilter === 'REJECTED' && j.status !== 'REJECTED') return false;
+        if (statusFilter === 'CLOSED' && j.status !== 'CLOSED') return false;
+      }
       return true;
     });
   }, [jobs, search, statusFilter]);
 
   const handleApprove = (j) => {
-    setJobs(jobs.map(item => item.id === j.id ? { ...item, status: 'PUBLISHED' } : item));
-    toast({ type: 'success', title: 'Job Approved', message: `"${j.title}" is now published.` });
+    approveJob(j.id);
+    addToast(`"${j.title}" by ${j.company} is now APPROVED.`, 'success');
+    if (selectedJob?.id === j.id) {
+      setSelectedJob({ ...selectedJob, status: 'APPROVED' });
+    }
   };
 
-  const handleConfirmSuspend = () => {
-    if (!suspendTarget) return;
-    setJobs(jobs.map(item => item.id === suspendTarget.id ? { ...item, status: 'SUSPENDED' } : item));
-    toast({ type: 'error', title: 'Job Suspended', message: `"${suspendTarget.title}" suspended.` });
-    setSuspendTarget(null);
+  const handleOpenReject = (j) => {
+    setRejectTarget(j);
+    setRejectionReason('Job details do not comply with wage transparency or employment authenticity guidelines.');
+    setRejectModalOpen(true);
+  };
+
+  const handleConfirmReject = (e) => {
+    e.preventDefault();
+    if (!rejectTarget) return;
+    rejectJob(rejectTarget.id, rejectionReason || 'Rejected by administrator.');
+    addToast(`"${rejectTarget.title}" has been REJECTED.`, 'info');
+    setRejectModalOpen(false);
+    if (selectedJob?.id === rejectTarget.id) {
+      setSelectedJob({ ...selectedJob, status: 'REJECTED' });
+    }
+    setRejectTarget(null);
+  };
+
+  const handleOpenRequestChanges = (j) => {
+    setChangesTarget(j);
+    setChangeNotes('Please clarify salary compensation range, educational criteria, and job responsibilities.');
+    setChangesModalOpen(true);
+  };
+
+  const handleConfirmRequestChanges = (e) => {
+    e.preventDefault();
+    if (!changesTarget) return;
+    requestJobChanges(changesTarget.id, changeNotes || 'Changes requested by administrator.');
+    addToast(`Changes requested for "${changesTarget.title}". Recruiter notified.`, 'warning');
+    setChangesModalOpen(false);
+    if (selectedJob?.id === changesTarget.id) {
+      setSelectedJob({ ...selectedJob, status: 'CHANGES_REQUESTED' });
+    }
+    setChangesTarget(null);
   };
 
   const columns = [
     {
       key: 'title',
-      label: 'Job Title & Employer',
+      label: 'Job Title',
       sortable: true,
       render: (_, row) => (
         <div>
-          <Link to={`/jobs/${row.id}`} target="_blank" style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-text)', textDecoration: 'none' }}>
-            {row.title}
-          </Link>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.company}</p>
-          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{row.location} ({row.type})</p>
+          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{row.title}</strong>
+          <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.type || 'Full-time'}</span>
         </div>
       )
     },
     {
-      key: 'salary',
-      label: 'CTC Range',
-      render: (v) => <strong style={{ color: 'var(--color-success-700)', fontSize: 'var(--text-xs)' }}>{v}</strong>
+      key: 'company',
+      label: 'Company',
+      sortable: true,
+      render: (v) => <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{v}</strong>
     },
     {
-      key: 'applicantsCount',
-      label: 'Applicants',
+      key: 'location',
+      label: 'Location',
+      render: (v) => <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>📍 {v}</span>
+    },
+    {
+      key: 'experience',
+      label: 'Experience',
+      render: (v) => <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{v || '2-5 Years'}</span>
+    },
+    {
+      key: 'salary',
+      label: 'Salary',
+      render: (v) => <strong style={{ fontSize: 'var(--text-xs)', color: '#047857' }}>{v}</strong>
+    },
+    {
+      key: 'recruiter',
+      label: 'Recruiter',
+      render: (v) => <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{v || 'Authorized Lead'}</span>
+    },
+    {
+      key: 'postedDate',
+      label: 'Posted Date',
       sortable: true,
-      render: (v) => <span className="badge badge-primary">{v} Candidates</span>
+      render: (v) => (
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+          {v ? new Date(v).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026'}
+        </span>
+      )
     },
     {
       key: 'status',
       label: 'Status',
-      render: (v) => <StatusBadge status={v} />
+      render: (v) => {
+        const isApproved = v === 'APPROVED' || v === 'ACTIVE' || v === 'PUBLISHED';
+        const isPending = v === 'PENDING';
+        return (
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '3px 8px',
+            borderRadius: 'var(--radius-full)',
+            background: isApproved ? '#ecfdf5' : isPending ? '#fffbeb' : '#fef2f2',
+            color: isApproved ? '#047857' : isPending ? '#b45309' : '#b91c1c',
+            border: isApproved ? '1px solid #a7f3d0' : isPending ? '1px solid #fde68a' : '1px solid #fecaca',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4
+          }}>
+            {isApproved ? <CheckCircle2 size={12} /> : isPending ? <Clock size={12} /> : <XCircle size={12} />}
+            {v}
+          </span>
+        );
+      }
     },
     {
       key: 'actions',
       label: 'Actions',
       render: (_, row) => (
         <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-          <Link to={`/jobs/${row.id}`} target="_blank">
-            <Button size="xs" variant="outline" leftIcon={<Eye size={12} />}>
-              View
-            </Button>
-          </Link>
+          <Button
+            size="xs"
+            variant="outline"
+            leftIcon={<Eye size={12} />}
+            onClick={() => {
+              setSelectedJob(row);
+              setViewModalOpen(true);
+            }}
+          >
+            View
+          </Button>
 
-          {row.status === 'PENDING' && (
-            <Button size="xs" variant="primary" onClick={() => handleApprove(row)}>
+          {row.status !== 'APPROVED' && row.status !== 'ACTIVE' && (
+            <Button
+              size="xs"
+              variant="primary"
+              onClick={() => handleApprove(row)}
+            >
               Approve
             </Button>
           )}
 
-          {row.status === 'PUBLISHED' && (
-            <Button size="xs" variant="danger" onClick={() => setSuspendTarget(row)}>
-              Suspend
+          {row.status !== 'REJECTED' && (
+            <Button
+              size="xs"
+              variant="danger"
+              onClick={() => handleOpenReject(row)}
+            >
+              Reject
             </Button>
           )}
+
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={() => handleOpenRequestChanges(row)}
+          >
+            Changes
+          </Button>
         </div>
       )
     }
@@ -149,104 +240,268 @@ export default function AdminJobsPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
               <Briefcase size={20} style={{ color: 'var(--color-primary-600)' }} />
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Master Jobs Directory</h1>
+              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Platform Jobs Directory</h1>
             </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-              Manage all published, draft, expired, and suspended job postings across all registered companies
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Review, moderate, approve, or request modifications for employer job listings.
             </p>
           </div>
 
-          <Link to="/admin/jobs/requests">
-            <Button variant="primary" size="sm">
-              View Approval Queue (28)
-            </Button>
-          </Link>
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <span style={{
+              background: '#ecfdf5',
+              color: '#047857',
+              border: '1px solid #a7f3d0',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 700
+            }}>
+              {jobs.filter(j => j.status === 'ACTIVE' || j.status === 'APPROVED').length} Active Listings
+            </span>
+          </div>
         </div>
+      </div>
 
-        {/* Status Filter Tabs (ALL, DRAFT, PENDING, PUBLISHED, REJECTED, CLOSED, EXPIRED, SUSPENDED) */}
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-6)', overflowX: 'auto', paddingBottom: 4 }}>
-          {filterTabs.map((tab) => {
-            const count = tab.key === 'ALL' ? jobs.length : jobs.filter(j => j.status === tab.key).length;
-            const active = statusFilter === tab.key;
-            return (
+      {/* Search & Filter Toolbar */}
+      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Search job title, company, recruiter, location..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="form-control"
+              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+            {filterTabs.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => setStatusFilter(tab.key)}
                 style={{
-                  padding: '6px 14px',
-                  borderRadius: 'var(--radius-full)',
-                  border: active ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                  background: active ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                  color: active ? '#fff' : 'var(--color-text-muted)',
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-lg)',
                   fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6
+                  border: statusFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                  background: statusFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                  color: statusFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
+                  transition: 'all 150ms ease'
                 }}
               >
                 {tab.label}
-                <span style={{
-                  background: active ? 'rgba(255,255,255,0.25)' : 'var(--color-gray-100)',
-                  padding: '1px 6px',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '10px'
-                }}>
-                  {count}
-                </span>
               </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Table Card */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div className="input-wrapper" style={{ width: 320 }}>
-            <span className="input-icon-left"><Search size={15} /></span>
-            <input
-              className="input has-icon-left"
-              placeholder="Search jobs by title or company..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            ))}
           </div>
-
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            Showing <strong>{filtered.length}</strong> postings
-          </p>
-        </div>
-
-        <div className="card-body" style={{ padding: 0 }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: 'var(--space-10)' }}>
-              <EmptyState icon="jobs" title="No jobs match filter" description="No jobs found matching your criteria." />
-            </div>
-          ) : (
-            <Table
-              columns={columns}
-              data={filtered}
-              rowKey="id"
-            />
-          )}
         </div>
       </div>
 
-      {/* Suspend Confirmation Dialog */}
-      <ConfirmDialog
-        open={!!suspendTarget}
-        onClose={() => setSuspendTarget(null)}
-        onConfirm={handleConfirmSuspend}
-        title="Suspend Job Posting?"
-        message={`Are you sure you want to suspend "${suspendTarget?.title}"? It will immediately be hidden from search engines and candidate listings.`}
-        confirmText="Yes, Suspend Job"
-        danger
-      />
+      {/* Data Table */}
+      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<Briefcase size={40} />}
+            title="No Jobs Found"
+            description="No job postings match your current search and filter criteria."
+          />
+        ) : (
+          <Table columns={columns} data={filtered} />
+        )}
+      </div>
 
+      {/* ── 1. Job View Details Modal ── */}
+      {viewModalOpen && selectedJob && (
+        <Modal
+          isOpen={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
+          title={`Job Specification: ${selectedJob.title}`}
+          size="lg"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            {/* Header Badge */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-4)',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+              color: '#fff',
+              padding: 'var(--space-5)',
+              borderRadius: 'var(--radius-xl)'
+            }}>
+              <div style={{
+                width: 56,
+                height: 56,
+                borderRadius: 'var(--radius-xl)',
+                background: 'rgba(255,255,255,0.2)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 'var(--text-xl)',
+                fontWeight: 800
+              }}>
+                <Briefcase size={28} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedJob.title}</h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '2px 0 0 0' }}>{selectedJob.company} • 📍 {selectedJob.location}</p>
+                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#cbd5e1' }}>
+                  <span>💰 {selectedJob.salary}</span>
+                  <span>💼 {selectedJob.experience || '3-5 Years'}</span>
+                  <span>🛡️ Status: {selectedJob.status}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Job Metadata */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Posting Parameters
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Recruiter:</strong> {selectedJob.recruiter || 'Enterprise Talent'}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Job Type:</strong> {selectedJob.type || 'Full-time'}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Posted Date:</strong> {selectedJob.postedDate || 'Aug 2026'}</p>
+              </div>
+
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Compensation & Experience
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Salary Range:</strong> {selectedJob.salary}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Required Experience:</strong> {selectedJob.experience || '2-5 Years'}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Applicants:</strong> {selectedJob.applicantsCount || 0} candidates</p>
+              </div>
+            </div>
+
+            {/* Description / Requirements */}
+            <div>
+              <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                Role Description & Responsibilities
+              </h4>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', lineHeight: 1.6, background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                {selectedJob.description || 'Enterprise role responsibilities including hands-on project delivery, cross-functional collaboration, design system execution, and quality code craftsmanship.'}
+              </p>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+              <Button variant="outline" onClick={() => setViewModalOpen(false)}>
+                Close
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setViewModalOpen(false);
+                  handleOpenRequestChanges(selectedJob);
+                }}
+              >
+                Request Changes
+              </Button>
+              {selectedJob.status !== 'APPROVED' && selectedJob.status !== 'ACTIVE' && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    handleApprove(selectedJob);
+                    setSelectedJob({ ...selectedJob, status: 'APPROVED' });
+                  }}
+                >
+                  Approve Job
+                </Button>
+              )}
+              {selectedJob.status !== 'REJECTED' && (
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    setViewModalOpen(false);
+                    handleOpenReject(selectedJob);
+                  }}
+                >
+                  Reject Job
+                </Button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── 2. Reject Modal ── */}
+      {rejectModalOpen && rejectTarget && (
+        <Modal
+          isOpen={rejectModalOpen}
+          onClose={() => setRejectModalOpen(false)}
+          title={`Reject Job: ${rejectTarget.title}`}
+          size="md"
+        >
+          <form onSubmit={handleConfirmReject} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Specify the moderation reason for rejecting this job posting.
+            </p>
+
+            <FormField label="Rejection Notes" required>
+              <Textarea
+                rows={3}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Reason for rejection..."
+                required
+              />
+            </FormField>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+              <Button type="button" variant="outline" onClick={() => setRejectModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="danger">
+                Confirm Rejection
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ── 3. Request Changes Modal ── */}
+      {changesModalOpen && changesTarget && (
+        <Modal
+          isOpen={changesModalOpen}
+          onClose={() => setChangesModalOpen(false)}
+          title={`Request Changes: ${changesTarget.title}`}
+          size="md"
+        >
+          <form onSubmit={handleConfirmRequestChanges} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Specify the requested modifications for the recruiter before this job can be approved.
+            </p>
+
+            <FormField label="Modification Instructions" required>
+              <Textarea
+                rows={3}
+                value={changeNotes}
+                onChange={(e) => setChangeNotes(e.target.value)}
+                placeholder="Required modifications..."
+                required
+              />
+            </FormField>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+              <Button type="button" variant="outline" onClick={() => setChangesModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary">
+                Send Request to Recruiter
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

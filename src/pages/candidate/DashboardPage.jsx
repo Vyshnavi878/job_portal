@@ -1,37 +1,65 @@
-import { Briefcase, FileText, Bookmark, CalendarDays, TrendingUp, Clock, Bell, ArrowRight, UserCheck, Search, Upload } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Briefcase, FileText, Bookmark, CalendarDays, TrendingUp, Clock,
+  ArrowRight, Search, User, ShieldCheck, Sparkles, CheckCircle2,
+  Video, BookmarkCheck, MapPin, DollarSign, Layers, Zap, ExternalLink
+} from 'lucide-react';
 import StatCard from '../../components/ui/StatCard';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import { JobCard } from '../../components/ui/EntityCards';
+import ApplyModal from '../../components/ui/ApplyModal';
+import { useToast } from '../../context/ToastContext';
+import { useCandidate } from '../../context/CandidateContext';
 import { MOCK_JOBS } from '../../data/mockData';
 
-const STATS = [
-  { label: 'Applied Jobs', value: '18', change: '+3 this week', positive: true, icon: <FileText size={20} />, iconBg: '#eef2ff', iconColor: '#4f46e5' },
-  { label: 'Shortlisted',  value: '4',  change: '+1 new',      positive: true, icon: <TrendingUp size={20} />, iconBg: '#f0fdf4', iconColor: '#16a34a', variant: 'success' },
-  { label: 'Interviews',   value: '2',  change: 'Upcoming',    positive: true, icon: <Clock size={20} />, iconBg: '#fffbeb', iconColor: '#d97706', variant: 'warning' },
-  { label: 'Saved Jobs',   value: '8',  icon: <Bookmark size={20} />, iconBg: '#eff6ff', iconColor: '#2563eb' },
-];
-
-const RECENT_APPLICATIONS = [
-  { id: '1', company: 'TechCorp India',  role: 'Senior Frontend Engineer', appliedOn: '22 Aug 2026', status: 'SHORTLISTED', salary: '₹14-22 LPA' },
-  { id: '2', company: 'Flipkart',        role: 'Lead Product Manager',    appliedOn: '20 Aug 2026', status: 'UNDER_REVIEW', salary: '₹28-42 LPA' },
-  { id: '3', company: 'Infosys',         role: 'Senior Data Scientist',     appliedOn: '18 Aug 2026', status: 'INTERVIEW',    salary: '₹18-28 LPA' },
-  { id: '4', company: 'Zomato',          role: 'Full Stack Developer',   appliedOn: '15 Aug 2026', status: 'REJECTED',     salary: '₹12-20 LPA' },
-];
-
 export default function CandidateDashboard() {
-  const recommendedJobs = MOCK_JOBS.slice(0, 3);
+  const { toast } = useToast();
+  const { candidate, stats, isJobSaved, saveJob, unsaveJob, switchCandidate, activeCandidateId } = useCandidate();
+
+  const [selectedJobToApply, setSelectedJobToApply] = useState(null);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+
+  const statItems = [
+    { label: 'Applied',      value: String(stats.applied),     change: '+2 this week', positive: true, icon: <FileText size={20} />, iconBg: '#eef2ff', iconColor: '#4f46e5' },
+    { label: 'Shortlisted',  value: String(stats.shortlisted), change: 'In Review',    positive: true, icon: <TrendingUp size={20} />, iconBg: '#f0fdf4', iconColor: '#16a34a', variant: 'success' },
+    { label: 'Interviews',   value: String(stats.interviews),  change: 'Scheduled',    positive: true, icon: <Clock size={20} />, iconBg: '#fffbeb', iconColor: '#d97706', variant: 'warning' },
+    { label: 'Saved Jobs',   value: String(stats.savedJobs),   change: 'Bookmarked',   icon: <Bookmark size={20} />, iconBg: '#eff6ff', iconColor: '#2563eb' },
+  ];
+
+  const handleToggleSave = (jobId, title) => {
+    if (isJobSaved(jobId)) {
+      unsaveJob(jobId);
+      toast({ type: 'info', title: 'Removed from Saved', message: `Removed "${title}" from saved jobs.` });
+    } else {
+      saveJob(jobId);
+      toast({ type: 'success', title: 'Job Saved', message: `Saved "${title}" to your bookmarks.` });
+    }
+  };
+
+  const handleOpenApply = (job) => {
+    setSelectedJobToApply(job);
+    setApplyModalOpen(true);
+  };
+
+  // Recommended jobs with high match percentages
+  const recommendedJobs = MOCK_JOBS.slice(0, 3).map((job, idx) => ({
+    ...job,
+    matchScore: idx === 0 ? 94 : idx === 1 ? 92 : 89
+  }));
+
+  const upcomingInterviews = candidate.interviews.filter(i => i.status === 'UPCOMING');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-      {/* ── 1. Welcome Section ── */}
+    <div className="candidate-dashboard-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
+      
+      {/* ── 1. Welcome Header Banner ── */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
         borderRadius: 'var(--radius-2xl)',
         padding: 'var(--space-8)',
-        color: '#fff',
+        color: '#ffffff',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -40,70 +68,83 @@ export default function CandidateDashboard() {
         boxShadow: 'var(--shadow-md)'
       }}>
         <div>
-          <p style={{ opacity: 0.85, fontSize: 'var(--text-sm)', marginBottom: 'var(--space-1)' }}>Good morning 👋</p>
-          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, marginBottom: 'var(--space-2)', color: '#ffffff' }}>Welcome back, Priya!</h1>
-          <p style={{ opacity: 0.9, fontSize: 'var(--text-sm)', color: '#cbd5e1' }}>You have 2 interview rounds scheduled this week and 3 new application status updates.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
+            <span style={{ fontSize: 'var(--text-lg)' }}>👋</span>
+            <span style={{ fontSize: 'var(--text-sm)', color: '#c7d2fe', fontWeight: 600 }}>Candidate Career Overview</span>
+          </div>
+          <h1 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', fontWeight: 800, color: '#ffffff', marginBottom: 'var(--space-1)' }}>
+            Welcome back, {candidate.name} 👋
+          </h1>
+          <p style={{ fontSize: 'var(--text-base)', color: '#cbd5e1' }}>
+            Find your next opportunity across top corporate employers in Andhra Pradesh & India.
+          </p>
         </div>
+
         <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-          <Link to="/candidate/applications">
-            <Button variant="secondary" rightIcon={<ArrowRight size={16} />} style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }}>
-              My Applications
-            </Button>
-          </Link>
-          <Link to="/jobs">
-            <Button variant="primary" style={{ background: '#ffffff', color: '#312e81', fontWeight: 700 }}>
+          <Link to="/candidate/jobs">
+            <Button variant="primary" style={{ background: '#ffffff', color: '#1e1b4b', fontWeight: 700 }} leftIcon={<Search size={16} />}>
               Search Jobs
             </Button>
           </Link>
+          <Link to="/candidate/profile">
+            <Button variant="secondary" style={{ background: 'rgba(255,255,255,0.15)', color: '#ffffff', borderColor: 'rgba(255,255,255,0.3)' }} leftIcon={<User size={16} />}>
+              Update Profile
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* ── 2. Stat Cards (Applied Jobs, Shortlisted, Interviews, Saved Jobs) ── */}
+      {/* ── 2. Statistics Grid ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
-        {STATS.map((s) => <StatCard key={s.label} {...s} />)}
+        {statItems.map((s) => (
+          <StatCard key={s.label} {...s} />
+        ))}
       </div>
 
-      {/* ── 3. Quick Actions Bar ── */}
-      <div className="card" style={{ padding: 'var(--space-4) var(--space-6)', borderRadius: 'var(--radius-xl)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
-            Quick Actions:
-          </span>
-          <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-            <Link to="/jobs"><Button size="xs" variant="outline" leftIcon={<Search size={13} />}>Browse New Jobs</Button></Link>
-            <Link to="/candidate/profile"><Button size="xs" variant="outline" leftIcon={<Upload size={13} />}>Update Resume</Button></Link>
-            <Link to="/candidate/job-mela"><Button size="xs" variant="outline" leftIcon={<CalendarDays size={13} />}>Job Mela Passes</Button></Link>
-            <Link to="/candidate/saved-jobs"><Button size="xs" variant="outline" leftIcon={<Bookmark size={13} />}>Saved Bookmarks</Button></Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 4. Main Grid: Recent Applications + Profile Strength & Job Mela Summary ── */}
-      <div className="responsive-dashboard-grid">
-
-        {/* Recent Applications Card */}
+      {/* ── 3. Main Split Grid: Recent Applications & Profile Strength ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 'var(--space-6)' }}>
+        
+        {/* Left Column: Recent Applications */}
         <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
-          <CardHeader>
-            <h2 className="card-title">Recent Applications</h2>
-            <Link to="/candidate/applications"><Button variant="ghost" size="sm" rightIcon={<ArrowRight size={14} />}>View All</Button></Link>
+          <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 className="card-title" style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>Recent Applications</h2>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Latest active recruitment progress</p>
+            </div>
+            <Link to="/candidate/applications">
+              <Button variant="ghost" size="sm" rightIcon={<ArrowRight size={14} />}>
+                View All ({candidate.applications.length})
+              </Button>
+            </Link>
           </CardHeader>
+
           <CardBody style={{ padding: 0 }}>
-            {RECENT_APPLICATIONS.map((app, i) => (
-              <div key={app.id} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: 'var(--space-4) var(--space-6)',
-                borderBottom: i < RECENT_APPLICATIONS.length - 1 ? '1px solid var(--color-gray-100)' : 'none',
-                gap: 'var(--space-3)',
-                flexWrap: 'wrap'
-              }}>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <p style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>{app.role}</p>
+            {candidate.applications.slice(0, 4).map((app, i) => (
+              <div
+                key={app.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: 'var(--space-4) var(--space-6)',
+                  borderBottom: i < 3 ? '1px solid var(--color-gray-100)' : 'none',
+                  gap: 'var(--space-3)',
+                  flexWrap: 'wrap'
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <p style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>
+                    {app.title}
+                  </p>
                   <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                    {app.company} • Applied on {app.appliedOn}
+                    <strong>{app.company}</strong> • Applied: {app.appliedDate}
                   </p>
                 </div>
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)' }}>{app.salary}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                    {app.location}
+                  </span>
                   <StatusBadge status={app.status} />
                 </div>
               </div>
@@ -111,79 +152,251 @@ export default function CandidateDashboard() {
           </CardBody>
         </Card>
 
-        {/* Right column: Profile completion & Job Mela Summary */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {/* Profile completion */}
-          <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
-            <CardBody>
-              <h3 className="card-title" style={{ marginBottom: 'var(--space-3)' }}>Profile Strength</h3>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>80% Complete</span>
-                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-success-600)' }}>Very Good</span>
-              </div>
-              <div style={{ height: 8, background: 'var(--color-gray-200)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-                <div style={{ width: '80%', height: '100%', background: 'linear-gradient(90deg, var(--color-primary-500), var(--color-accent-500))', borderRadius: 'var(--radius-full)' }} />
-              </div>
+        {/* Right Column: Profile Strength */}
+        <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
+          <CardHeader>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Sparkles size={18} style={{ color: 'var(--color-primary-600)' }} />
+              <h2 className="card-title" style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>Profile Strength</h2>
+            </div>
+          </CardHeader>
 
-              <div style={{ marginTop: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                {[
-                  { label: 'Basic contact information', done: true },
-                  { label: 'Upload verified resume PDF', done: true },
-                  { label: 'Add key technical skills (5+)', done: true },
-                  { label: 'Add portfolio / project link', done: false },
-                ].map((item) => (
-                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: item.done ? 'var(--color-success-500)' : 'var(--color-gray-200)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {item.done && <span style={{ color: '#fff', fontSize: 10 }}>✓</span>}
-                    </div>
-                    <span style={{ color: item.done ? 'var(--color-text-muted)' : 'var(--color-text)', textDecoration: item.done ? 'line-through' : 'none' }}>{item.label}</span>
+          <CardBody>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text)' }}>
+                Profile {candidate.profileCompletion}% complete
+              </span>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-success-600)', background: 'var(--color-success-50)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
+                Strong Profile
+              </span>
+            </div>
+
+            <div style={{ height: 8, background: 'var(--color-gray-100)', borderRadius: 'var(--radius-full)', overflow: 'hidden', marginBottom: 'var(--space-4)' }}>
+              <div style={{ width: `${candidate.profileCompletion}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-primary-600), var(--color-accent-500))', borderRadius: 'var(--radius-full)' }} />
+            </div>
+
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+              Complete the remaining items to increase your recruiter profile visibility by 3.5x:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-5)' }}>
+              {[
+                { label: 'Basic contact information', done: true },
+                { label: `Upload verified resume PDF (${candidate.resume.fileName})`, done: true },
+                { label: `Add 5+ technical skills (${candidate.skillsPreferences.skills.length} added)`, done: true },
+                { label: 'Add portfolio / repository link', done: true },
+                { label: 'Add certifications or licenses', done: true },
+              ].map((item) => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: item.done ? 'var(--color-success-500)' : 'var(--color-gray-200)',
+                    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, fontSize: 10
+                  }}>
+                    {item.done ? '✓' : ''}
                   </div>
-                ))}
-              </div>
-
-              <Link to="/candidate/profile" style={{ marginTop: 'var(--space-4)', display: 'block' }}>
-                <Button variant="outline" fullWidth size="sm">Manage Full Profile</Button>
-              </Link>
-            </CardBody>
-          </Card>
-
-          {/* Job Mela Registration Summary */}
-          <Card style={{ background: 'linear-gradient(135deg, var(--color-primary-50), var(--color-accent-50))', border: '1px solid var(--color-primary-200)', borderRadius: 'var(--radius-2xl)' }}>
-            <CardBody>
-              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-xl)', background: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
-                  <CalendarDays size={22} />
+                  <span style={{ color: item.done ? 'var(--color-text-muted)' : 'var(--color-text)', textDecoration: item.done ? 'line-through' : 'none' }}>
+                    {item.label}
+                  </span>
                 </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <span className="badge badge-success" style={{ fontSize: '10px' }}>Registered</span>
-                  </div>
-                  <h4 style={{ fontWeight: 700, fontSize: 'var(--text-sm)', marginBottom: 2 }}>Bengaluru Mega IT Job Mela</h4>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Sep 18–19 • 09:00 AM • BIEC Hall 3</p>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', marginTop: 4, fontWeight: 600 }}>Fast-Track QR Pass Ready</p>
-                </div>
-              </div>
-              <Link to="/candidate/job-mela" style={{ marginTop: 'var(--space-4)', display: 'block' }}>
-                <Button variant="primary" fullWidth size="sm">View Mela Ticket & Pass</Button>
-              </Link>
-            </CardBody>
-          </Card>
-        </div>
+              ))}
+            </div>
+
+            <Link to="/candidate/profile" style={{ display: 'block' }}>
+              <Button fullWidth variant="outline" size="sm">
+                Complete Profile
+              </Button>
+            </Link>
+          </CardBody>
+        </Card>
       </div>
 
-      {/* ── 5. Recommended Jobs Section ── */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+      {/* ── 4. Recommended Jobs for Candidate ── */}
+      <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
+        <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
           <div>
-            <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 800 }}>Recommended for Your Profile</h2>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Based on your skills: React, TypeScript, Node.js</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Briefcase size={18} style={{ color: 'var(--color-primary-600)' }} />
+              <h2 className="card-title" style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>Recommended Jobs For You</h2>
+            </div>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+              Tailored matching based on your skills & preferences
+            </p>
           </div>
-          <Link to="/jobs"><Button variant="ghost" size="sm" rightIcon={<ArrowRight size={14} />}>Browse All Jobs</Button></Link>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
-          {recommendedJobs.map((job) => <JobCard key={job.id} job={job} />)}
-        </div>
-      </div>
+          <Link to="/candidate/jobs">
+            <Button variant="ghost" size="sm" rightIcon={<ArrowRight size={14} />}>
+              Explore All Jobs
+            </Button>
+          </Link>
+        </CardHeader>
+
+        <CardBody>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
+            {recommendedJobs.map((job) => {
+              const saved = isJobSaved(job.id);
+              return (
+                <div
+                  key={job.id}
+                  className="card card-hoverable"
+                  style={{
+                    borderRadius: 'var(--radius-xl)',
+                    padding: 'var(--space-5)',
+                    border: '1px solid var(--color-border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: 'var(--space-3)'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-2)' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                          <Link to={`/candidate/jobs/${job.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text)' }}>
+                              {job.title}
+                            </h3>
+                          </Link>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{job.company}</span>
+                          <CheckCircle2 size={13} style={{ color: 'var(--color-success-600)' }} />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSave(job.id, job.title)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: saved ? 'var(--color-primary-600)' : 'var(--color-text-light)'
+                        }}
+                        aria-label={saved ? 'Unsave job' : 'Save job'}
+                      >
+                        {saved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={12} /> {job.location}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><DollarSign size={12} /> {job.salary}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> {job.experience}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Layers size={12} /> {job.mode}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap', marginBottom: 'var(--space-3)' }}>
+                      {(job.tags || ['React', 'TypeScript', 'Node.js']).map((skill) => (
+                        <span key={skill} style={{ background: 'var(--color-gray-100)', padding: '2px 8px', borderRadius: 'var(--radius-md)', fontSize: '11px', fontWeight: 600 }}>
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: 'var(--space-3)' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--color-success-600)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Zap size={12} /> {job.matchScore}% Match
+                    </span>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                      <Link to={`/candidate/jobs/${job.id}`}>
+                        <Button size="sm" variant="outline">
+                          View
+                        </Button>
+                      </Link>
+                      <Button size="sm" variant="primary" onClick={() => handleOpenApply(job)}>
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* ── 5. Upcoming Interviews Section ── */}
+      {upcomingInterviews.length > 0 && (
+        <Card style={{ borderRadius: 'var(--radius-2xl)', border: '1px solid var(--color-primary-200)', background: 'linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%)' }}>
+          <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <Video size={18} style={{ color: 'var(--color-primary-600)' }} />
+              <h2 className="card-title" style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>Upcoming Scheduled Interviews</h2>
+            </div>
+            <Link to="/candidate/interviews">
+              <Button size="sm" variant="outline">View Calendar</Button>
+            </Link>
+          </CardHeader>
+
+          <CardBody>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
+              {upcomingInterviews.map((interview) => (
+                <div
+                  key={interview.id}
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: 'var(--radius-xl)',
+                    padding: 'var(--space-5)',
+                    border: '1px solid var(--color-primary-100)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: 'var(--space-3)',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
+                >
+                  <div>
+                    <span className="badge badge-warning" style={{ fontSize: '10px', marginBottom: 4 }}>
+                      {interview.mode}
+                    </span>
+                    <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 800, marginTop: 4 }}>
+                      {interview.title}
+                    </h3>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 700 }}>
+                      {interview.role} • {interview.company}
+                    </p>
+
+                    <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <CalendarDays size={13} /> {interview.date}
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Clock size={13} /> {interview.time}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: 'var(--space-3)' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Platform: {interview.meetingPlatform}</span>
+                    <a
+                      href={interview.meetingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <Button size="xs" variant="primary" leftIcon={<ExternalLink size={12} />}>
+                        Join Meeting
+                      </Button>
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Reusable Apply Modal */}
+      {selectedJobToApply && (
+        <ApplyModal
+          isOpen={applyModalOpen}
+          onClose={() => setApplyModalOpen(false)}
+          job={selectedJobToApply}
+        />
+      )}
     </div>
   );
 }

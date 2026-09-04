@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
  * @param {boolean} disabled
  * @param {boolean} iconOnly
  * @param {ReactNode} leftIcon
+ * @param {ReactNode} icon     - alias for leftIcon
  * @param {ReactNode} rightIcon
  */
 export default function Button({
@@ -21,10 +22,12 @@ export default function Button({
   iconOnly = false,
   leftIcon,
   rightIcon,
+  icon,
   className = '',
   type = 'button',
   ...props
 }) {
+  const finalLeftIcon = leftIcon || icon;
   const sizeClass = size === 'md' ? '' : `btn-${size}`;
   const classes = [
     'btn',
@@ -44,8 +47,8 @@ export default function Button({
     >
       {loading ? (
         <Loader2 size={16} className="btn-spinner" />
-      ) : leftIcon ? (
-        <span className="btn-icon-left">{leftIcon}</span>
+      ) : finalLeftIcon ? (
+        <span className="btn-icon-left">{finalLeftIcon}</span>
       ) : null}
       {children && <span>{children}</span>}
       {!loading && rightIcon && <span className="btn-icon-right">{rightIcon}</span>}

@@ -1,97 +1,116 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Bookmark, MapPin, DollarSign, Clock, Briefcase, Trash2, ArrowRight, Building2, Search } from 'lucide-react';
+import {
+  Bookmark, MapPin, DollarSign, Clock, Briefcase, Trash2,
+  ArrowRight, Building2, Search, Sparkles, ShieldCheck, CheckCircle2
+} from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/States';
-import { Badge } from '../../components/ui/Badge';
+import ApplyModal from '../../components/ui/ApplyModal';
+import { useCandidate } from '../../context/CandidateContext';
 import { useToast } from '../../context/ToastContext';
 import { MOCK_JOBS } from '../../data/mockData';
 
 export default function CandidateSavedJobsPage() {
+  const { candidate, unsaveJob } = useCandidate();
   const { toast } = useToast();
 
-  // Initialize with some mock saved jobs
-  const [savedJobs, setSavedJobs] = useState(MOCK_JOBS.slice(0, 4));
   const [search, setSearch] = useState('');
+  const [selectedJobToApply, setSelectedJobToApply] = useState(null);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+
+  // Derive saved jobs from CandidateContext savedJobIds
+  const savedJobsList = useMemo(() => {
+    return candidate.savedJobIds.map(id => {
+      const found = MOCK_JOBS.find(j => String(j.id) === String(id));
+      if (found) return found;
+      return {
+        id,
+        title: 'Senior Software Engineer',
+        company: 'TechCorp India',
+        location: 'Hyderabad',
+        salary: '₹14 - ₹22 LPA',
+        experience: '2-4 Years',
+        type: 'Full-time',
+        mode: 'Hybrid',
+        tags: ['React', 'Python', 'SQL'],
+        createdAt: '2026-09-01'
+      };
+    });
+  }, [candidate.savedJobIds]);
 
   const handleRemove = (id, title) => {
-    setSavedJobs(savedJobs.filter(j => j.id !== id));
+    unsaveJob(id);
     toast({
       type: 'info',
       title: 'Job Removed',
-      message: `Removed "${title}" from your saved bookmarks.`,
+      message: `Removed "${title}" from your saved list.`,
     });
   };
 
-  const filteredSaved = savedJobs.filter(j => {
+  const handleOpenApply = (job) => {
+    setSelectedJobToApply(job);
+    setApplyModalOpen(true);
+  };
+
+  const filteredSaved = savedJobsList.filter(j => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q);
+    return j.title.toLowerCase().includes(q) || j.company.toLowerCase().includes(q) || j.location.toLowerCase().includes(q);
   });
 
   return (
     <div className="candidate-saved-jobs-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
-
-      {/* Header */}
+      {/* Top Banner */}
       <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
-              <Bookmark size={20} style={{ color: 'var(--color-primary-600)' }} />
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Saved Jobs & Bookmarks</h1>
+              <Bookmark size={22} style={{ color: 'var(--color-primary-600)' }} />
+              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Saved Jobs ({savedJobsList.length})</h1>
             </div>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-              Keep track of positions you're interested in applying for later
+              Quick access to bookmarked opportunities for {candidate.name}
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-            <Link to="/jobs"><Button variant="primary" size="sm">Browse More Jobs</Button></Link>
-          </div>
+          <Link to="/candidate/jobs">
+            <Button variant="primary" size="sm" rightIcon={<ArrowRight size={14} />}>
+              Find More Jobs
+            </Button>
+          </Link>
         </div>
 
-        {savedJobs.length > 0 && (
-          <div style={{ marginTop: 'var(--space-4)', maxWidth: 360 }}>
-            <div className="input-wrapper">
-              <span className="input-icon-left"><Search size={15} /></span>
-              <input
-                className="input has-icon-left"
-                placeholder="Search within saved bookmarks..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+        {/* Search */}
+        <div style={{ marginTop: 'var(--space-4)', maxWidth: 460 }}>
+          <div className="input-wrapper">
+            <span className="input-icon-left"><Search size={16} style={{ color: 'var(--color-primary-600)' }} /></span>
+            <input
+              className="input has-icon-left"
+              placeholder="Search saved jobs by title, company, or city..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        )}
+        </div>
       </div>
 
-      {/* List / Empty State */}
-      {savedJobs.length === 0 ? (
-        <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-12)' }}>
+      {/* Saved Jobs List */}
+      {filteredSaved.length === 0 ? (
+        <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-10)' }}>
           <EmptyState
-            icon="jobs"
-            title="No Saved Jobs Yet"
-            description="When you find an interesting opening while browsing, click the bookmark icon to save it here for quick review."
+            icon="default"
+            title="No Saved Jobs Found"
+            description="You haven't bookmarked any jobs yet. Browse available jobs and click the bookmark icon to save roles for later review."
             action={
-              <Link to="/jobs">
-                <Button variant="primary" rightIcon={<ArrowRight size={16} />}>
-                  Explore Open Jobs
-                </Button>
+              <Link to="/candidate/jobs">
+                <Button variant="primary">Explore Find Jobs</Button>
               </Link>
             }
           />
         </div>
-      ) : filteredSaved.length === 0 ? (
-        <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-8)' }}>
-          <EmptyState
-            icon="jobs"
-            title="No matching saved jobs"
-            description="No bookmarks matched your search query."
-            action={<Button onClick={() => setSearch('')}>Clear Search</Button>}
-          />
-        </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 'var(--space-6)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 'var(--space-4)' }}>
           {filteredSaved.map((job) => (
             <div
               key={job.id}
@@ -99,29 +118,27 @@ export default function CandidateSavedJobsPage() {
               style={{
                 borderRadius: 'var(--radius-2xl)',
                 padding: 'var(--space-6)',
+                border: '1px solid var(--color-border)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                gap: 'var(--space-4)',
-                border: '1px solid var(--color-border)'
+                gap: 'var(--space-4)'
               }}
             >
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
-                  <div style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 'var(--radius-xl)',
-                    background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-accent-500))',
-                    color: '#fff',
-                    fontSize: 'var(--text-xl)',
-                    fontWeight: 800,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    {job.company?.[0]}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-2)' }}>
+                  <div>
+                    <Link to={`/candidate/jobs/${job.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text)' }}>
+                        {job.title}
+                      </h2>
+                    </Link>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-primary-600)' }}>
+                        {job.company}
+                      </span>
+                      <CheckCircle2 size={13} style={{ color: 'var(--color-success-600)' }} />
+                    </div>
                   </div>
 
                   <button
@@ -131,55 +148,73 @@ export default function CandidateSavedJobsPage() {
                       background: 'var(--color-danger-50)',
                       border: '1px solid var(--color-danger-200)',
                       color: 'var(--color-danger-600)',
-                      padding: '6px 8px',
                       borderRadius: 'var(--radius-md)',
+                      padding: 6,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 4,
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 600
+                      justifyContent: 'center'
                     }}
-                    title="Remove from saved"
+                    aria-label="Remove from saved"
+                    title="Remove from Saved Jobs"
                   >
-                    <Trash2 size={13} /> Remove
+                    <Trash2 size={14} />
                   </button>
                 </div>
 
-                <Link to={`/jobs/${job.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, marginBottom: 2 }}>{job.title}</h3>
-                </Link>
-
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
-                  {job.company}
-                </p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MapPin size={13} /> {job.location} ({job.workMode})
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <DollarSign size={13} /> {job.salary}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Clock size={13} /> Apply by {new Date(job.deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                  </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 'var(--space-3) 0' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={13} /> {job.location}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><DollarSign size={13} /> {job.salary}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> {job.experience}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Briefcase size={13} /> {job.type} ({job.mode})</span>
                 </div>
+
+                {job.tags && job.tags.length > 0 && (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {job.tags.slice(0, 4).map(skill => (
+                      <span key={skill} style={{ background: 'var(--color-gray-100)', padding: '2px 8px', borderRadius: 'var(--radius-md)', fontSize: '11px', fontWeight: 600 }}>
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div style={{ borderTop: '1px solid var(--color-gray-100)', paddingTop: 'var(--space-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="badge badge-primary" style={{ fontSize: '10px' }}>{job.type}</span>
-                <Link to={`/jobs/${job.id}`}>
-                  <Button size="sm" variant="primary" rightIcon={<ArrowRight size={13} />}>
-                    View & Apply
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderTop: '1px solid var(--color-gray-100)',
+                paddingTop: 'var(--space-3)'
+              }}>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-light)' }}>
+                  Saved • Ready to Apply
+                </span>
+
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                  <Link to={`/candidate/jobs/${job.id}`}>
+                    <Button size="sm" variant="outline">
+                      View Job
+                    </Button>
+                  </Link>
+                  <Button size="sm" variant="primary" onClick={() => handleOpenApply(job)}>
+                    Apply
                   </Button>
-                </Link>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
+      {/* Apply Modal */}
+      {selectedJobToApply && (
+        <ApplyModal
+          isOpen={applyModalOpen}
+          onClose={() => setApplyModalOpen(false)}
+          job={selectedJobToApply}
+        />
+      )}
     </div>
   );
 }

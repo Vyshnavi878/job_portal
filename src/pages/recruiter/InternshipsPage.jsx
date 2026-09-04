@@ -6,58 +6,20 @@ import {
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
-import Table from '../../components/ui/Table';
 import { Modal } from '../../components/ui/Modal';
 import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
+import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
 
-const INITIAL_INTERNSHIPS = [
-  {
-    id: 'INT-01',
-    title: 'Frontend React Development Intern',
-    stipend: '₹25,000 / month',
-    duration: '6 Months',
-    workMode: 'Hybrid',
-    location: 'Bengaluru, Karnataka',
-    applicantsCount: 42,
-    status: 'PUBLISHED',
-    postedOn: '2026-08-16',
-    openings: 4,
-  },
-  {
-    id: 'INT-02',
-    title: 'Cloud Infrastructure & DevOps Intern',
-    stipend: '₹30,000 / month',
-    duration: '6 Months',
-    workMode: 'On-site',
-    location: 'Bengaluru, Karnataka',
-    applicantsCount: 28,
-    status: 'PUBLISHED',
-    postedOn: '2026-08-19',
-    openings: 2,
-  },
-  {
-    id: 'INT-03',
-    title: 'UI/UX Design & Research Intern',
-    stipend: '₹20,000 / month',
-    duration: '3 Months',
-    workMode: 'Remote',
-    location: 'Remote',
-    applicantsCount: 15,
-    status: 'PENDING',
-    postedOn: '2026-08-22',
-    openings: 2,
-  },
-];
-
 export default function RecruiterInternshipsPage() {
-  const { toast } = useToast();
+  const { recruiter, createInternship } = useRecruiter();
+  const { addToast } = useToast();
 
-  const [internships, setInternships] = useState(INITIAL_INTERNSHIPS);
+  const internships = recruiter?.internships || [];
   const [search, setSearch] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newInternship, setNewInternship] = useState({
@@ -67,205 +29,231 @@ export default function RecruiterInternshipsPage() {
     workMode: 'Hybrid',
     location: 'Bengaluru, Karnataka',
     openings: '3',
-    description: 'We are looking for enthusiastic computer science interns to build modern UI experiences.',
+    description: 'We are looking for passionate student developers and fresh graduates to join our hands-on engineering team.',
   });
 
   const handleCreateSubmit = (e) => {
     e.preventDefault();
-    if (!newInternship.title.trim()) return;
-    const created = {
-      id: `INT-0${internships.length + 1}`,
+    if (!newInternship.title.trim()) {
+      addToast('Please enter an internship title.', 'error');
+      return;
+    }
+
+    createInternship({
       ...newInternship,
-      applicantsCount: 0,
-      status: 'PENDING',
-      postedOn: new Date().toISOString().split('T')[0],
       openings: parseInt(newInternship.openings, 10) || 1,
-    };
-    setInternships([created, ...internships]);
+    });
+
     setCreateModalOpen(false);
-    toast({
-      type: 'success',
-      title: 'Internship Submitted',
-      message: `Internship "${created.title}" submitted for Admin review.`,
+    addToast(`Internship "${newInternship.title}" submitted for Admin review. Status: PENDING.`, 'success');
+    setNewInternship({
+      title: '',
+      stipend: '₹25,000 / month',
+      duration: '6 Months',
+      workMode: 'Hybrid',
+      location: 'Bengaluru, Karnataka',
+      openings: '3',
+      description: '',
     });
   };
 
   const filtered = internships.filter(i => {
     if (!search.trim()) return true;
-    return i.title.toLowerCase().includes(search.toLowerCase());
+    return i.title.toLowerCase().includes(search.toLowerCase()) ||
+           i.location?.toLowerCase().includes(search.toLowerCase());
   });
 
-  const columns = [
-    {
-      key: 'title',
-      label: 'Internship Role',
-      sortable: true,
-      render: (_, row) => (
-        <div>
-          <p style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>{row.title}</p>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            {row.duration} • {row.workMode} ({row.location})
-          </p>
-        </div>
-      )
-    },
-    {
-      key: 'stipend',
-      label: 'Stipend / Month',
-      render: (v) => <strong style={{ color: 'var(--color-success-700)', fontSize: 'var(--text-xs)' }}>{v}</strong>
-    },
-    {
-      key: 'applicantsCount',
-      label: 'Applicants',
-      sortable: true,
-      render: (count) => (
-        <span className="badge badge-primary">
-          <Users size={12} style={{ marginRight: 4 }} /> {count} Students
-        </span>
-      )
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (v) => <StatusBadge status={v} />
-    },
-    {
-      key: 'actions',
-      label: 'Action',
-      render: (_, row) => (
-        <Button size="xs" variant="outline" onClick={() => toast({ type: 'info', title: 'Reviewing Applicants', message: `Opening student list for ${row.title}` })}>
-          Review Applicants
-        </Button>
-      )
-    }
-  ];
-
   return (
-    <div className="recruiter-internships-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
-
-      {/* Header Bar */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
-              <GraduationCap size={20} style={{ color: 'var(--color-primary-600)' }} />
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Manage Internship Opportunities</h1>
-            </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-              Source emerging campus talent, offer summer internships, and build early career pipelines
-            </p>
-          </div>
-
-          <Button variant="primary" size="sm" leftIcon={<Plus size={16} />} onClick={() => setCreateModalOpen(true)}>
-            Post New Internship
-          </Button>
-        </div>
-      </div>
-
-      {/* Table Card */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div className="input-wrapper" style={{ width: 320 }}>
-            <span className="input-icon-left"><Search size={15} /></span>
-            <input
-              className="input has-icon-left"
-              placeholder="Search internships..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            Showing <strong>{filtered.length}</strong> active programs
+    <div className="portal-page">
+      {/* Header */}
+      <div className="portal-header-actions" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-gray-900)', margin: 0 }}>
+            Internship Programs
+          </h1>
+          <p style={{ color: 'var(--color-gray-500)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
+            Hire fresh student talent and graduate interns across Andhra Pradesh & India.
           </p>
         </div>
+        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setCreateModalOpen(true)}>
+          Post New Internship
+        </Button>
+      </div>
 
-        <div className="card-body" style={{ padding: 0 }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: 'var(--space-10)' }}>
-              <EmptyState icon="internships" title="No internships found" description="Post a new internship to recruit students from top universities." />
-            </div>
-          ) : (
-            <Table
-              columns={columns}
-              data={filtered}
-              rowKey="id"
-            />
-          )}
+      {/* Search Bar */}
+      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+        <div style={{ position: 'relative', maxWidth: '400px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search internships by title or location..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
+          />
         </div>
       </div>
 
-      {/* ── Post Internship Modal ── */}
-      <Modal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        title="Post New Internship"
-        size="md"
-      >
-        <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <FormField label="Internship Title" required>
-            <Input
-              placeholder="e.g. AI & ML Engineering Intern"
-              value={newInternship.title}
-              onChange={(e) => setNewInternship({ ...newInternship, title: e.target.value })}
-              required
-            />
-          </FormField>
+      {/* Internships Grid */}
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={<GraduationCap size={48} />}
+          title="No internships found"
+          description="Create and publish your first internship opportunity to recruit student builders."
+          action={
+            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setCreateModalOpen(true)}>
+              Post Internship
+            </Button>
+          }
+        />
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
+          {filtered.map((item) => (
+            <div
+              key={item.id}
+              className="card"
+              style={{
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                border: '1px solid var(--color-gray-200)'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
+                    {item.title}
+                  </h3>
+                  <StatusBadge status={item.status} />
+                </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-            <FormField label="Monthly Stipend" required>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--color-gray-600)', marginBottom: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <DollarSign size={14} color="var(--color-primary-600)" />
+                    <span style={{ fontWeight: 600, color: 'var(--color-gray-800)' }}>{item.stipend}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Clock size={14} color="var(--color-gray-400)" />
+                    <span>{item.duration}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <MapPin size={14} color="var(--color-gray-400)" />
+                    <span>{item.location || 'Bengaluru'}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Users size={14} color="var(--color-gray-400)" />
+                    <span>{item.openings || 2} Openings</span>
+                  </div>
+                </div>
+
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-gray-700)', lineHeight: 1.5, margin: 0 }}>
+                  {item.description}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.75rem', marginTop: '1rem' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+                  {item.applicantsCount || 0} Candidates Applied
+                </span>
+                <Link to="/recruiter/applications">
+                  <Button variant="outline" size="sm">
+                    View Applicants
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Post Internship Modal */}
+      {createModalOpen && (
+        <Modal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          title="Post New Internship Opportunity"
+          size="md"
+        >
+          <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <FormField label="Internship Title *" required>
               <Input
-                value={newInternship.stipend}
-                onChange={(e) => setNewInternship({ ...newInternship, stipend: e.target.value })}
+                type="text"
+                placeholder="e.g. Frontend React Development Intern"
+                value={newInternship.title}
+                onChange={(e) => setNewInternship({ ...newInternship, title: e.target.value })}
                 required
               />
             </FormField>
 
-            <FormField label="Duration" required>
-              <Select
-                options={['2 Months', '3 Months', '6 Months', '1 Year']}
-                value={newInternship.duration}
-                onChange={(e) => setNewInternship({ ...newInternship, duration: e.target.value })}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <FormField label="Stipend (Monthly) *" required>
+                <Input
+                  type="text"
+                  placeholder="₹25,000 / month"
+                  value={newInternship.stipend}
+                  onChange={(e) => setNewInternship({ ...newInternship, stipend: e.target.value })}
+                  required
+                />
+              </FormField>
+
+              <FormField label="Duration *" required>
+                <Select
+                  value={newInternship.duration}
+                  onChange={(e) => setNewInternship({ ...newInternship, duration: e.target.value })}
+                >
+                  <option value="2 Months">2 Months</option>
+                  <option value="3 Months">3 Months</option>
+                  <option value="6 Months">6 Months</option>
+                  <option value="12 Months">12 Months</option>
+                </Select>
+              </FormField>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <FormField label="Work Mode">
+                <Select
+                  value={newInternship.workMode}
+                  onChange={(e) => setNewInternship({ ...newInternship, workMode: e.target.value })}
+                >
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="Remote">Remote</option>
+                  <option value="On-site">On-site</option>
+                </Select>
+              </FormField>
+
+              <FormField label="Number of Interns">
+                <Input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={newInternship.openings}
+                  onChange={(e) => setNewInternship({ ...newInternship, openings: e.target.value })}
+                />
+              </FormField>
+            </div>
+
+            <FormField label="Internship Description">
+              <Textarea
+                rows={3}
+                placeholder="Describe the projects, learning mentorship, and student responsibilities..."
+                value={newInternship.description}
+                onChange={(e) => setNewInternship({ ...newInternship, description: e.target.value })}
               />
             </FormField>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-            <FormField label="Work Mode" required>
-              <Select
-                options={['Hybrid', 'Remote', 'On-site']}
-                value={newInternship.workMode}
-                onChange={(e) => setNewInternship({ ...newInternship, workMode: e.target.value })}
-              />
-            </FormField>
-
-            <FormField label="Openings" required>
-              <Input
-                type="number"
-                min="1"
-                value={newInternship.openings}
-                onChange={(e) => setNewInternship({ ...newInternship, openings: e.target.value })}
-                required
-              />
-            </FormField>
-          </div>
-
-          <FormField label="Description & Learning Objectives" required>
-            <Textarea
-              rows={3}
-              value={newInternship.description}
-              onChange={(e) => setNewInternship({ ...newInternship, description: e.target.value })}
-              required
-            />
-          </FormField>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
-            <Button type="button" variant="secondary" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="primary">Submit for Review</Button>
-          </div>
-        </form>
-      </Modal>
-
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <Button variant="outline" type="button" onClick={() => setCreateModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit">
+                Submit for Approval
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

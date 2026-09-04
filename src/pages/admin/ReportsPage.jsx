@@ -1,23 +1,202 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
-  BarChart3, TrendingUp, Users, Building2, Briefcase, FileText,
-  CalendarDays, Download, Filter, Layers, PieChart, Activity
+  AlertTriangle, Search, Filter, Eye, CheckCircle2, XCircle,
+  ShieldAlert, ShieldCheck, FileText, User, Building2, Download
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
-import StatCard from '../../components/ui/StatCard';
-import { Card, CardHeader, CardBody } from '../../components/ui/Card';
+import { StatusBadge } from '../../components/ui/Badge';
+import { Modal } from '../../components/ui/Modal';
+import Table from '../../components/ui/Table';
+import FormField from '../../components/ui/FormField';
+import Textarea from '../../components/ui/Textarea';
+import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
+import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminReportsPage() {
-  const { toast } = useToast();
+  const { addToast } = useToast();
+  const { reports, resolveReport, rejectReport } = useAdmin();
 
-  const handleExport = (reportType) => {
-    toast({
-      type: 'success',
-      title: 'Report Exported',
-      message: `${reportType} downloaded as CSV spreadsheet.`,
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
+  // Review Modal
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+
+  // Resolve Modal
+  const [resolveTarget, setResolveTarget] = useState(null);
+  const [resolutionNotes, setResolutionNotes] = useState('');
+  const [resolveModalOpen, setResolveModalOpen] = useState(false);
+
+  // Reject / Dismiss Modal
+  const [dismissTarget, setDismissTarget] = useState(null);
+  const [dismissModalOpen, setDismissModalOpen] = useState(false);
+
+  const filtered = useMemo(() => {
+    return reports.filter((r) => {
+      const type = r.reportType || r.type || '';
+      const entity = r.reportedEntity || '';
+      const reporter = r.reporter || '';
+      const reason = r.reason || '';
+
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!type.toLowerCase().includes(q) && !entity.toLowerCase().includes(q) && !reporter.toLowerCase().includes(q) && !reason.toLowerCase().includes(q)) {
+          return false;
+        }
+      }
+      if (statusFilter !== 'ALL') {
+        if (r.status !== statusFilter) return false;
+      }
+      return true;
     });
+  }, [reports, search, statusFilter]);
+
+  const handleOpenResolve = (rep) => {
+    setResolveTarget(rep);
+    setResolutionNotes('Reviewed evidence. Corrective action enforced against reported entity.');
+    setResolveModalOpen(true);
   };
+
+  const handleConfirmResolve = (e) => {
+    e.preventDefault();
+    if (!resolveTarget) return;
+    resolveReport(resolveTarget.id, resolutionNotes);
+    addToast(`Report #${resolveTarget.id} against ${resolveTarget.reportedEntity} has been RESOLVED.`, 'success');
+    setResolveModalOpen(false);
+    if (selectedReport?.id === resolveTarget.id) {
+      setSelectedReport({ ...selectedReport, status: 'RESOLVED', actionTaken: resolutionNotes });
+    }
+    setResolveTarget(null);
+  };
+
+  const handleOpenDismiss = (rep) => {
+    setDismissTarget(rep);
+    setDismissModalOpen(true);
+  };
+
+  const handleConfirmDismiss = () => {
+    if (!dismissTarget) return;
+    rejectReport(dismissTarget.id);
+    addToast(`Report #${dismissTarget.id} has been DISMISSED.`, 'info');
+    setDismissModalOpen(false);
+    if (selectedReport?.id === dismissTarget.id) {
+      setSelectedReport({ ...selectedReport, status: 'DISMISSED' });
+    }
+    setDismissTarget(null);
+  };
+
+  const columns = [
+    {
+      key: 'reportType',
+      label: 'Report Type',
+      sortable: true,
+      render: (_, row) => {
+        const type = row.reportType || row.type || 'Flagged Content';
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <AlertTriangle size={15} style={{ color: '#dc2626' }} />
+            <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{type}</strong>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'reportedEntity',
+      label: 'Reported Entity',
+      sortable: true,
+      render: (_, row) => (
+        <div>
+          <strong style={{ fontSize: 'var(--text-xs)', color: '#b91c1c' }}>{row.reportedEntity}</strong>
+          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>ID: {row.id}</span>
+        </div>
+      )
+    },
+    {
+      key: 'reporter',
+      label: 'Reporter',
+      render: (_, row) => (
+        <div style={{ fontSize: 'var(--text-xs)' }}>
+          <strong>{row.reporter}</strong>
+          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>Verified Candidate</span>
+        </div>
+      )
+    },
+    {
+      key: 'date',
+      label: 'Date',
+      sortable: true,
+      render: (v) => (
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+          {v ? new Date(v).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026'}
+        </span>
+      )
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (v) => {
+        const isPending = v === 'PENDING';
+        const isResolved = v === 'RESOLVED';
+        return (
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            padding: '3px 8px',
+            borderRadius: 'var(--radius-full)',
+            background: isPending ? '#fef2f2' : isResolved ? '#ecfdf5' : '#f8fafc',
+            color: isPending ? '#b91c1c' : isResolved ? '#047857' : '#475569',
+            border: isPending ? '1px solid #fecaca' : isResolved ? '1px solid #a7f3d0' : '1px solid #cbd5e1',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4
+          }}>
+            {isPending ? <AlertTriangle size={12} /> : isResolved ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+            {v || 'PENDING'}
+          </span>
+        );
+      }
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, row) => (
+        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+          <Button
+            size="xs"
+            variant="outline"
+            leftIcon={<Eye size={12} />}
+            onClick={() => {
+              setSelectedReport(row);
+              setViewModalOpen(true);
+            }}
+          >
+            Review
+          </Button>
+
+          {row.status === 'PENDING' && (
+            <>
+              <Button
+                size="xs"
+                variant="primary"
+                onClick={() => handleOpenResolve(row)}
+              >
+                Resolve
+              </Button>
+              <Button
+                size="xs"
+                variant="danger"
+                onClick={() => handleOpenDismiss(row)}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+        </div>
+      )
+    }
+  ];
 
   return (
     <div className="admin-reports-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
@@ -27,106 +206,243 @@ export default function AdminReportsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
-              <BarChart3 size={20} style={{ color: 'var(--color-primary-600)' }} />
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Platform Intelligence & System Reports</h1>
+              <AlertTriangle size={20} style={{ color: '#dc2626' }} />
+              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Reports & Complaints Moderation</h1>
             </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-              Comprehensive performance analytics across user demographics, hiring funnels, and Job Mela footprints
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Investigate candidate grievances, employer policy violations, spam alerts, and fee-charging reports.
             </p>
           </div>
 
-          <Button variant="primary" size="sm" leftIcon={<Download size={14} />} onClick={() => handleExport('Platform Master Analytics Report')}>
-            Export Full Analytics CSV
-          </Button>
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <span style={{
+              background: '#fef2f2',
+              color: '#dc2626',
+              border: '1px solid #fecaca',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 700
+            }}>
+              {reports.filter(r => r.status === 'PENDING').length} Open Complaints
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* ── 1. Top Core Metrics ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
-        <StatCard label="Monthly Job Postings" value="1,840" change="+14.2% MoM" positive icon={<Briefcase size={20} />} iconBg="#eef2ff" iconColor="#4f46e5" />
-        <StatCard label="Applications Processed" value="48,900" change="+28.4% MoM" positive icon={<FileText size={20} />} iconBg="#f0fdf4" iconColor="#16a34a" variant="success" />
-        <StatCard label="Candidate Placements" value="3,120" change="+18.9% MoM" positive icon={<TrendingUp size={20} />} iconBg="#eff6ff" iconColor="#2563eb" />
-        <StatCard label="Job Mela Footfall" value="15,200" change="4 Cities" positive icon={<CalendarDays size={20} />} iconBg="#fff1f2" iconColor="#e11d48" />
+      {/* Search & Filter Toolbar */}
+      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Search by report type, reported entity, reporter..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="form-control"
+              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+            {['ALL', 'PENDING', 'RESOLVED', 'DISMISSED'].map((filterKey) => (
+              <button
+                key={filterKey}
+                type="button"
+                onClick={() => setStatusFilter(filterKey)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                  background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                  color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
+                  transition: 'all 150ms ease'
+                }}
+              >
+                {filterKey === 'ALL' ? 'All Reports' : filterKey}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* ── 2. Detailed Analytic Distributions ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
-
-        {/* Candidate Experience Demographics */}
-        <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
-          <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 className="card-title">Candidate Experience Demographics</h2>
-            <Button size="xs" variant="ghost" onClick={() => handleExport('Candidate Demographics')}>Export</Button>
-          </CardHeader>
-          <CardBody style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            {[
-              { level: '0-2 Years (Freshers & Entry)', count: '4,620 candidates', pct: '37.1%', color: '#6366f1' },
-              { level: '3-5 Years (Mid Level)', count: '4,100 candidates', pct: '32.9%', color: '#3b82f6' },
-              { level: '6-9 Years (Senior Specialists)', count: '2,480 candidates', pct: '19.9%', color: '#10b981' },
-              { level: '10+ Years (Leadership & Staff)', count: '1,250 candidates', pct: '10.1%', color: '#f59e0b' },
-            ].map((item) => (
-              <div key={item.level}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600 }}>{item.level}</span>
-                  <span style={{ color: 'var(--color-text-muted)' }}>{item.count} ({item.pct})</span>
-                </div>
-                <div style={{ height: 8, background: 'var(--color-gray-200)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-                  <div style={{ width: item.pct, height: '100%', background: item.color, borderRadius: 'var(--radius-full)' }} />
-                </div>
-              </div>
-            ))}
-          </CardBody>
-        </Card>
-
-        {/* Industry Hiring Share */}
-        <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
-          <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 className="card-title">Industry Hiring Breakdown</h2>
-            <Button size="xs" variant="ghost" onClick={() => handleExport('Industry Share')}>Export</Button>
-          </CardHeader>
-          <CardBody style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            {[
-              { industry: 'Information Technology & Software', vacancies: '2,140 vacancies', pct: '49.5%', color: '#4f46e5' },
-              { industry: 'BFSI & Fintech', vacancies: '860 vacancies', pct: '19.9%', color: '#06b6d4' },
-              { industry: 'Healthcare & Pharma', vacancies: '540 vacancies', pct: '12.5%', color: '#10b981' },
-              { industry: 'E-Commerce & Retail', vacancies: '480 vacancies', pct: '11.1%', color: '#f59e0b' },
-              { industry: 'Manufacturing & Automobile', vacancies: '300 vacancies', pct: '7.0%', color: '#ec4899' },
-            ].map((item) => (
-              <div key={item.industry}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600 }}>{item.industry}</span>
-                  <span style={{ color: 'var(--color-text-muted)' }}>{item.vacancies} ({item.pct})</span>
-                </div>
-                <div style={{ height: 8, background: 'var(--color-gray-200)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-                  <div style={{ width: item.pct, height: '100%', background: item.color, borderRadius: 'var(--radius-full)' }} />
-                </div>
-              </div>
-            ))}
-          </CardBody>
-        </Card>
-
+      {/* Data Table */}
+      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<CheckCircle2 size={40} />}
+            title="No Moderation Complaints"
+            description="No reports or complaints match your current search and filter criteria."
+          />
+        ) : (
+          <Table columns={columns} data={filtered} />
+        )}
       </div>
 
-      {/* ── 3. Application Lifecycle Conversion Funnel ── */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
-        <h2 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>Macro Platform Application Funnel (48,900 Total Submissions)</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-4)' }}>
-          {[
-            { step: '1. Applications Sent', value: '48,900', color: '#6366f1', conversion: '100%' },
-            { step: '2. Under Review / Screened', value: '31,200', color: '#8b5cf6', conversion: '63.8%' },
-            { step: '3. Shortlisted', value: '11,400', color: '#06b6d4', conversion: '23.3%' },
-            { step: '4. Interviews Conducted', value: '5,800', color: '#f59e0b', conversion: '11.9%' },
-            { step: '5. Offers / Placements', value: '3,120', color: '#10b981', conversion: '6.4%' },
-          ].map((item) => (
-            <div key={item.step} style={{ padding: 'var(--space-4)', background: 'var(--color-gray-50)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)' }}>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>{item.step}</span>
-              <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: item.color, margin: '4px 0' }}>{item.value}</p>
-              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{item.conversion} retention rate</span>
+      {/* ── 1. Review Modal ── */}
+      {viewModalOpen && selectedReport && (
+        <Modal
+          isOpen={viewModalOpen}
+          onClose={() => setViewModalOpen(false)}
+          title={`Grievance Report: #${selectedReport.id}`}
+          size="lg"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            {/* Header Badge */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-4)',
+              background: 'linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%)',
+              color: '#fff',
+              padding: 'var(--space-5)',
+              borderRadius: 'var(--radius-xl)'
+            }}>
+              <div style={{
+                width: 56,
+                height: 56,
+                borderRadius: 'var(--radius-xl)',
+                background: 'rgba(255,255,255,0.2)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 'var(--text-xl)',
+                fontWeight: 800
+              }}>
+                <AlertTriangle size={28} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>
+                  {selectedReport.reportType || selectedReport.type}
+                </h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: '#fecaca', margin: '2px 0 0 0' }}>
+                  Reported Target: {selectedReport.reportedEntity}
+                </p>
+                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#fee2e2' }}>
+                  <span>👤 Reporter: {selectedReport.reporter}</span>
+                  <span>📅 Date: {selectedReport.date ? new Date(selectedReport.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026'}</span>
+                  <span>🛡️ Status: {selectedReport.status}</span>
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
 
+            {/* Complaint Narrative */}
+            <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+              <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                Complaint Description & Evidence
+              </h4>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', lineHeight: 1.6, margin: 0 }}>
+                {selectedReport.reason || 'Candidate reported suspicious recruitment behavior requesting security deposits or unofficial registration fees.'}
+              </p>
+            </div>
+
+            {selectedReport.actionTaken && (
+              <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#047857', marginBottom: 'var(--space-1)' }}>
+                  Action Taken / Resolution
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', color: '#065f46', margin: 0 }}>
+                  {selectedReport.actionTaken}
+                </p>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+              <Button variant="outline" onClick={() => setViewModalOpen(false)}>
+                Close
+              </Button>
+              {selectedReport.status === 'PENDING' && (
+                <>
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      setViewModalOpen(false);
+                      handleOpenDismiss(selectedReport);
+                    }}
+                  >
+                    Dismiss / Reject
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setViewModalOpen(false);
+                      handleOpenResolve(selectedReport);
+                    }}
+                  >
+                    Resolve Complaint
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── 2. Resolve Modal ── */}
+      {resolveModalOpen && resolveTarget && (
+        <Modal
+          isOpen={resolveModalOpen}
+          onClose={() => setResolveModalOpen(false)}
+          title={`Resolve Report #${resolveTarget.id}`}
+          size="md"
+        >
+          <form onSubmit={handleConfirmResolve} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Specify the corrective action or resolution summary for complaint against <strong>{resolveTarget.reportedEntity}</strong>.
+            </p>
+
+            <FormField label="Resolution Summary" required>
+              <Textarea
+                rows={3}
+                value={resolutionNotes}
+                onChange={(e) => setResolutionNotes(e.target.value)}
+                placeholder="Resolution details..."
+                required
+              />
+            </FormField>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+              <Button type="button" variant="outline" onClick={() => setResolveModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary">
+                Confirm & Mark Resolved
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ── 3. Dismiss Dialog ── */}
+      {dismissModalOpen && dismissTarget && (
+        <Modal
+          isOpen={dismissModalOpen}
+          onClose={() => setDismissModalOpen(false)}
+          title={`Dismiss Complaint #${dismissTarget.id}`}
+          size="sm"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Are you sure you want to dismiss the complaint against <strong>{dismissTarget.reportedEntity}</strong> as non-actionable?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+              <Button variant="outline" onClick={() => setDismissModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={handleConfirmDismiss}>
+                Dismiss Complaint
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

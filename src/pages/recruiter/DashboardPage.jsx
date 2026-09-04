@@ -2,38 +2,39 @@ import { Link } from 'react-router-dom';
 import {
   Briefcase, Users, Clock, CheckCircle2, TrendingUp, AlertCircle,
   Plus, ArrowRight, Eye, CalendarCheck, Building2, UserCheck,
-  Sparkles, FileText, ChevronRight
+  Sparkles, FileText, ChevronRight, Video, MapPin
 } from 'lucide-react';
+import { useRecruiter } from '../../context/RecruiterContext';
 import StatCard from '../../components/ui/StatCard';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 
-const STATS = [
-  { label: 'Active Jobs',   value: '6',   change: '+2 this week', positive: true, icon: <Briefcase size={20} />, iconBg: '#eef2ff', iconColor: '#4f46e5' },
-  { label: 'Pending Jobs',  value: '2',   change: 'Under Admin Review', positive: false, icon: <Clock size={20} />, iconBg: '#fffbeb', iconColor: '#d97706', variant: 'warning' },
-  { label: 'Total Applicants', value: '214', change: '+38 this week', positive: true, icon: <Users size={20} />, iconBg: '#eff6ff', iconColor: '#2563eb' },
-  { label: 'Shortlisted',   value: '38',  change: '+9 new', positive: true, icon: <TrendingUp size={20} />, iconBg: '#f0fdf4', iconColor: '#16a34a', variant: 'success' },
-  { label: 'Interviews',    value: '12',  change: '4 scheduled today', positive: true, icon: <CalendarCheck size={20} />, iconBg: '#fdf4ff', iconColor: '#c026d3', variant: 'default' },
-  { label: 'Selected / Hired', value: '6', change: '+2 this month', positive: true, icon: <UserCheck size={20} />, iconBg: '#ecfdf5', iconColor: '#059669', variant: 'success' },
-];
-
-const RECENT_APPLICATIONS = [
-  { id: '1', name: 'Priya Sharma', role: 'Senior Frontend Engineer', exp: '4.2 yrs', appliedOn: 'Today, 10:30 AM', status: 'SHORTLISTED', score: '92%' },
-  { id: '2', name: 'Amitav Ghosh', role: 'Staff Backend Engineer (Java)', exp: '8.5 yrs', appliedOn: 'Today, 09:15 AM', status: 'UNDER_REVIEW', score: '88%' },
-  { id: '3', name: 'Sneha Kulkarni', role: 'UI/UX Product Designer', exp: '3.0 yrs', appliedOn: 'Yesterday', status: 'INTERVIEW', score: '95%' },
-  { id: '4', name: 'Vikram Patel', role: 'DevOps & Cloud Engineer', exp: '5.1 yrs', appliedOn: '2 days ago', status: 'APPLIED', score: '79%' },
-  { id: '5', name: 'Kavita Menon', role: 'Talent Acquisition Lead', exp: '2.5 yrs', appliedOn: '3 days ago', status: 'REJECTED', score: '62%' },
-];
-
-const RECENT_JOBS = [
-  { id: '1', title: 'Senior Frontend Engineer', dept: 'Engineering', applicants: 78, status: 'PUBLISHED', posted: '2 days ago' },
-  { id: '2', title: 'Staff Backend Engineer (Golang/Java)', dept: 'Platform Core', applicants: 45, status: 'PUBLISHED', posted: '4 days ago' },
-  { id: '3', title: 'Cloud Security Architect', dept: 'Infra Security', applicants: 12, status: 'PENDING', posted: '1 day ago' },
-  { id: '4', title: 'Associate Product Marketing Lead', dept: 'Marketing', applicants: 0, status: 'DRAFT', posted: 'Today' },
-];
-
 export default function RecruiterDashboard() {
+  const { recruiter } = useRecruiter();
+
+  const jobs = recruiter?.jobs || [];
+  const applicants = recruiter?.applicants || [];
+  const interviews = recruiter?.interviews || [];
+
+  const activeJobsCount = jobs.filter(j => j.status === 'PUBLISHED').length;
+  const pendingJobsCount = jobs.filter(j => j.status === 'PENDING').length;
+  const totalApplicantsCount = applicants.length;
+  const shortlistedCount = applicants.filter(a => a.status === 'SHORTLISTED').length;
+  const upcomingInterviewsCount = interviews.filter(i => i.status === 'SCHEDULED').length;
+
+  const STATS = [
+    { label: 'Active Jobs', value: String(activeJobsCount), change: 'Currently live', positive: true, icon: <Briefcase size={20} />, iconBg: '#eef2ff', iconColor: 'var(--color-primary-600)' },
+    { label: 'Pending Approvals', value: String(pendingJobsCount), change: 'Admin moderation', positive: false, icon: <Clock size={20} />, iconBg: '#fffbeb', iconColor: '#d97706', variant: 'warning' },
+    { label: 'Total Applications', value: String(totalApplicantsCount), change: '+18 this week', positive: true, icon: <Users size={20} />, iconBg: '#eff6ff', iconColor: '#2563eb' },
+    { label: 'Shortlisted Pool', value: String(shortlistedCount), change: 'Ready for interview', positive: true, icon: <TrendingUp size={20} />, iconBg: '#f0fdf4', iconColor: '#16a34a', variant: 'success' },
+    { label: 'Upcoming Interviews', value: String(upcomingInterviewsCount), change: 'Scheduled rounds', positive: true, icon: <CalendarCheck size={20} />, iconBg: '#fdf4ff', iconColor: '#9333ea', variant: 'default' },
+  ];
+
+  const recentApplicants = applicants.slice(0, 5);
+  const recentJobs = jobs.slice(0, 4);
+  const upcomingInterviews = interviews.slice(0, 3);
+
   return (
     <div className="recruiter-dashboard" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
 
@@ -51,47 +52,47 @@ export default function RecruiterDashboard() {
         boxShadow: 'var(--shadow-md)'
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)' }}>
-            <span className="badge badge-success" style={{ fontSize: '11px' }}>Verified Employer</span>
-            <span style={{ fontSize: 'var(--text-xs)', opacity: 0.85, color: '#c7d2fe' }}>TechCorp India</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+            <span className="badge badge-success" style={{ fontSize: '11px', background: '#10b981', color: '#fff' }}>
+              ✓ Verified Employer
+            </span>
+            <span style={{ fontSize: 'var(--text-xs)', opacity: 0.9, color: '#c7d2fe', fontWeight: 600 }}>
+              {recruiter?.company?.name || 'Enterprise Employer'}
+            </span>
           </div>
           <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: '#ffffff', marginBottom: 'var(--space-2)' }}>
-            Recruiter Workspace
+            Welcome back, {recruiter?.name || 'Recruiter'}!
           </h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: '#cbd5e1' }}>
-            You have <strong>38 shortlisted candidates</strong> awaiting interview scheduling and <strong>2 jobs</strong> pending admin approval.
+          <p style={{ fontSize: 'var(--text-sm)', color: '#cbd5e1', maxWidth: '650px', margin: 0 }}>
+            {recruiter?.designation || 'Talent Acquisition'} • You have <strong>{shortlistedCount} shortlisted candidates</strong> awaiting interview scheduling and <strong>{upcomingInterviewsCount} upcoming interviews</strong>.
           </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-          <Link to="/recruiter/jobs/create">
-            <Button variant="primary" size="lg" leftIcon={<Plus size={18} />} style={{ background: '#ffffff', color: '#1e1b4b', fontWeight: 700 }}>
-              Post New Job
-            </Button>
-          </Link>
-          <Link to="/recruiter/interviews">
-            <Button variant="secondary" size="lg" style={{ background: 'rgba(255,255,255,0.15)', color: '#ffffff', borderColor: 'rgba(255,255,255,0.3)' }}>
-              Interview Calendar
-            </Button>
-          </Link>
         </div>
       </div>
 
-      {/* ── 2. Stat Cards (All 6 Required Metrics) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-4)' }}>
+      {/* ── 2. Stat Cards (5 Core Metrics) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)' }}>
         {STATS.map((s) => <StatCard key={s.label} {...s} />)}
       </div>
 
-      {/* ── 3. Hiring Funnel / Activity Summary ── */}
+      {/* ── 3. Recruitment Pipeline Funnel ── */}
       <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
-        <h2 className="card-title" style={{ marginBottom: 'var(--space-4)' }}>Recruitment Funnel Overview</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+          <div>
+            <h2 className="card-title" style={{ margin: 0 }}>Active Recruitment Pipeline</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: '0.2rem 0 0 0' }}>Real-time conversion across all job requisitions</p>
+          </div>
+          <Link to="/recruiter/analytics" style={{ fontSize: '0.85rem', color: 'var(--color-primary-600)', fontWeight: 600, textDecoration: 'none' }}>
+            Detailed Analytics →
+          </Link>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-4)' }}>
           {[
-            { stage: '1. Applications', count: '214', color: '#6366f1', pct: '100%' },
-            { stage: '2. Screened', count: '142', color: '#8b5cf6', pct: '66.3%' },
-            { stage: '3. Shortlisted', count: '38', color: '#06b6d4', pct: '17.7%' },
-            { stage: '4. Interviews', count: '12', color: '#f59e0b', pct: '5.6%' },
-            { stage: '5. Offers / Hired', count: '6', color: '#10b981', pct: '2.8%' },
+            { stage: '1. Applications', count: totalApplicantsCount, color: 'var(--color-primary-600)', pct: '100%' },
+            { stage: '2. Under Review', count: applicants.filter(a => a.status === 'UNDER_REVIEW' || a.status === 'APPLIED').length, color: '#f59e0b', pct: `${totalApplicantsCount > 0 ? Math.round((applicants.filter(a => a.status === 'UNDER_REVIEW' || a.status === 'APPLIED').length / totalApplicantsCount) * 100) : 0}%` },
+            { stage: '3. Shortlisted', count: shortlistedCount, color: '#8b5cf6', pct: `${totalApplicantsCount > 0 ? Math.round((shortlistedCount / totalApplicantsCount) * 100) : 0}%` },
+            { stage: '4. Interviews', count: interviews.length, color: '#06b6d4', pct: `${totalApplicantsCount > 0 ? Math.round((interviews.length / totalApplicantsCount) * 100) : 0}%` },
+            { stage: '5. Selected / Hired', count: applicants.filter(a => a.status === 'SELECTED' || a.status === 'HIRED').length, color: '#10b981', pct: `${totalApplicantsCount > 0 ? Math.round((applicants.filter(a => a.status === 'SELECTED' || a.status === 'HIRED').length / totalApplicantsCount) * 100) : 0}%` },
           ].map((step) => (
             <div key={step.stage} style={{
               background: 'var(--color-gray-50)',
@@ -103,98 +104,181 @@ export default function RecruiterDashboard() {
               gap: 4
             }}>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>{step.stage}</span>
-              <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: step.color }}>{step.count}</p>
+              <p style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: step.color, margin: 0 }}>{step.count}</p>
               <div style={{ height: 4, background: 'var(--color-gray-200)', borderRadius: 'var(--radius-full)', overflow: 'hidden', marginTop: 4 }}>
                 <div style={{ width: step.pct, height: '100%', background: step.color }} />
               </div>
-              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: 2 }}>{step.pct} conversion rate</span>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>{step.pct} of applicants</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── 4. Main Two Column: Recent Applications + Recent Jobs ── */}
-      <div className="responsive-dashboard-grid">
+      {/* ── 4. Main Grid: Recent Applications + Posted Jobs + Upcoming Interviews ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 'var(--space-6)' }}>
 
         {/* Recent Applications Card */}
         <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
           <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 className="card-title">Recent Candidate Applications</h2>
-            <Link to="/recruiter/jobs/1/applicants">
-              <Button variant="ghost" size="sm" rightIcon={<ArrowRight size={14} />}>View All Applicants</Button>
+            <div>
+              <h2 className="card-title" style={{ margin: 0 }}>Recent Applications</h2>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>Latest candidate submissions</span>
+            </div>
+            <Link to="/recruiter/applications">
+              <Button variant="ghost" size="sm" icon={<ArrowRight size={14} />}>View All</Button>
             </Link>
           </CardHeader>
           <CardBody style={{ padding: 0 }}>
-            {RECENT_APPLICATIONS.map((cand, i) => (
-              <div key={cand.id} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: 'var(--space-4) var(--space-6)',
-                borderBottom: i < RECENT_APPLICATIONS.length - 1 ? '1px solid var(--color-gray-100)' : 'none',
-                gap: 'var(--space-3)',
-                flexWrap: 'wrap'
-              }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    <p style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>{cand.name}</p>
-                    <span className="badge badge-success" style={{ fontSize: '10px' }}>{cand.score} Match</span>
+            {recentApplicants.length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-gray-500)' }}>No applications yet.</div>
+            ) : (
+              recentApplicants.map((cand, i) => (
+                <div key={cand.id} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '1rem 1.25rem',
+                  borderBottom: i < recentApplicants.length - 1 ? '1px solid var(--color-gray-100)' : 'none',
+                  gap: 'var(--space-3)',
+                  flexWrap: 'wrap'
+                }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.9rem', margin: 0, color: 'var(--color-gray-900)' }}>{cand.candidateName}</p>
+                      {cand.matchScore && (
+                        <span style={{ fontSize: '10px', background: '#ecfdf5', color: '#059669', padding: '0.1rem 0.4rem', borderRadius: '8px', fontWeight: 700, border: '1px solid #a7f3d0' }}>
+                          ⚡ {cand.matchScore}% Match
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--color-primary-700)', fontWeight: 600, margin: '0.15rem 0' }}>{cand.jobTitle}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0 }}>Experience: {cand.experience || '3+ yrs'} • Applied {cand.appliedDate}</p>
                   </div>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{cand.role}</p>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Experience: {cand.exp} • {cand.appliedOn}</p>
-                </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <StatusBadge status={cand.status} />
-                  <Link to="/recruiter/jobs/1/applicants">
-                    <Button size="xs" variant="outline">Review</Button>
-                  </Link>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <StatusBadge status={cand.status} />
+                    <Link to="/recruiter/applications">
+                      <Button size="xs" variant="outline">Review</Button>
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardBody>
         </Card>
 
-        {/* Recent Jobs Management Card */}
+        {/* Posted Jobs Card */}
         <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
           <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 className="card-title">My Posted Positions</h2>
+            <div>
+              <h2 className="card-title" style={{ margin: 0 }}>Active Job Positions</h2>
+              <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>Requisitions and applicant status</span>
+            </div>
             <Link to="/recruiter/jobs">
-              <Button variant="ghost" size="sm" rightIcon={<ArrowRight size={14} />}>Manage All</Button>
+              <Button variant="ghost" size="sm" icon={<ArrowRight size={14} />}>Manage Jobs</Button>
             </Link>
           </CardHeader>
           <CardBody style={{ padding: 0 }}>
-            {RECENT_JOBS.map((job, i) => (
-              <div key={job.id} style={{
-                padding: 'var(--space-4) var(--space-6)',
-                borderBottom: i < RECENT_JOBS.length - 1 ? '1px solid var(--color-gray-100)' : 'none',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 'var(--space-3)',
-                flexWrap: 'wrap'
-              }}>
-                <div>
-                  <Link to={`/recruiter/jobs/${job.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <p style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>{job.title}</p>
-                  </Link>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                    {job.dept} • {job.posted}
-                  </p>
-                  <Link to={`/recruiter/jobs/${job.id}/applicants`} style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600, textDecoration: 'none' }}>
-                    {job.applicants} Applicants Received →
-                  </Link>
-                </div>
+            {recentJobs.length === 0 ? (
+              <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-gray-500)' }}>No jobs posted yet.</div>
+            ) : (
+              recentJobs.map((job, i) => (
+                <div key={job.id} style={{
+                  padding: '1rem 1.25rem',
+                  borderBottom: i < recentJobs.length - 1 ? '1px solid var(--color-gray-100)' : 'none',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 'var(--space-3)',
+                  flexWrap: 'wrap'
+                }}>
+                  <div>
+                    <Link to={`/recruiter/jobs`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <p style={{ fontWeight: 700, fontSize: '0.9rem', margin: 0, color: 'var(--color-gray-900)' }}>{job.title}</p>
+                    </Link>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 2, margin: 0 }}>
+                      {job.department} • {job.location || 'Bengaluru'}
+                    </p>
+                    <Link to={`/recruiter/applications`} style={{ fontSize: '0.8rem', color: 'var(--color-primary-600)', fontWeight: 600, textDecoration: 'none' }}>
+                      {job.applicantsCount || 0} Applicants Received →
+                    </Link>
+                  </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <StatusBadge status={job.status} size="sm" />
+                  <div style={{ textAlign: 'right' }}>
+                    <StatusBadge status={job.status} size="sm" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardBody>
         </Card>
 
       </div>
+
+      {/* ── 5. Upcoming Interviews Bar ── */}
+      {upcomingInterviews.length > 0 && (
+        <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
+          <CardHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <CalendarCheck size={20} color="var(--color-primary-600)" />
+              <div>
+                <h2 className="card-title" style={{ margin: 0 }}>Upcoming Interviews</h2>
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>Confirmed rounds for the week</span>
+              </div>
+            </div>
+            <Link to="/recruiter/interviews">
+              <Button variant="outline" size="sm">Full Calendar</Button>
+            </Link>
+          </CardHeader>
+          <CardBody style={{ padding: '0.75rem 1.25rem 1.25rem 1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+              {upcomingInterviews.map((item) => (
+                <div key={item.id} style={{
+                  background: '#f8fafc',
+                  border: '1px solid var(--color-gray-200)',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--color-gray-900)', fontSize: '0.9rem' }}>{item.candidateName}</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, background: '#e0e7ff', color: '#4338ca', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                      {item.time || '11:00 AM'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-primary-700)', fontWeight: 500 }}>
+                    {item.jobTitle}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Clock size={12} /> {item.date} • {item.type}
+                  </div>
+                  {item.meetingLink && (
+                    <a
+                      href={item.meetingLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        marginTop: '0.25rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        fontSize: '0.8rem',
+                        color: '#2563eb',
+                        fontWeight: 600,
+                        textDecoration: 'none'
+                      }}
+                    >
+                      <Video size={14} /> Join Meeting Round
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
     </div>
   );

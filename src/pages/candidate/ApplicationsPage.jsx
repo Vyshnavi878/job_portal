@@ -3,200 +3,111 @@ import { Link } from 'react-router-dom';
 import {
   Search, Filter, Clock, Building2, MapPin, DollarSign,
   Calendar, CheckCircle2, XCircle, ArrowRight, Eye, RefreshCw,
-  AlertCircle, Sparkles, UserCheck, MessageSquare, ChevronRight
+  AlertCircle, Sparkles, UserCheck, MessageSquare, ChevronRight,
+  Briefcase, Check, X
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
-import { Modal } from '../../components/ui/Modal';
-import { EmptyState, ErrorState } from '../../components/ui/States';
-import Table from '../../components/ui/Table';
+import { EmptyState } from '../../components/ui/States';
+import { useCandidate } from '../../context/CandidateContext';
 import { useToast } from '../../context/ToastContext';
 
-const STATUS_STAGES = ['APPLIED', 'UNDER_REVIEW', 'SHORTLISTED', 'INTERVIEW', 'SELECTED'];
-
-const MOCK_APPLICATIONS = [
-  {
-    id: 'APP-1001',
-    jobId: '1',
-    role: 'Senior Frontend Engineer',
-    company: 'TechCorp India',
-    companyLogo: null,
-    location: 'Bengaluru, Karnataka',
-    salary: '₹14 - ₹22 LPA',
-    type: 'Full-time',
-    appliedOn: '2026-08-22',
-    status: 'SHORTLISTED',
-    lastUpdate: '1 day ago',
-    currentStageNumber: 3,
-    interviewSchedule: '2026-08-28 at 02:30 PM (Google Meet)',
-    timeline: [
-      { status: 'APPLIED', title: 'Application Submitted', date: '22 Aug 2026, 10:30 AM', note: 'Resume and profile forwarded to hiring recruiter.', done: true },
-      { status: 'UNDER_REVIEW', title: 'Resume Screened by Recruiter', date: '23 Aug 2026, 04:15 PM', note: 'Technical recruiter reviewed qualifications and portfolio.', done: true },
-      { status: 'SHORTLISTED', title: 'Shortlisted for Round 1', date: '24 Aug 2026, 11:00 AM', note: 'Selected for technical live-coding evaluation.', done: true },
-      { status: 'INTERVIEW', title: 'Technical Interview', date: 'Pending (Scheduled for 28 Aug)', note: '45-minute live coding round on React & algorithms.', done: false },
-      { status: 'SELECTED', title: 'Final Decision & Offer', date: 'Upcoming', note: 'Formal offer rollout upon clearing rounds.', done: false },
-    ],
-  },
-  {
-    id: 'APP-1002',
-    jobId: '2',
-    role: 'Lead Product Manager - Checkout',
-    company: 'Flipkart',
-    companyLogo: null,
-    location: 'Bengaluru, Karnataka',
-    salary: '₹28 - ₹42 LPA',
-    type: 'Full-time',
-    appliedOn: '2026-08-20',
-    status: 'UNDER_REVIEW',
-    lastUpdate: '3 days ago',
-    currentStageNumber: 2,
-    interviewSchedule: null,
-    timeline: [
-      { status: 'APPLIED', title: 'Application Submitted', date: '20 Aug 2026, 02:00 PM', note: 'Direct submission via NTR VIKASA Job Portal.', done: true },
-      { status: 'UNDER_REVIEW', title: 'Under Review by Product Guild', date: '21 Aug 2026, 09:30 AM', note: 'Reviewing product execution portfolio.', done: true },
-      { status: 'SHORTLISTED', title: 'Shortlisting Decision', date: 'Pending', note: 'Awaiting recruiter feedback.', done: false },
-      { status: 'INTERVIEW', title: 'Interview Round', date: 'Pending', note: '', done: false },
-      { status: 'SELECTED', title: 'Final Offer', date: 'Pending', note: '', done: false },
-    ],
-  },
-  {
-    id: 'APP-1003',
-    jobId: '5',
-    role: 'Senior Data Scientist (NLP / GenAI)',
-    company: 'Infosys',
-    companyLogo: null,
-    location: 'Hyderabad, Telangana',
-    salary: '₹18 - ₹28 LPA',
-    type: 'Full-time',
-    appliedOn: '2026-08-18',
-    status: 'INTERVIEW',
-    lastUpdate: '2 days ago',
-    currentStageNumber: 4,
-    interviewSchedule: '2026-08-26 at 11:00 AM IST (MS Teams)',
-    timeline: [
-      { status: 'APPLIED', title: 'Application Submitted', date: '18 Aug 2026, 11:00 AM', note: 'Applied for Topaz AI COE.', done: true },
-      { status: 'UNDER_REVIEW', title: 'Screening Passed', date: '19 Aug 2026, 03:20 PM', note: 'Python & ML credentials validated.', done: true },
-      { status: 'SHORTLISTED', title: 'Shortlisted by Hiring Manager', date: '21 Aug 2026, 05:00 PM', note: 'Advanced to interview panel.', done: true },
-      { status: 'INTERVIEW', title: 'Technical Panel Interview', date: '26 Aug 2026, 11:00 AM', note: 'Meeting link sent via email.', done: true },
-      { status: 'SELECTED', title: 'Final Offer Letter', date: 'Pending', note: '', done: false },
-    ],
-  },
-  {
-    id: 'APP-1004',
-    jobId: '4',
-    role: 'Full Stack Developer (Node.js + React)',
-    company: 'Zomato',
-    companyLogo: null,
-    location: 'Gurugram, Haryana',
-    salary: '₹12 - ₹20 LPA',
-    type: 'Full-time',
-    appliedOn: '2026-08-15',
-    status: 'REJECTED',
-    lastUpdate: '5 days ago',
-    currentStageNumber: 2,
-    interviewSchedule: null,
-    timeline: [
-      { status: 'APPLIED', title: 'Application Submitted', date: '15 Aug 2026', note: 'Applied directly.', done: true },
-      { status: 'UNDER_REVIEW', title: 'Application Screened', date: '17 Aug 2026', note: 'Position filled by another applicant with prior restaurant-tech experience.', done: true },
-      { status: 'REJECTED', title: 'Application Not Shortlisted', date: '19 Aug 2026', note: 'Profile kept in talent pool for future openings.', done: true },
-    ],
-  },
+const TIMELINE_STAGES = [
+  { key: 'Applied', label: 'Applied', desc: 'Application & resume submitted' },
+  { key: 'Screening', label: 'Screening', desc: 'Recruiter evaluating qualifications' },
+  { key: 'Shortlisted', label: 'Shortlisted', desc: 'Shortlisted for technical rounds' },
+  { key: 'Interview', label: 'Interview', desc: 'Technical & architectural discussion' },
+  { key: 'Selected', label: 'Selected', desc: 'Offer release & onboarding' },
 ];
 
 export default function CandidateApplicationsPage() {
+  const { candidate } = useCandidate();
   const { toast } = useToast();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedApp, setSelectedApp] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-  const [hasError, setHasError] = useState(false);
 
   const filterTabs = [
-    { key: 'ALL', label: 'All Applications' },
-    { key: 'APPLIED', label: 'Applied' },
-    { key: 'UNDER_REVIEW', label: 'Under Review' },
-    { key: 'SHORTLISTED', label: 'Shortlisted' },
-    { key: 'INTERVIEW', label: 'Interview' },
-    { key: 'SELECTED', label: 'Selected' },
-    { key: 'REJECTED', label: 'Rejected' },
+    { key: 'ALL', label: 'All', count: candidate.applications.length },
+    { key: 'APPLIED', label: 'Applied', count: candidate.applications.filter(a => a.status === 'APPLIED').length },
+    { key: 'SCREENING', label: 'Screening', count: candidate.applications.filter(a => a.status === 'SCREENING').length },
+    { key: 'SHORTLISTED', label: 'Shortlisted', count: candidate.applications.filter(a => a.status === 'SHORTLISTED').length },
+    { key: 'INTERVIEW', label: 'Interview', count: candidate.applications.filter(a => a.status === 'INTERVIEW').length },
+    { key: 'SELECTED', label: 'Selected', count: candidate.applications.filter(a => a.status === 'SELECTED').length },
+    { key: 'REJECTED', label: 'Rejected', count: candidate.applications.filter(a => a.status === 'REJECTED').length },
   ];
 
   const filteredApps = useMemo(() => {
-    return MOCK_APPLICATIONS.filter((app) => {
+    return candidate.applications.filter((app) => {
       if (search.trim()) {
         const q = search.toLowerCase();
-        const matchRole = app.role.toLowerCase().includes(q);
+        const matchTitle = app.title.toLowerCase().includes(q);
         const matchComp = app.company.toLowerCase().includes(q);
-        if (!matchRole && !matchComp) return false;
+        if (!matchTitle && !matchComp) return false;
       }
       if (statusFilter !== 'ALL' && app.status !== statusFilter) return false;
       return true;
     });
-  }, [search, statusFilter]);
+  }, [candidate.applications, search, statusFilter]);
 
   const handleOpenDetails = (app) => {
     setSelectedApp(app);
     setDetailsModalOpen(true);
   };
 
-  const columns = [
-    {
-      key: 'role',
-      label: 'Job Role & Company',
-      sortable: true,
-      render: (_, row) => (
-        <div>
-          <p style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{row.role}</p>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.company} • {row.location}</p>
-        </div>
-      )
-    },
-    {
-      key: 'appliedOn',
-      label: 'Applied Date',
-      sortable: true,
-      render: (v) => new Date(v).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    },
-    {
-      key: 'salary',
-      label: 'Offered CTC'
-    },
-    {
-      key: 'status',
-      label: 'Current Status',
-      render: (v) => <StatusBadge status={v} />
-    },
-    {
-      key: 'actions',
-      label: 'Action',
-      render: (_, row) => (
-        <Button size="xs" variant="outline" leftIcon={<Eye size={13} />} onClick={() => handleOpenDetails(row)}>
-          Track Status
-        </Button>
-      )
+  const getStageIndex = (status) => {
+    switch (status) {
+      case 'APPLIED': return 0;
+      case 'SCREENING': return 1;
+      case 'SHORTLISTED': return 2;
+      case 'INTERVIEW': return 3;
+      case 'SELECTED': return 4;
+      case 'REJECTED': return 1;
+      default: return 0;
     }
-  ];
+  };
 
   return (
     <div className="candidate-applications-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
-
-      {/* Header Overview Card */}
+      
+      {/* ── Top Header ── */}
       <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div>
-            <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>My Job Applications</h1>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginTop: 2 }}>
-              Track recruitment milestones and interview schedules with live timeline updates
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
+              <Briefcase size={22} style={{ color: 'var(--color-primary-600)' }} />
+              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>My Applications Tracker</h1>
+            </div>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+              Real-time application tracking with step-by-step recruitment milestones for {candidate.name}
             </p>
           </div>
-          <Link to="/jobs"><Button variant="primary" size="sm">Browse More Jobs</Button></Link>
+
+          <Link to="/candidate/jobs">
+            <Button variant="primary" size="sm" rightIcon={<ArrowRight size={14} />}>
+              Find More Jobs
+            </Button>
+          </Link>
         </div>
 
-        {/* Status Filter Tabs */}
-        <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-6)', overflowX: 'auto', paddingBottom: 4 }}>
+        {/* Search Input */}
+        <div style={{ marginTop: 'var(--space-5)', maxWidth: 460 }}>
+          <div className="input-wrapper">
+            <span className="input-icon-left"><Search size={16} style={{ color: 'var(--color-primary-600)' }} /></span>
+            <input
+              className="input has-icon-left"
+              placeholder="Search applied role, company name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Status Tabs */}
+        <div style={{ display: 'flex', gap: 'var(--space-2)', overflowX: 'auto', paddingBottom: 'var(--space-1)', marginTop: 'var(--space-4)' }}>
           {filterTabs.map((tab) => {
-            const count = tab.key === 'ALL' ? MOCK_APPLICATIONS.length : MOCK_APPLICATIONS.filter(a => a.status === tab.key).length;
             const active = statusFilter === tab.key;
             return (
               <button
@@ -206,27 +117,28 @@ export default function CandidateApplicationsPage() {
                 style={{
                   padding: '6px 14px',
                   borderRadius: 'var(--radius-full)',
-                  border: active ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                  border: active ? '1.5px solid var(--color-primary-600)' : '1px solid var(--color-border)',
                   background: active ? 'var(--color-primary-600)' : 'var(--color-surface)',
                   color: active ? '#fff' : 'var(--color-text-muted)',
                   fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
+                  whiteSpace: 'nowrap',
                   transition: 'all var(--transition-fast)'
                 }}
               >
                 {tab.label}
                 <span style={{
                   background: active ? 'rgba(255,255,255,0.25)' : 'var(--color-gray-100)',
+                  color: active ? '#fff' : 'var(--color-text-muted)',
                   padding: '1px 6px',
                   borderRadius: 'var(--radius-full)',
                   fontSize: '10px'
                 }}>
-                  {count}
+                  {tab.count}
                 </span>
               </button>
             );
@@ -234,181 +146,256 @@ export default function CandidateApplicationsPage() {
         </div>
       </div>
 
-      {/* Search and Table results */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div className="input-wrapper" style={{ width: 320 }}>
-            <span className="input-icon-left"><Search size={15} /></span>
-            <input
-              className="input has-icon-left"
-              placeholder="Search by role or company..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            Showing <strong>{filteredApps.length}</strong> applications
-          </p>
+      {/* ── Applications List ── */}
+      {filteredApps.length === 0 ? (
+        <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-10)' }}>
+          <EmptyState
+            icon="default"
+            title="No applications in this category"
+            description="Explore open jobs matching your skills and submit applications to start tracking."
+            action={
+              <Link to="/candidate/jobs">
+                <Button variant="primary">Browse Jobs</Button>
+              </Link>
+            }
+          />
         </div>
-
-        <div className="card-body" style={{ padding: 0 }}>
-          {hasError ? (
-            <div style={{ padding: 'var(--space-8)' }}>
-              <ErrorState title="Failed to load applications" description="Please try refreshing the page." action={<Button onClick={() => setHasError(false)}>Retry</Button>} />
-            </div>
-          ) : filteredApps.length === 0 ? (
-            <div style={{ padding: 'var(--space-10)' }}>
-              <EmptyState
-                icon="jobs"
-                title="No applications in this category"
-                description={statusFilter !== 'ALL' ? `You currently have zero applications with status "${statusFilter}".` : 'You have not applied to any jobs yet.'}
-                action={<Link to="/jobs"><Button variant="primary">Explore Open Jobs</Button></Link>}
-              />
-            </div>
-          ) : (
-            <Table
-              columns={columns}
-              data={filteredApps}
-              rowKey="id"
-            />
-          )}
-        </div>
-      </div>
-
-      {/* ── Application Details & Status Timeline Modal ── */}
-      {selectedApp && (
-        <Modal
-          open={detailsModalOpen}
-          onClose={() => setDetailsModalOpen(false)}
-          title={`Application Details: ${selectedApp.role}`}
-          size="lg"
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-            {/* Header info */}
-            <div style={{
-              background: 'var(--color-gray-50)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'var(--space-5)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 'var(--space-4)'
-            }}>
-              <div>
-                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800 }}>{selectedApp.role}</h3>
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{selectedApp.company} • {selectedApp.location}</p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                  Application ID: <strong>{selectedApp.id}</strong> • Applied: {selectedApp.appliedOn}
-                </p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <StatusBadge status={selectedApp.status} size="lg" />
-                <p style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginTop: 4 }}>
-                  CTC: {selectedApp.salary}
-                </p>
-              </div>
-            </div>
-
-            {/* Scheduled Interview Notice */}
-            {selectedApp.interviewSchedule && (
-              <div style={{
-                background: 'var(--color-warning-50)',
-                border: '1px solid var(--color-warning-200)',
-                borderRadius: 'var(--radius-xl)',
-                padding: 'var(--space-4) var(--space-5)',
-                display: 'flex',
-                gap: 'var(--space-3)',
-                alignItems: 'center'
-              }}>
-                <Clock size={22} style={{ color: 'var(--color-warning-600)', flexShrink: 0 }} />
-                <div>
-                  <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-warning-900)' }}>
-                    Interview Scheduled
-                  </h4>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-warning-800)', marginTop: 2 }}>
-                    {selectedApp.interviewSchedule}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* ── Status Lifecycle Timeline: APPLIED → UNDER_REVIEW → SHORTLISTED → INTERVIEW → SELECTED/REJECTED ── */}
-            <div>
-              <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, marginBottom: 'var(--space-4)', textTransform: 'uppercase', color: 'var(--color-text-muted)', letterSpacing: '0.05em' }}>
-                Application Lifecycle & Stage Timeline
-              </h4>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, position: 'relative', paddingLeft: 'var(--space-4)' }}>
-                {selectedApp.timeline.map((step, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: 'var(--space-4)', position: 'relative', paddingBottom: idx < selectedApp.timeline.length - 1 ? 'var(--space-6)' : 0 }}>
-                    {/* Vertical connecting line */}
-                    {idx < selectedApp.timeline.length - 1 && (
-                      <div style={{
-                        position: 'absolute',
-                        left: 11,
-                        top: 24,
-                        bottom: 0,
-                        width: 2,
-                        background: step.done ? 'var(--color-primary-600)' : 'var(--color-gray-200)'
-                      }} />
-                    )}
-
-                    {/* Step circle indicator */}
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {filteredApps.map((app) => {
+            const currentStage = getStageIndex(app.status);
+            return (
+              <div
+                key={app.id}
+                className="card card-hoverable"
+                style={{
+                  borderRadius: 'var(--radius-2xl)',
+                  padding: 'var(--space-6)',
+                  border: '1px solid var(--color-border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-4)'
+                }}
+              >
+                {/* Header info */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
                     <div style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      background: step.done ? 'var(--color-primary-600)' : 'var(--color-gray-200)',
+                      width: 48,
+                      height: 48,
+                      borderRadius: 'var(--radius-xl)',
+                      background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
                       color: '#fff',
+                      fontSize: 'var(--text-lg)',
+                      fontWeight: 800,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      zIndex: 1,
                       flexShrink: 0
                     }}>
-                      {step.done ? '✓' : idx + 1}
+                      {app.company?.[0] || 'C'}
                     </div>
 
-                    <div style={{ flex: 1, marginTop: -2 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                        <p style={{ fontWeight: 700, fontSize: 'var(--text-sm)', color: step.done ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
-                          {step.title}
-                        </p>
+                    <div>
+                      <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text)' }}>
+                        {app.title}
+                      </h2>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-primary-600)' }}>
+                          {app.company}
+                        </span>
+                        <span style={{ color: 'var(--color-text-light)' }}>•</span>
                         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                          {step.date}
+                          Applied: {app.appliedDate}
                         </span>
                       </div>
-                      {step.note && (
-                        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2, lineHeight: 1.4 }}>
-                          {step.note}
-                        </p>
-                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                    <StatusBadge status={app.status} />
+                    <Button size="sm" variant="outline" onClick={() => handleOpenDetails(app)}>
+                      View Timeline
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Meta details */}
+                <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {app.location}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><DollarSign size={13} /> {app.salary}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Briefcase size={13} /> {app.type} ({app.mode})</span>
+                </div>
+
+                {/* ── Progress Milestone Line ── */}
+                <div style={{ background: 'var(--color-bg)', padding: 'var(--space-4)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-gray-100)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', alignItems: 'center' }}>
+                    
+                    {/* Background track */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 12,
+                      left: '8%',
+                      right: '8%',
+                      height: 2,
+                      background: 'var(--color-gray-200)',
+                      zIndex: 1
+                    }} />
+
+                    {TIMELINE_STAGES.map((stage, idx) => {
+                      const isCompleted = idx <= currentStage && app.status !== 'REJECTED';
+                      const isCurrent = idx === currentStage && app.status !== 'REJECTED';
+                      const isRejectedState = app.status === 'REJECTED' && idx === 1;
+
+                      return (
+                        <div
+                          key={stage.key}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            zIndex: 2,
+                            position: 'relative'
+                          }}
+                        >
+                          <div style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: '50%',
+                            background: isRejectedState ? 'var(--color-danger-500)' : isCompleted ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                            border: isCompleted || isRejectedState ? 'none' : '2px solid var(--color-gray-300)',
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            boxShadow: isCurrent ? '0 0 0 4px var(--color-primary-100)' : 'none'
+                          }}>
+                            {isRejectedState ? <X size={13} /> : isCompleted ? <Check size={13} /> : idx + 1}
+                          </div>
+
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: isCurrent ? 800 : 600,
+                            color: isRejectedState ? 'var(--color-danger-600)' : isCurrent ? 'var(--color-primary-700)' : isCompleted ? 'var(--color-text)' : 'var(--color-text-light)',
+                            marginTop: 4
+                          }}>
+                            {stage.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Detail Timeline Modal ── */}
+      {detailsModalOpen && selectedApp && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'var(--space-4)',
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)'
+          }}
+          onClick={() => setDetailsModalOpen(false)}
+        >
+          <div
+            style={{
+              background: 'var(--color-surface)',
+              borderRadius: 'var(--radius-2xl)',
+              width: '100%',
+              maxWidth: 600,
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: 'var(--shadow-2xl)',
+              border: '1px solid var(--color-border)',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: 'var(--space-5) var(--space-6)',
+              borderBottom: '1px solid var(--color-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'var(--color-bg)'
+            }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-primary-600)', textTransform: 'uppercase' }}>
+                  Application Timeline
+                </span>
+                <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 800 }}>{selectedApp.title}</h2>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{selectedApp.company} • {selectedApp.location}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailsModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: 'var(--space-6)', overflowY: 'auto', flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-lg)' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Current Status:</span>
+                <StatusBadge status={selectedApp.status} />
+              </div>
+
+              {/* Step by step timeline */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
+                {(selectedApp.timeline || [
+                  { stage: 'Applied', date: selectedApp.appliedDate, completed: true },
+                  { stage: 'Screening', date: 'In Progress', completed: selectedApp.status !== 'APPLIED' },
+                  { stage: 'Shortlisted', date: 'Pending', completed: selectedApp.status === 'SHORTLISTED' || selectedApp.status === 'INTERVIEW' || selectedApp.status === 'SELECTED' },
+                  { stage: 'Interview', date: 'Pending', completed: selectedApp.status === 'INTERVIEW' || selectedApp.status === 'SELECTED' },
+                  { stage: 'Selected', date: 'TBD', completed: selectedApp.status === 'SELECTED' },
+                ]).map((step, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: step.completed ? 'var(--color-success-500)' : 'var(--color-gray-200)',
+                      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, flexShrink: 0
+                    }}>
+                      {step.completed ? '✓' : idx + 1}
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: step.completed ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
+                        {step.stage}
+                      </h4>
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                        {step.date || 'Pending'}
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Footer action */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-              <Link to={`/jobs/${selectedApp.jobId}`} target="_blank">
-                <Button size="sm" variant="ghost" rightIcon={<ArrowRight size={14} />}>
-                  View Original Job Posting
-                </Button>
-              </Link>
-              <Button size="sm" variant="secondary" onClick={() => setDetailsModalOpen(false)}>
+            <div style={{ padding: 'var(--space-4) var(--space-6)', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end' }}>
+              <Button variant="primary" onClick={() => setDetailsModalOpen(false)}>
                 Close
               </Button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
-
     </div>
   );
 }

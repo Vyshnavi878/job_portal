@@ -11,44 +11,13 @@ import FormField from '../../components/ui/FormField';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
-
-const INITIAL_INTERNSHIP_REQUESTS = [
-  {
-    id: 'INT-REQ-01',
-    title: 'AI Engineering & LLM Intern',
-    company: 'Razorpay Technologies',
-    recruiter: 'Arjun Sen',
-    location: 'Bengaluru, Karnataka',
-    stipend: '₹40,000 / month',
-    duration: '6 Months',
-    openings: 3,
-    submittedDate: '2026-08-24, 09:00 AM',
-    status: 'PENDING',
-    description: 'Work closely with our Core Payment AI guild to build retrieval agents and fraud anomaly detection algorithms.',
-    eligibility: 'B.Tech/M.Tech Computer Science 2026/2027 batch graduating students.',
-  },
-  {
-    id: 'INT-REQ-02',
-    title: 'Product Design & UI Research Intern',
-    company: 'Swiggy',
-    recruiter: 'Sneha Rao',
-    location: 'Remote',
-    stipend: '₹30,000 / month',
-    duration: '3 Months',
-    openings: 2,
-    submittedDate: '2026-08-23, 03:30 PM',
-    status: 'PENDING',
-    description: 'Help conduct usability studies and design component token variations in Figma.',
-    eligibility: 'Degree in Design, HCI, or related field with strong portfolio.',
-  },
-];
+import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminInternshipRequestsPage() {
-  const { toast } = useToast();
+  const { addToast } = useToast();
+  const { internships, approveInternship, rejectInternship } = useAdmin();
 
-  const [requests, setRequests] = useState(INITIAL_INTERNSHIP_REQUESTS);
   const [search, setSearch] = useState('');
-
   const [selectedReq, setSelectedReq] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
@@ -56,14 +25,20 @@ export default function AdminInternshipRequestsPage() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
+  const pendingInternships = internships.filter(i => i.status === 'PENDING');
+
+  const filtered = pendingInternships.filter(r => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return r.title?.toLowerCase().includes(q) || r.company?.toLowerCase().includes(q);
+  });
+
   const handleApprove = (item) => {
-    setRequests(requests.map(r => r.id === item.id ? { ...r, status: 'PUBLISHED' } : r));
-    if (selectedReq?.id === item.id) setSelectedReq({ ...selectedReq, status: 'PUBLISHED' });
-    toast({
-      type: 'success',
-      title: 'Internship Approved',
-      message: `"${item.title}" by ${item.company} is now published on the portal.`,
-    });
+    approveInternship(item.id);
+    addToast(`Internship "${item.title}" by ${item.company} has been APPROVED & PUBLISHED.`, 'success');
+    if (selectedReq?.id === item.id) {
+      setViewModalOpen(false);
+    }
   };
 
   const handleOpenReject = (item) => {
@@ -75,72 +50,110 @@ export default function AdminInternshipRequestsPage() {
   const handleConfirmReject = (e) => {
     e.preventDefault();
     if (!rejectTarget || !rejectionReason.trim()) return;
-    setRequests(requests.map(r => r.id === rejectTarget.id ? { ...r, status: 'REJECTED' } : r));
+    rejectInternship(rejectTarget.id, rejectionReason);
+    addToast(`Internship request rejected for ${rejectTarget.company}.`, 'info');
     setRejectModalOpen(false);
-    toast({
-      type: 'error',
-      title: 'Internship Rejected',
-      message: `Internship request rejected for ${rejectTarget.company}.`,
-    });
+    if (selectedReq?.id === rejectTarget.id) {
+      setViewModalOpen(false);
+    }
+    setRejectTarget(null);
   };
-
-  const filtered = requests.filter(r => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return r.title.toLowerCase().includes(q) || r.company.toLowerCase().includes(q);
-  });
 
   const columns = [
     {
       key: 'title',
-      label: 'Internship & Employer',
+      label: 'Internship',
       sortable: true,
       render: (_, row) => (
         <div>
-          <strong style={{ fontSize: 'var(--text-sm)' }}>{row.title}</strong>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.company}</p>
-          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Recruiter: {row.recruiter} ({row.location})</p>
+          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{row.title}</strong>
+          <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.company}</span>
         </div>
       )
+    },
+    {
+      key: 'company',
+      label: 'Company',
+      sortable: true,
+      render: (v) => <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{v}</strong>
+    },
+    {
+      key: 'duration',
+      label: 'Duration',
+      render: (v) => <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>⏳ {v || '3 Months'}</span>
     },
     {
       key: 'stipend',
-      label: 'Stipend & Duration',
-      render: (_, row) => (
-        <div style={{ fontSize: 'var(--text-xs)' }}>
-          <strong style={{ color: 'var(--color-success-700)' }}>{row.stipend}</strong>
-          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{row.duration}</p>
-        </div>
-      )
+      label: 'Stipend',
+      render: (v) => <strong style={{ fontSize: 'var(--text-xs)', color: '#047857' }}>{v}</strong>
+    },
+    {
+      key: 'location',
+      label: 'Location',
+      render: (v) => <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>📍 {v}</span>
     },
     {
       key: 'submittedDate',
-      label: 'Submitted On',
+      label: 'Submitted Date',
       sortable: true,
+      render: (v) => (
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+          {v ? new Date(v).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026'}
+        </span>
+      )
     },
     {
       key: 'status',
       label: 'Status',
-      render: (v) => <StatusBadge status={v} />
+      render: (v) => (
+        <span style={{
+          fontSize: '11px',
+          fontWeight: 700,
+          padding: '3px 8px',
+          borderRadius: 'var(--radius-full)',
+          background: '#fffbeb',
+          color: '#b45309',
+          border: '1px solid #fde68a',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4
+        }}>
+          <Clock size={12} />
+          {v || 'PENDING'}
+        </span>
+      )
     },
     {
       key: 'actions',
       label: 'Actions',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <Button size="xs" variant="outline" leftIcon={<Eye size={12} />} onClick={() => { setSelectedReq(row); setViewModalOpen(true); }}>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+          <Button
+            size="xs"
+            variant="outline"
+            leftIcon={<Eye size={12} />}
+            onClick={() => {
+              setSelectedReq(row);
+              setViewModalOpen(true);
+            }}
+          >
             Review
           </Button>
-          {row.status === 'PENDING' && (
-            <>
-              <Button size="xs" variant="primary" onClick={() => handleApprove(row)}>
-                Approve
-              </Button>
-              <Button size="xs" variant="danger" onClick={() => handleOpenReject(row)}>
-                Reject
-              </Button>
-            </>
-          )}
+          <Button
+            size="xs"
+            variant="primary"
+            leftIcon={<CheckCircle2 size={12} />}
+            onClick={() => handleApprove(row)}
+          >
+            Approve
+          </Button>
+          <Button
+            size="xs"
+            variant="danger"
+            onClick={() => handleOpenReject(row)}
+          >
+            Reject
+          </Button>
         </div>
       )
     }
@@ -155,123 +168,192 @@ export default function AdminInternshipRequestsPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
               <GraduationCap size={20} style={{ color: 'var(--color-primary-600)' }} />
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Internship Approval Requests</h1>
+              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Internship Approvals Queue</h1>
             </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-              Moderate and verify student internship postings, stipend standards, and educational eligibility
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Audit incoming employer internship postings for stipend fairness and training quality before publishing.
             </p>
           </div>
 
-          <span className="badge badge-warning" style={{ fontSize: 'var(--text-xs)', padding: '6px 14px' }}>
-            {requests.filter(r => r.status === 'PENDING').length} Internships Awaiting Review
-          </span>
-        </div>
-      </div>
-
-      {/* Table Card */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div className="input-wrapper" style={{ width: 320 }}>
-            <span className="input-icon-left"><Search size={15} /></span>
-            <input
-              className="input has-icon-left"
-              placeholder="Search internships or companies..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <span style={{
+              background: '#fffbeb',
+              color: '#b45309',
+              border: '1px solid #fde68a',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 700
+            }}>
+              {pendingInternships.length} Pending Approvals
+            </span>
           </div>
-
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            Showing <strong>{filtered.length}</strong> submissions
-          </p>
-        </div>
-
-        <div className="card-body" style={{ padding: 0 }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: 'var(--space-10)' }}>
-              <EmptyState icon="internships" title="No pending requests" description="All submitted internship programs have been verified." />
-            </div>
-          ) : (
-            <Table
-              columns={columns}
-              data={filtered}
-              rowKey="id"
-            />
-          )}
         </div>
       </div>
 
-      {/* Details Modal */}
-      {selectedReq && (
+      {/* Search Toolbar */}
+      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
+        <div style={{ position: 'relative', maxWidth: 440 }}>
+          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+          <input
+            type="text"
+            placeholder="Search pending internships by title, company..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="form-control"
+            style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+          />
+        </div>
+      </div>
+
+      {/* Data Table */}
+      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<CheckCircle2 size={40} />}
+            title="All Internship Approvals Cleared"
+            description="There are currently no internship approval requests waiting in the queue."
+          />
+        ) : (
+          <Table columns={columns} data={filtered} />
+        )}
+      </div>
+
+      {/* ── 1. Internship Review Modal ── */}
+      {viewModalOpen && selectedReq && (
         <Modal
-          open={viewModalOpen}
+          isOpen={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
-          title={`Internship Review: ${selectedReq.title}`}
-          size="md"
+          title={`Review Internship: ${selectedReq.title}`}
+          size="lg"
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div style={{ padding: 'var(--space-4)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>{selectedReq.title}</h3>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600 }}>{selectedReq.company} • Posted by {selectedReq.recruiter}</p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{selectedReq.location}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            {/* Header Badge */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-4)',
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+              color: '#fff',
+              padding: 'var(--space-5)',
+              borderRadius: 'var(--radius-xl)'
+            }}>
+              <div style={{
+                width: 56,
+                height: 56,
+                borderRadius: 'var(--radius-xl)',
+                background: 'rgba(255,255,255,0.2)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 'var(--text-xl)',
+                fontWeight: 800
+              }}>
+                <GraduationCap size={28} />
               </div>
-              <StatusBadge status={selectedReq.status} size="lg" />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Stipend</span><strong>{selectedReq.stipend}</strong></div>
-              <div><span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Duration</span><strong>{selectedReq.duration}</strong></div>
-            </div>
-
-            <div>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Program Summary</span>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', lineHeight: 1.5 }}>{selectedReq.description}</p>
-            </div>
-
-            <div>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Student Eligibility</span>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{selectedReq.eligibility}</p>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-              <Button size="sm" variant="secondary" onClick={() => setViewModalOpen(false)}>Close</Button>
-              {selectedReq.status === 'PENDING' && (
-                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                  <Button size="sm" variant="danger" onClick={() => { setViewModalOpen(false); handleOpenReject(selectedReq); }}>Reject</Button>
-                  <Button size="sm" variant="primary" leftIcon={<CheckCircle2 size={14} />} onClick={() => handleApprove(selectedReq)}>Approve & Publish</Button>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedReq.title}</h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '2px 0 0 0' }}>{selectedReq.company} • 📍 {selectedReq.location}</p>
+                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#cbd5e1' }}>
+                  <span>💰 Stipend: {selectedReq.stipend}</span>
+                  <span>⏳ Duration: {selectedReq.duration || '3 Months'}</span>
+                  <span>📅 Submitted: {selectedReq.submittedDate || 'Aug 2026'}</span>
                 </div>
-              )}
+              </div>
+            </div>
+
+            {/* Metadata Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Employer & Location
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Company:</strong> {selectedReq.company}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Location:</strong> {selectedReq.location}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Submitted Date:</strong> {selectedReq.submittedDate || 'Aug 2026'}</p>
+              </div>
+
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Stipend & Capacity
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Stipend:</strong> {selectedReq.stipend}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Duration:</strong> {selectedReq.duration || '3 Months'}</p>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Openings:</strong> {selectedReq.openings || 2} Interns</p>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                Internship Objectives & Eligibility
+              </h4>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', lineHeight: 1.6, background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                {selectedReq.description || 'Hands-on practical industry internship providing direct mentorship, project delivery exposure, and career growth pathways.'}
+              </p>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+              <Button variant="outline" onClick={() => setViewModalOpen(false)}>
+                Close
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setViewModalOpen(false);
+                  handleOpenReject(selectedReq);
+                }}
+              >
+                Reject Request
+              </Button>
+              <Button
+                variant="primary"
+                leftIcon={<CheckCircle2 size={14} />}
+                onClick={() => handleApprove(selectedReq)}
+              >
+                Approve & Publish Internship
+              </Button>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Reject Modal */}
-      {rejectTarget && (
+      {/* ── 2. Reject Modal ── */}
+      {rejectModalOpen && rejectTarget && (
         <Modal
-          open={rejectModalOpen}
+          isOpen={rejectModalOpen}
           onClose={() => setRejectModalOpen(false)}
-          title="Reject Internship Request"
-          size="sm"
+          title={`Reject Internship: ${rejectTarget.title}`}
+          size="md"
         >
           <form onSubmit={handleConfirmReject} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <FormField label="Rejection Reason" required>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Specify the moderation reason for rejecting this internship posting.
+            </p>
+
+            <FormField label="Rejection Notes" required>
               <Textarea
                 rows={3}
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Reason for rejection..."
                 required
               />
             </FormField>
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
-              <Button type="button" variant="secondary" onClick={() => setRejectModalOpen(false)}>Cancel</Button>
-              <Button type="submit" variant="danger">Confirm Rejection</Button>
+              <Button type="button" variant="outline" onClick={() => setRejectModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="danger">
+                Confirm Rejection
+              </Button>
             </div>
           </form>
         </Modal>
       )}
-
     </div>
   );
 }

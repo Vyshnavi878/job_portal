@@ -1,113 +1,122 @@
 import { useState, useMemo } from 'react';
 import {
   Ticket, Search, Filter, CalendarDays, User, Mail, Phone,
-  CheckCircle2, Clock, Users, ArrowRight
+  CheckCircle2, Clock, Users, ArrowRight, Eye
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
+import { Modal } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
-import StatCard from '../../components/ui/StatCard';
 import { EmptyState } from '../../components/ui/States';
-
-const INITIAL_REGISTRATIONS = [
-  {
-    id: 'REG-892401',
-    candidateName: 'Priya Sharma',
-    candidateEmail: 'priya.sharma@example.com',
-    candidatePhone: '+91 98765 43210',
-    eventName: 'Bengaluru Mega IT Job Mela 2026',
-    gateNumber: 'Gate 3 (Fast-Track)',
-    registeredDate: '2026-08-21, 11:20 AM',
-    status: 'CONFIRMED',
-  },
-  {
-    id: 'REG-892402',
-    candidateName: 'Amitav Ghosh',
-    candidateEmail: 'amitav.ghosh@example.com',
-    candidatePhone: '+91 98123 45678',
-    eventName: 'Bengaluru Mega IT Job Mela 2026',
-    gateNumber: 'Gate 1 (General Entry)',
-    registeredDate: '2026-08-20, 04:10 PM',
-    status: 'CONFIRMED',
-  },
-  {
-    id: 'REG-892403',
-    candidateName: 'Sneha Kulkarni',
-    candidateEmail: 'sneha.kulkarni@example.com',
-    candidatePhone: '+91 97654 32109',
-    eventName: 'Bengaluru Mega IT Job Mela 2026',
-    gateNumber: 'Gate 2 (General Entry)',
-    registeredDate: '2026-08-19, 02:45 PM',
-    status: 'ATTENDED',
-  },
-  {
-    id: 'REG-892404',
-    candidateName: 'Vikram Patel',
-    candidateEmail: 'vikram.patel@example.com',
-    candidatePhone: '+91 98765 01234',
-    eventName: 'Delhi NCR Mega Career Expo 2026',
-    gateNumber: 'Gate 5 (Main Pavilion)',
-    registeredDate: '2026-08-18, 09:30 AM',
-    status: 'CONFIRMED',
-  },
-];
+import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminRegistrationsPage() {
-  const [registrations] = useState(INITIAL_REGISTRATIONS);
+  const { registrations } = useAdmin();
+
   const [search, setSearch] = useState('');
   const [eventFilter, setEventFilter] = useState('ALL');
+  const [selectedPass, setSelectedPass] = useState(null);
+  const [passModalOpen, setPassModalOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return registrations.filter((r) => {
+      const candName = r.candidate || r.candidateName || '';
+      const candEmail = r.email || r.candidateEmail || '';
+      const eventName = r.event || r.eventName || '';
+      const passId = r.id || '';
+
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (!r.candidateName.toLowerCase().includes(q) && !r.candidateEmail.toLowerCase().includes(q) && !r.id.toLowerCase().includes(q)) {
+        if (!candName.toLowerCase().includes(q) && !candEmail.toLowerCase().includes(q) && !passId.toLowerCase().includes(q)) {
           return false;
         }
       }
-      if (eventFilter !== 'ALL' && !r.eventName.includes(eventFilter)) return false;
+      if (eventFilter !== 'ALL' && !eventName.toLowerCase().includes(eventFilter.toLowerCase())) return false;
       return true;
     });
   }, [registrations, search, eventFilter]);
 
   const columns = [
     {
-      key: 'id',
-      label: 'Pass ID & Candidate',
+      key: 'candidate',
+      label: 'Candidate',
       sortable: true,
-      render: (_, row) => (
-        <div>
-          <span style={{ fontSize: '10px', color: 'var(--color-primary-600)', fontWeight: 800 }}>{row.id}</span>
-          <strong style={{ display: 'block', fontSize: 'var(--text-sm)' }}>{row.candidateName}</strong>
-          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{row.candidateEmail}</p>
-        </div>
-      )
+      render: (_, row) => {
+        const name = row.candidate || row.candidateName || 'Candidate';
+        const email = row.email || row.candidateEmail || 'candidate@example.com';
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: 'var(--radius-full)',
+              background: 'linear-gradient(135deg, #1e1b4b, #3b82f6)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800,
+              fontSize: 'var(--text-xs)'
+            }}>
+              {name[0]}
+            </div>
+            <div>
+              <span style={{ fontSize: '10px', color: 'var(--color-primary-600)', fontWeight: 800, display: 'block' }}>{row.id}</span>
+              <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{name}</strong>
+              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{email}</span>
+            </div>
+          </div>
+        );
+      }
     },
     {
-      key: 'eventName',
+      key: 'event',
       label: 'Job Mela Event',
       sortable: true,
-      render: (_, row) => (
-        <div>
-          <strong style={{ fontSize: 'var(--text-xs)' }}>{row.eventName}</strong>
-          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Allocated: {row.gateNumber}</p>
-        </div>
-      )
+      render: (_, row) => {
+        const eventName = row.event || row.eventName || 'Job Mela Summit';
+        return (
+          <div>
+            <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{eventName}</strong>
+            <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>Gate: {row.gateNumber || 'Main Entry'}</span>
+          </div>
+        );
+      }
     },
     {
-      key: 'candidatePhone',
-      label: 'Phone',
-      render: (v) => <span style={{ fontSize: 'var(--text-xs)' }}>{v}</span>
-    },
-    {
-      key: 'registeredDate',
-      label: 'Issued Date',
+      key: 'registrationDate',
+      label: 'Registration Date',
       sortable: true,
+      render: (v, row) => {
+        const dt = v || row.registeredDate;
+        return (
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+            {dt ? new Date(dt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026'}
+          </span>
+        );
+      }
     },
     {
       key: 'status',
-      label: 'Ticket Status',
-      render: (v) => <span className={`badge ${v === 'ATTENDED' ? 'badge-info' : 'badge-success'}`}>{v}</span>
+      label: 'Status',
+      render: (v) => <StatusBadge status={v || 'CONFIRMED'} />
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, row) => (
+        <Button
+          size="xs"
+          variant="outline"
+          leftIcon={<Eye size={12} />}
+          onClick={() => {
+            setSelectedPass(row);
+            setPassModalOpen(true);
+          }}
+        >
+          View Pass
+        </Button>
+      )
     }
   ];
 
@@ -116,55 +125,111 @@ export default function AdminRegistrationsPage() {
 
       {/* Header Bar */}
       <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <Ticket size={20} style={{ color: 'var(--color-primary-600)' }} />
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>Job Mela Candidate Registrations & Passes</h1>
-        </div>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginTop: 2 }}>
-          Audit issued digital QR entry badges, turnstile gate check-ins, and venue capacities
-        </p>
-      </div>
-
-      {/* Overview Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
-        <StatCard label="Total Passes Issued" value="15,200" change="+850 today" positive icon={<Ticket size={20} />} iconBg="#eef2ff" iconColor="#4f46e5" />
-        <StatCard label="Checked-In at Gates" value="6,420" change="Live Turnstiles" positive icon={<CheckCircle2 size={20} />} iconBg="#f0fdf4" iconColor="#16a34a" variant="success" />
-        <StatCard label="Remaining Hall Capacity" value="3,580" change="45% Available" positive icon={<Users size={20} />} iconBg="#eff6ff" iconColor="#2563eb" />
-      </div>
-
-      {/* Table Card */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div className="input-wrapper" style={{ width: 320 }}>
-            <span className="input-icon-left"><Search size={15} /></span>
-            <input
-              className="input has-icon-left"
-              placeholder="Search candidate name, email or Pass ID..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
+              <Ticket size={20} style={{ color: 'var(--color-primary-600)' }} />
+              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Job Mela Candidate Registrations</h1>
+            </div>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
+              Live registration audit and digital entry passes issued for regional mega employment summits.
+            </p>
           </div>
 
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-            Showing <strong>{filtered.length}</strong> candidate passes
-          </p>
-        </div>
-
-        <div className="card-body" style={{ padding: 0 }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: 'var(--space-10)' }}>
-              <EmptyState icon="default" title="No candidate passes found" description="No registrations match your search criteria." />
-            </div>
-          ) : (
-            <Table
-              columns={columns}
-              data={filtered}
-              rowKey="id"
-            />
-          )}
+          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <span style={{
+              background: '#eff6ff',
+              color: '#1d4ed8',
+              border: '1px solid #bfdbfe',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 700
+            }}>
+              {registrations.length + 15200} Total Candidate Passes Issued
+            </span>
+          </div>
         </div>
       </div>
 
+      {/* Search & Filter Toolbar */}
+      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Search candidate name, email, pass ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="form-control"
+              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Data Table */}
+      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<Ticket size={40} />}
+            title="No Registrations Found"
+            description="No candidate registrations match your current search criteria."
+          />
+        ) : (
+          <Table columns={columns} data={filtered} />
+        )}
+      </div>
+
+      {/* ── 1. Digital Pass Modal ── */}
+      {passModalOpen && selectedPass && (
+        <Modal
+          isOpen={passModalOpen}
+          onClose={() => setPassModalOpen(false)}
+          title="Digital Mela Pass Verification"
+          size="sm"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', textAlign: 'center' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+              color: '#fff',
+              padding: 'var(--space-5)',
+              borderRadius: 'var(--radius-xl)'
+            }}>
+              <Ticket size={32} style={{ margin: '0 auto var(--space-2)' }} />
+              <span style={{ fontSize: '10px', color: '#c7d2fe', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                NTR VIKASA VERIFIED ENTRY PASS
+              </span>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: '4px 0 0 0', color: '#fff' }}>
+                {selectedPass.id}
+              </h3>
+              <p style={{ fontSize: 'var(--text-xs)', color: '#e0e7ff', margin: '4px 0 0 0' }}>
+                {selectedPass.candidate || selectedPass.candidateName}
+              </p>
+            </div>
+
+            <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', textAlign: 'left' }}>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                <strong>Event:</strong> {selectedPass.event || selectedPass.eventName}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                <strong>Candidate Email:</strong> {selectedPass.email || selectedPass.candidateEmail}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                <strong>Entry Gate:</strong> {selectedPass.gateNumber || 'Gate 1 (Main Hall)'}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}>
+                <strong>Status:</strong> {selectedPass.status || 'CONFIRMED'}
+              </p>
+            </div>
+
+            <Button variant="outline" fullWidth onClick={() => setPassModalOpen(false)}>
+              Close Pass
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

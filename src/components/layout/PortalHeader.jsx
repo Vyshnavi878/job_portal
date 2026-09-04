@@ -70,8 +70,6 @@ export default function PortalHeader({ title, breadcrumb, user, actions }) {
 
   const adminMenuItems = [
     { label: `${user?.name || 'Admin'} (Admin)`, header: `${user?.name || 'Admin'} (Admin Control)` },
-    { label: 'Admin Dashboard', icon: <LayoutDashboard size={15} />, onClick: () => navigate('/admin/dashboard') },
-    { label: 'Settings', icon: <Settings size={15} />, onClick: () => navigate('/admin/settings') },
     { divider: true },
     { label: 'Log Out', icon: <LogOut size={15} />, danger: true, onClick: handleLogout },
   ];

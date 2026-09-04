@@ -1,0 +1,329 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  MessageSquare, Send, Phone, Mail, Clock, LifeBuoy,
+  ShieldCheck, FileText, CalendarDays, Video, Bookmark,
+  CheckCircle2, MapPin, ArrowRight, Briefcase, Building2,
+  BarChart3, UserCheck, HelpCircle
+} from 'lucide-react';
+import Button from '../../components/ui/Button';
+import FormField from '../../components/ui/FormField';
+import Input from '../../components/ui/Input';
+import Select from '../../components/ui/Select';
+import Textarea from '../../components/ui/Textarea';
+import { useToast } from '../../context/ToastContext';
+import { useRecruiter } from '../../context/RecruiterContext';
+
+export default function RecruiterHelpSupportPage() {
+  const { recruiter } = useRecruiter();
+  const { toast } = useToast();
+
+  // Contact Support Ticket State
+  const [issueType, setIssueType] = useState('Job Posting Approval & Moderation');
+  const [subject, setSubject] = useState('');
+  const [description, setDescription] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const recruiterName = recruiter?.name || 'Recruiter';
+  const companyName = recruiter?.company?.name || 'ABC Technologies Pvt Ltd';
+  const recruiterEmail = recruiter?.email || 'recruiter@example.com';
+
+  const handleSubmitTicket = (e) => {
+    e.preventDefault();
+    if (!description.trim()) {
+      toast({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please describe your query before submitting.'
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      setSubject('');
+      setDescription('');
+      toast({
+        type: 'success',
+        title: 'Support Ticket Submitted',
+        message: `Ticket #${Math.floor(100000 + Math.random() * 900000)} created. Our employer support team will respond within 24 hours.`
+      });
+    }, 800);
+  };
+
+  return (
+    <div className="recruiter-help-support-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
+      
+      {/* Top Banner */}
+      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-8)', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%)', color: '#fff' }}>
+        <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', background: 'rgba(255,255,255,0.15)', color: '#c7d2fe', padding: '4px 12px', borderRadius: 'var(--radius-full)', marginBottom: 'var(--space-3)' }}>
+            <LifeBuoy size={14} /> Recruiter Help Desk & Support
+          </div>
+          <h1 style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: '#ffffff', marginBottom: 'var(--space-2)' }}>
+            How can we help you today, {recruiterName.split(' ')[0]}?
+          </h1>
+          <p style={{ fontSize: 'var(--text-sm)', color: '#cbd5e1', lineHeight: 'var(--leading-relaxed)' }}>
+            Have questions or experiencing any issues regarding job postings, candidate pipelines, interview schedules, hiring team management, or Job Mela participation? Submit a ticket below or reach out through our official employer support channels.
+          </p>
+        </div>
+      </div>
+
+      {/* 2-Column Support Layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(340px, 1fr)', gap: 'var(--space-6)', alignItems: 'start' }}>
+        
+        {/* Left Column: Support Channels & Helpful Information */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          
+          {/* Quick Helpline & Channels */}
+          <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', background: 'var(--color-surface)' }}>
+            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, marginBottom: 'var(--space-1)' }}>
+              Official Employer Support Channels
+            </h3>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-5)' }}>
+              Direct contact channels dedicated to verified recruiters and hiring partners.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-primary-50)', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Mail size={18} />
+                </div>
+                <div>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Employer Email Support</span>
+                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>recruiter-support@ntrvikasa.ap.gov.in</strong>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>Priority response within 2–4 hours during business days</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-success-50, #f0fdf4)', color: 'var(--color-success-600, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Phone size={18} />
+                </div>
+                <div>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Toll-Free Recruitment Helpline</span>
+                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>1800-425-VIKASA (8452)</strong>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>Operating hours: Monday to Saturday, 9:00 AM – 6:00 PM IST</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-accent-50)', color: 'var(--color-accent-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <MapPin size={18} />
+                </div>
+                <div>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>State Skill Center</span>
+                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>APSSDC Headquarters, Tadepalli, Guntur District, AP</strong>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>Government of Andhra Pradesh Employment & Skill Development</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Workspace Shortcuts */}
+          <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', background: 'var(--color-surface)' }}>
+            <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, marginBottom: 'var(--space-3)' }}>
+              Quick Self-Service Shortcuts
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
+              <Link
+                to="/recruiter/jobs"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--color-gray-50)',
+                  color: 'var(--color-text)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  border: '1px solid var(--color-border)',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <Briefcase size={15} style={{ color: 'var(--color-primary-600)' }} />
+                <span>My Posted Jobs</span>
+              </Link>
+
+              <Link
+                to="/recruiter/applications"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--color-gray-50)',
+                  color: 'var(--color-text)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  border: '1px solid var(--color-border)',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <FileText size={15} style={{ color: '#16a34a' }} />
+                <span>Candidate Pipeline</span>
+              </Link>
+
+              <Link
+                to="/recruiter/interviews"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--color-gray-50)',
+                  color: 'var(--color-text)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  border: '1px solid var(--color-border)',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <Video size={15} style={{ color: 'var(--color-accent-600)' }} />
+                <span>Interview Schedule</span>
+              </Link>
+
+              <Link
+                to="/recruiter/company"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--color-gray-50)',
+                  color: 'var(--color-text)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  border: '1px solid var(--color-border)',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <Building2 size={15} style={{ color: '#6366f1' }} />
+                <span>Company Profile</span>
+              </Link>
+
+              <Link
+                to="/recruiter/job-melas"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--color-gray-50)',
+                  color: 'var(--color-text)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  border: '1px solid var(--color-border)',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <CalendarDays size={15} style={{ color: '#ec4899' }} />
+                <span>Job Melas</span>
+              </Link>
+
+              <Link
+                to="/recruiter/analytics"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'var(--color-gray-50)',
+                  color: 'var(--color-text)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  border: '1px solid var(--color-border)',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                <BarChart3 size={15} style={{ color: '#d97706' }} />
+                <span>Hiring Analytics</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Contact Support Form */}
+        <div>
+          <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', border: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+              <MessageSquare size={20} style={{ color: 'var(--color-primary-600)' }} />
+              <div>
+                <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>Need More Help?</h2>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Submit a ticket to employer support</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitTicket} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              <FormField label="Recruiter Name">
+                <Input value={recruiterName} disabled />
+              </FormField>
+
+              <FormField label="Company & Registered Email">
+                <Input value={`${companyName} (${recruiterEmail})`} disabled />
+              </FormField>
+
+              <FormField label="Issue Category" required>
+                <Select
+                  options={[
+                    'Job Posting Approval & Moderation',
+                    'Candidate Applications & Pipeline',
+                    'Interview Scheduling & Virtual Links',
+                    'Company Verification & Documents',
+                    'Hiring Team & Collaborators',
+                    'Job Mela Participation & Stalls',
+                    'Other Employer Support Query'
+                  ]}
+                  value={issueType}
+                  onChange={(e) => setIssueType(e.target.value)}
+                />
+              </FormField>
+
+              <FormField label="Subject / Brief Summary" required>
+                <Input
+                  placeholder="e.g. Question regarding job approval status"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  required
+                />
+              </FormField>
+
+              <FormField label="Description of Problem" required>
+                <Textarea
+                  rows={4}
+                  placeholder="Please describe what assistance your hiring team requires..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                />
+              </FormField>
+
+              <Button
+                type="submit"
+                variant="primary"
+                fullWidth
+                loading={submitting}
+                leftIcon={<Send size={15} />}
+              >
+                Submit Support Request
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

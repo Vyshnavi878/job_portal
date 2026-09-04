@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Users, Search, Filter, Eye, ShieldAlert, ShieldCheck,
   Mail, Phone, MapPin, GraduationCap, Briefcase, FileText,
-  CheckCircle2, XCircle, AlertTriangle, Sparkles, Calendar
+  CheckCircle2, XCircle, AlertTriangle, Sparkles, Calendar, Ticket,
+  Download
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -12,9 +14,37 @@ import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
 
+// Consolidated Pages
+import AdminApplicationsPage from './ApplicationsPage';
+import AdminRegistrationsPage from './RegistrationsPage';
+
 export default function AdminCandidatesPage() {
   const { addToast } = useToast();
-  const { candidates, suspendCandidate, activateCandidate } = useAdmin();
+  const { candidates, suspendCandidate, activateCandidate, applications } = useAdmin();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const tabParam = searchParams.get('tab');
+  const validTabs = ['candidates', 'applications', 'registrations'];
+  const currentTab = validTabs.includes(tabParam) ? tabParam : 'candidates';
+
+  const [activeSection, setActiveSection] = useState(currentTab);
+
+  useEffect(() => {
+    if (tabParam && validTabs.includes(tabParam)) {
+      setActiveSection(tabParam);
+    } else if (!tabParam) {
+      setActiveSection('candidates');
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tabKey) => {
+    setActiveSection(tabKey);
+    if (tabKey === 'candidates') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: tabKey });
+    }
+  };
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -25,6 +55,158 @@ export default function AdminCandidatesPage() {
 
   // Suspend Dialog
   const [suspendTarget, setSuspendTarget] = useState(null);
+
+  // Export Candidates State
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [selectedExportStatus, setSelectedExportStatus] = useState('ALL');
+  const [selectedExportPlace, setSelectedExportPlace] = useState('ALL');
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportStatusOptions = [
+    { id: 'ALL', label: 'All Candidates' },
+    { id: 'SELECTED', label: 'Selected Candidates' },
+    { id: 'SHORTLISTED', label: 'Shortlisted Candidates' },
+    { id: 'INTERVIEW', label: 'Interview Candidates' },
+    { id: 'REJECTED', label: 'Rejected Candidates' },
+  ];
+
+  // Available unique places from candidate data
+  const availablePlaces = useMemo(() => {
+    const placesSet = new Set();
+    (candidates || []).forEach((c) => {
+      if (c.location) {
+        const city = c.location.split(',')[0].trim();
+        if (city && city !== 'Unknown') placesSet.add(city);
+      }
+    });
+    // Include common region hubs if available in candidate pool
+    ['Bengaluru', 'Hyderabad', 'Visakhapatnam', 'Vijayawada', 'Chennai', 'Pune'].forEach((city) => placesSet.add(city));
+    return Array.from(placesSet).sort();
+  }, [candidates]);
+
+  // Combined candidate + application records dataset
+  const exportDataset = useMemo(() => {
+    const appList = applications || [];
+    const candList = candidates || [];
+
+    // Map applications enriched with candidate details
+    const appRecords = appList.map((app) => {
+      const cand = candList.find(
+        (c) => c.email?.toLowerCase() === app.candidateEmail?.toLowerCase() ||
+               c.name?.toLowerCase() === app.candidate?.toLowerCase()
+      );
+      return {
+        name: app.candidate || app.candidateName || cand?.name || 'Candidate',
+        email: app.candidateEmail || cand?.email || 'N/A',
+        phone: cand?.phone || app.phone || '+91 98765 43210',
+        location: cand?.location || app.location || 'India',
+        appliedJob: app.job || app.jobTitle || 'General Application',
+        company: app.company || 'N/A',
+        applicationDate: app.appliedDate || app.date || cand?.registrationDate || '2026-08-20',
+        applicationStatus: app.status || 'APPLIED',
+      };
+    });
+
+    // Candidates without an active application record
+    const standaloneCandidates = candList
+      .filter((cand) => !appRecords.some((r) => r.email?.toLowerCase() === cand.email?.toLowerCase()))
+      .map((cand) => ({
+        name: cand.name || 'Candidate',
+        email: cand.email || 'N/A',
+        phone: cand.phone || 'N/A',
+        location: cand.location || 'India',
+        appliedJob: 'Direct Platform Registration',
+        company: 'NTR Vikasa Platform',
+        applicationDate: cand.registrationDate || '2026-08-01',
+        applicationStatus: cand.accountStatus === 'ACTIVE' ? 'REGISTERED' : cand.accountStatus || 'ACTIVE',
+      }));
+
+    return [...appRecords, ...standaloneCandidates];
+  }, [applications, candidates]);
+
+  // Matching records based on selected export status & location
+  const matchingExportRecords = useMemo(() => {
+    return exportDataset.filter((item) => {
+      // Status filtering
+      if (selectedExportStatus !== 'ALL') {
+        if (item.applicationStatus !== selectedExportStatus) {
+          return false;
+        }
+      }
+      // Place filtering
+      if (selectedExportPlace !== 'ALL') {
+        const placeQuery = selectedExportPlace.toLowerCase();
+        if (!item.location?.toLowerCase().includes(placeQuery)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [exportDataset, selectedExportStatus, selectedExportPlace]);
+
+  // Handle CSV generation and download
+  const handleDownloadCSV = () => {
+    if (matchingExportRecords.length === 0) return;
+
+    setIsExporting(true);
+
+    setTimeout(() => {
+      const headers = [
+        'Candidate Name',
+        'Email',
+        'Phone',
+        'Place/Location',
+        'Applied Job',
+        'Company',
+        'Application Date',
+        'Application Status'
+      ];
+
+      const escapeCSV = (str) => {
+        if (str === null || str === undefined) return '""';
+        const escaped = String(str).replace(/"/g, '""');
+        return `"${escaped}"`;
+      };
+
+      const csvRows = [
+        headers.map(escapeCSV).join(','),
+        ...matchingExportRecords.map((r) => [
+          escapeCSV(r.name),
+          escapeCSV(r.email),
+          escapeCSV(r.phone),
+          escapeCSV(r.location),
+          escapeCSV(r.appliedJob),
+          escapeCSV(r.company),
+          escapeCSV(r.applicationDate),
+          escapeCSV(r.applicationStatus),
+        ].join(','))
+      ];
+
+      const csvContent = csvRows.join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const statusSlug = selectedExportStatus.toLowerCase() === 'all'
+        ? 'all_candidates'
+        : `${selectedExportStatus.toLowerCase()}_candidates`;
+      const placeSlug = selectedExportPlace === 'ALL'
+        ? 'all_places'
+        : selectedExportPlace.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const filename = `${statusSlug}_${placeSlug}.csv`;
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setIsExporting(false);
+      setExportModalOpen(false);
+      addToast(`Exported ${matchingExportRecords.length} candidate(s) to ${filename}`, 'success');
+    }, 300);
+  };
 
   const filtered = useMemo(() => {
     return candidates.filter((c) => {
@@ -206,218 +388,440 @@ export default function AdminCandidatesPage() {
   return (
     <div className="admin-candidates-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
 
-      {/* Header Bar */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
-              <Users size={20} style={{ color: 'var(--color-primary-600)' }} />
-              <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Platform Candidates Directory</h1>
-            </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
-              Search, moderate, and manage job seekers registered across NTR Vikasa employment programs.
-            </p>
-          </div>
+      {/* ── 0. Consolidated Navigation Tabs (Candidates | Applications | Job Mela Registrations) ── */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+        background: 'var(--color-surface)',
+        padding: '6px',
+        borderRadius: 'var(--radius-xl)',
+        border: '1px solid var(--color-border)',
+        width: 'fit-content',
+        boxShadow: 'var(--shadow-sm)',
+        flexWrap: 'wrap'
+      }}>
+        <button
+          type="button"
+          onClick={() => handleTabChange('candidates')}
+          style={{
+            padding: '8px 18px',
+            borderRadius: 'var(--radius-lg)',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: 'none',
+            background: activeSection === 'candidates' ? 'var(--color-primary-600)' : 'transparent',
+            color: activeSection === 'candidates' ? '#fff' : 'var(--color-text-muted)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: activeSection === 'candidates' ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
+            transition: 'all 150ms ease'
+          }}
+        >
+          <Users size={16} /> Candidates
+        </button>
 
-          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-            <span style={{
-              background: '#ecfdf5',
-              color: '#047857',
-              border: '1px solid #a7f3d0',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-lg)',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 700
-            }}>
-              {candidates.filter(c => c.accountStatus === 'ACTIVE').length} Active Candidates
-            </span>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => handleTabChange('applications')}
+          style={{
+            padding: '8px 18px',
+            borderRadius: 'var(--radius-lg)',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: 'none',
+            background: activeSection === 'applications' ? 'var(--color-primary-600)' : 'transparent',
+            color: activeSection === 'applications' ? '#fff' : 'var(--color-text-muted)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: activeSection === 'applications' ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
+            transition: 'all 150ms ease'
+          }}
+        >
+          <FileText size={16} /> Applications
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('registrations')}
+          style={{
+            padding: '8px 18px',
+            borderRadius: 'var(--radius-lg)',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: 'none',
+            background: activeSection === 'registrations' ? 'var(--color-primary-600)' : 'transparent',
+            color: activeSection === 'registrations' ? '#fff' : 'var(--color-text-muted)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            boxShadow: activeSection === 'registrations' ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
+            transition: 'all 150ms ease'
+          }}
+        >
+          <Ticket size={16} /> Job Mela Registrations
+        </button>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
-        <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
-            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-            <input
-              type="text"
-              placeholder="Search candidate name, email, headline, skills..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="form-control"
-              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
-            />
-          </div>
+      {/* ── Tab Content ── */}
+      {activeSection === 'applications' ? (
+        <AdminApplicationsPage />
+      ) : activeSection === 'registrations' ? (
+        <AdminRegistrationsPage />
+      ) : (
+        <>
+          {/* Header Bar */}
+          <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
+                  <Users size={20} style={{ color: 'var(--color-primary-600)' }} />
+                  <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Platform Candidates Directory</h1>
+                </div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
+                  Search, moderate, and manage job seekers registered across NTR Vikasa employment programs.
+                </p>
+              </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-            <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-            {['ALL', 'ACTIVE', 'SUSPENDED'].map((filterKey) => (
-              <button
-                key={filterKey}
-                type="button"
-                onClick={() => setStatusFilter(filterKey)}
-                style={{
-                  padding: '5px 12px',
+              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Download size={15} />}
+                  onClick={() => setExportModalOpen(true)}
+                  style={{ fontWeight: 700 }}
+                >
+                  Export Candidates
+                </Button>
+
+                <span style={{
+                  background: '#ecfdf5',
+                  color: '#047857',
+                  border: '1px solid #a7f3d0',
+                  padding: '6px 12px',
                   borderRadius: 'var(--radius-lg)',
                   fontSize: 'var(--text-xs)',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                  background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                  color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
-                  transition: 'all 150ms ease'
-                }}
-              >
-                {filterKey === 'ALL' ? 'All Accounts' : filterKey}
-              </button>
-            ))}
+                  fontWeight: 700
+                }}>
+                  {candidates.filter(c => c.accountStatus === 'ACTIVE').length} Active Candidates
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Data Table */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
-        {filtered.length === 0 ? (
-          <EmptyState
-            icon={<Users size={40} />}
-            title="No Candidates Found"
-            description="No candidate records match your current search and filter criteria."
-          />
-        ) : (
-          <Table columns={columns} data={filtered} />
-        )}
-      </div>
-
-      {/* ── 1. Candidate Full Profile Modal ── */}
-      {profileModalOpen && selectedCand && (
-        <Modal
-          isOpen={profileModalOpen}
-          onClose={() => setProfileModalOpen(false)}
-          title={`Candidate Profile: ${selectedCand.name}`}
-          size="lg"
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-            {/* Header Badge */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-4)',
-              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
-              color: '#fff',
-              padding: 'var(--space-5)',
-              borderRadius: 'var(--radius-xl)'
-            }}>
-              <div style={{
-                width: 56,
-                height: 56,
-                borderRadius: 'var(--radius-full)',
-                background: 'rgba(255,255,255,0.2)',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 'var(--text-xl)',
-                fontWeight: 800
-              }}>
-                {selectedCand.name?.[0]}
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedCand.name}</h3>
-                <p style={{ fontSize: 'var(--text-sm)', color: '#c7d2fe', margin: '2px 0 0 0' }}>{selectedCand.headline}</p>
-                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#e0e7ff' }}>
-                  <span>📍 {selectedCand.location}</span>
-                  <span>💼 Experience: {selectedCand.experience}</span>
-                  <span>📅 Joined: {selectedCand.registrationDate || 'Aug 2026'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Candidate Details Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                  Contact Information
-                </h4>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Email:</strong> {selectedCand.email}</p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Phone:</strong> {selectedCand.phone || '+91 98765 43210'}</p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Location:</strong> {selectedCand.location}</p>
+          {/* Search & Filter Toolbar */}
+          <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+                <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search candidate name, email, headline, skills..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="form-control"
+                  style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+                />
               </div>
 
-              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                  Education & Experience
-                </h4>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Education:</strong> {selectedCand.education || 'B.Tech Computer Science'}</p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Experience:</strong> {selectedCand.experience}</p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Applications:</strong> {selectedCand.applicationsCount || 12} Submitted</p>
-              </div>
-            </div>
-
-            {/* Skills */}
-            <div>
-              <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                Skills & Competencies
-              </h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                {selectedCand.skills?.map((skill) => (
-                  <span key={skill} style={{
-                    background: 'var(--color-primary-50)',
-                    color: 'var(--color-primary-700)',
-                    border: '1px solid var(--color-primary-200)',
-                    padding: '4px 10px',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: '11px',
-                    fontWeight: 600
-                  }}>
-                    {skill}
-                  </span>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+                {['ALL', 'ACTIVE', 'SUSPENDED'].map((filterKey) => (
+                  <button
+                    key={filterKey}
+                    type="button"
+                    onClick={() => setStatusFilter(filterKey)}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 'var(--radius-lg)',
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                      background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                      color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
+                      transition: 'all 150ms ease'
+                    }}
+                  >
+                    {filterKey === 'ALL' ? 'All Accounts' : filterKey}
+                  </button>
                 ))}
               </div>
             </div>
-
-            {/* Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-              <Button variant="outline" onClick={() => setProfileModalOpen(false)}>
-                Close
-              </Button>
-              {selectedCand.accountStatus === 'ACTIVE' ? (
-                <Button
-                  variant="danger"
-                  onClick={() => {
-                    setProfileModalOpen(false);
-                    setSuspendTarget(selectedCand);
-                  }}
-                >
-                  Suspend Candidate Account
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    handleActivate(selectedCand);
-                    setSelectedCand({ ...selectedCand, accountStatus: 'ACTIVE' });
-                  }}
-                >
-                  Activate Account
-                </Button>
-              )}
-            </div>
           </div>
-        </Modal>
-      )}
 
-      {/* ── 2. Confirm Suspend Dialog ── */}
-      {suspendTarget && (
-        <ConfirmDialog
-          isOpen={Boolean(suspendTarget)}
-          title="Suspend Candidate Account?"
-          message={`Are you sure you want to suspend candidate ${suspendTarget.name} (${suspendTarget.email})? The candidate will no longer be able to submit job applications.`}
-          confirmLabel="Confirm Suspension"
-          confirmVariant="danger"
-          onConfirm={handleConfirmSuspend}
-          onCancel={() => setSuspendTarget(null)}
-        />
+          {/* Data Table */}
+          <div className="card" style={{ borderRadius: 'var(--radius-2xl)', overflow: 'hidden' }}>
+            {filtered.length === 0 ? (
+              <EmptyState
+                icon={<Users size={40} />}
+                title="No Candidates Found"
+                description="No candidate records match your current search and filter criteria."
+              />
+            ) : (
+              <Table columns={columns} data={filtered} />
+            )}
+          </div>
+
+          {/* ── 1. Candidate Full Profile Modal ── */}
+          {profileModalOpen && selectedCand && (
+            <Modal
+              isOpen={profileModalOpen}
+              onClose={() => setProfileModalOpen(false)}
+              title={`Candidate Profile: ${selectedCand.name}`}
+              size="lg"
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                {/* Header Badge */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-4)',
+                  background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+                  color: '#fff',
+                  padding: 'var(--space-5)',
+                  borderRadius: 'var(--radius-xl)'
+                }}>
+                  <div style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 'var(--radius-full)',
+                    background: 'rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 'var(--text-xl)',
+                    fontWeight: 800
+                  }}>
+                    {selectedCand.name?.[0]}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedCand.name}</h3>
+                    <p style={{ fontSize: 'var(--text-sm)', color: '#c7d2fe', margin: '2px 0 0 0' }}>{selectedCand.headline}</p>
+                    <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#e0e7ff' }}>
+                      <span>📍 {selectedCand.location}</span>
+                      <span>💼 Experience: {selectedCand.experience}</span>
+                      <span>📅 Joined: {selectedCand.registrationDate || 'Aug 2026'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Candidate Details Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                      Contact Information
+                    </h4>
+                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Email:</strong> {selectedCand.email}</p>
+                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Phone:</strong> {selectedCand.phone || '+91 98765 43210'}</p>
+                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Location:</strong> {selectedCand.location}</p>
+                  </div>
+
+                  <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                      Education & Experience
+                    </h4>
+                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Education:</strong> {selectedCand.education || 'B.Tech Computer Science'}</p>
+                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Experience:</strong> {selectedCand.experience}</p>
+                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Applications:</strong> {selectedCand.applicationsCount || 12} Submitted</p>
+                  </div>
+                </div>
+
+                {/* Skills */}
+                <div>
+                  <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                    Skills & Competencies
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                    {selectedCand.skills?.map((skill) => (
+                      <span key={skill} style={{
+                        background: 'var(--color-primary-50)',
+                        color: 'var(--color-primary-700)',
+                        border: '1px solid var(--color-primary-200)',
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '11px',
+                        fontWeight: 600
+                      }}>
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+                  <Button variant="outline" onClick={() => setProfileModalOpen(false)}>
+                    Close
+                  </Button>
+                  {selectedCand.accountStatus === 'ACTIVE' ? (
+                    <Button
+                      variant="danger"
+                      onClick={() => {
+                        setProfileModalOpen(false);
+                        setSuspendTarget(selectedCand);
+                      }}
+                    >
+                      Suspend Candidate Account
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        handleActivate(selectedCand);
+                        setSelectedCand({ ...selectedCand, accountStatus: 'ACTIVE' });
+                      }}
+                    >
+                      Activate Account
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Modal>
+          )}
+
+          {/* ── 2. Confirm Suspend Dialog ── */}
+          {suspendTarget && (
+            <ConfirmDialog
+              isOpen={Boolean(suspendTarget)}
+              title="Suspend Candidate Account?"
+              message={`Are you sure you want to suspend candidate ${suspendTarget.name} (${suspendTarget.email})? The candidate will no longer be able to submit job applications.`}
+              confirmLabel="Confirm Suspension"
+              confirmVariant="danger"
+              onConfirm={handleConfirmSuspend}
+              onCancel={() => setSuspendTarget(null)}
+            />
+          )}
+
+          {/* ── 3. Export Candidates Modal ── */}
+          {exportModalOpen && (
+            <Modal
+              isOpen={exportModalOpen}
+              onClose={() => setExportModalOpen(false)}
+              title="Export Candidates to CSV"
+              size="md"
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+                {/* Description */}
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
+                  Select candidate application status and optional place/location to generate and download a filtered CSV report.
+                </p>
+
+                {/* 1. Candidate Application Status Selection */}
+                <div>
+                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', display: 'block', marginBottom: 'var(--space-2)' }}>
+                    1. Application Status
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 'var(--space-2)' }}>
+                    {exportStatusOptions.map((opt) => {
+                      const isSelected = selectedExportStatus === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setSelectedExportStatus(opt.id)}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: 'var(--radius-lg)',
+                            fontSize: 'var(--text-xs)',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            border: isSelected ? '2px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                            background: isSelected ? 'var(--color-primary-50)' : 'var(--color-surface)',
+                            color: isSelected ? 'var(--color-primary-700)' : 'var(--color-text)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            textAlign: 'center',
+                            transition: 'all 150ms ease'
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Place / Location Selection */}
+                <div>
+                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', display: 'block', marginBottom: 'var(--space-2)' }}>
+                    2. Filter by Place / Location
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <MapPin size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
+                    <select
+                      value={selectedExportPlace}
+                      onChange={(e) => setSelectedExportPlace(e.target.value)}
+                      className="form-control"
+                      style={{ width: '100%', paddingLeft: 36, height: 42, borderRadius: 'var(--radius-lg)', fontWeight: 600 }}
+                    >
+                      <option value="ALL">All Places / Locations</option>
+                      {availablePlaces.map((place) => (
+                        <option key={place} value={place}>
+                          {place}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 3. Live Matching Summary & Empty State Message */}
+                <div style={{
+                  padding: 'var(--space-4)',
+                  borderRadius: 'var(--radius-lg)',
+                  background: matchingExportRecords.length > 0 ? '#f0fdf4' : '#fffbeb',
+                  border: matchingExportRecords.length > 0 ? '1px solid #bbf7d0' : '1px solid #fde68a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 'var(--space-2)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    {matchingExportRecords.length > 0 ? (
+                      <CheckCircle2 size={18} style={{ color: '#16a34a' }} />
+                    ) : (
+                      <AlertTriangle size={18} style={{ color: '#d97706' }} />
+                    )}
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: matchingExportRecords.length > 0 ? '#15803d' : '#b45309' }}>
+                      {matchingExportRecords.length > 0
+                        ? `${matchingExportRecords.length} matching candidate record(s) ready for export`
+                        : `No candidates match "${exportStatusOptions.find(o => o.id === selectedExportStatus)?.label}" in "${selectedExportPlace === 'ALL' ? 'All Places' : selectedExportPlace}"`}
+                    </span>
+                  </div>
+
+                  {matchingExportRecords.length > 0 && (
+                    <span style={{ fontSize: '11px', color: '#166534', fontWeight: 600 }}>
+                      {selectedExportStatus.toLowerCase() === 'all' ? 'all_candidates' : `${selectedExportStatus.toLowerCase()}_candidates`}_{selectedExportPlace === 'ALL' ? 'all_places' : selectedExportPlace.toLowerCase().replace(/[^a-z0-9]/g, '_')}.csv
+                    </span>
+                  )}
+                </div>
+
+                {/* 4. Action Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+                  <Button variant="outline" onClick={() => setExportModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    leftIcon={<Download size={15} />}
+                    disabled={matchingExportRecords.length === 0 || isExporting}
+                    onClick={handleDownloadCSV}
+                  >
+                    {isExporting ? 'Preparing CSV...' : 'Download CSV'}
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+          )}
+        </>
       )}
     </div>
   );

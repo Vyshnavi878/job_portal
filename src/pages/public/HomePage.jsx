@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import { useToast } from '../../context/ToastContext';
+import { useAdmin, DEFAULT_HOME_CONTENT } from '../../context/AdminContext';
 import {
   Search, MapPin, Briefcase, Building2, GraduationCap, CalendarDays,
   ArrowRight, TrendingUp, Users, CheckCircle2, Award, Sparkles,
-  ChevronRight, ArrowUpRight, ShieldCheck, Clock, ChevronDown
+  ChevronRight, ArrowUpRight, ShieldCheck, Clock, ChevronDown,
+  ExternalLink, X
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { JobCard, CompanyCard, InternshipCard, JobMelaCard } from '../../components/ui/EntityCards';
@@ -23,6 +25,40 @@ import heroImg from '../../assets/hero.jpeg';
 export default function HomePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { homeContent } = useAdmin();
+
+  const currentContent = homeContent || DEFAULT_HOME_CONTENT;
+  const heroContent = currentContent.hero || DEFAULT_HOME_CONTENT.hero;
+  const statsContent = currentContent.stats || DEFAULT_HOME_CONTENT.stats;
+  const wcContent = currentContent.whyChoose || DEFAULT_HOME_CONTENT.whyChoose;
+  const welcomePopup = currentContent.welcomePopup || DEFAULT_HOME_CONTENT.welcomePopup;
+
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+
+  useEffect(() => {
+    if (welcomePopup?.enabled && welcomePopup?.imageUrl) {
+      const dismissed = sessionStorage.getItem('ntr_welcome_popup_dismissed');
+      if (!dismissed) {
+        const timer = setTimeout(() => {
+          setShowWelcomePopup(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [welcomePopup]);
+
+  const handleDismissPopup = () => {
+    sessionStorage.setItem('ntr_welcome_popup_dismissed', 'true');
+    setShowWelcomePopup(false);
+  };
+
+  const handlePosterClick = () => {
+    if (welcomePopup?.redirectUrl) {
+      window.open(welcomePopup.redirectUrl, '_blank', 'noopener,noreferrer');
+    }
+    handleDismissPopup();
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
@@ -55,12 +91,32 @@ export default function HomePage() {
   const featuredInternships = MOCK_INTERNSHIPS.slice(0, 3);
   const upcomingJobMelas = MOCK_JOB_MELAS.filter(m => m.status === 'REGISTRATION_OPEN' || m.status === 'UPCOMING').slice(0, 2);
 
-  const statsList = [
-    { value: MOCK_STATS.totalJobs, label: 'Active Jobs', icon: <Briefcase size={24} /> },
-    { value: MOCK_STATS.totalCompanies, label: 'Verified Companies', icon: <Building2 size={24} /> },
-    { value: MOCK_STATS.totalCandidates, label: 'Registered Candidates', icon: <Users size={24} /> },
-    { value: MOCK_STATS.totalPlacements, label: 'Successful Placements', icon: <TrendingUp size={24} /> },
+  const iconMap24 = {
+    Briefcase: <Briefcase size={24} />,
+    Building2: <Building2 size={24} />,
+    Users: <Users size={24} />,
+    TrendingUp: <TrendingUp size={24} />,
+    Award: <Award size={24} />,
+    ShieldCheck: <ShieldCheck size={24} />,
+    GraduationCap: <GraduationCap size={24} />,
+    CalendarDays: <CalendarDays size={24} />,
+  };
+
+  const default24Icons = [
+    <Briefcase size={24} key="1" />,
+    <Building2 size={24} key="2" />,
+    <Users size={24} key="3" />,
+    <TrendingUp size={24} key="4" />
   ];
+
+  const statsList = (statsContent || []).map((stat, idx) => ({
+    value: stat.value,
+    label: stat.label,
+    icon: iconMap24[stat.icon] || default24Icons[idx % 4]
+  }));
+
+  const activeHeroImg = heroContent.heroImage || heroImg;
+  const popularSearches = heroContent.popularSearches || ['React', 'Python', 'Java', 'Data Science', 'Figma', 'Fintech', 'Freshers', 'Remote'];
 
   return (
     <div className="home-page" style={{ minHeight: '100vh' }}>
@@ -88,7 +144,7 @@ export default function HomePage() {
             pointerEvents: 'none', zIndex: 0, opacity: 0.8
           }} className="hero-img-wrapper hide-mobile">
           <img
-            src={heroImg}
+            src={activeHeroImg}
             alt="Hero Background"
             style={{
               maxWidth: '100%',
@@ -116,7 +172,7 @@ export default function HomePage() {
                 borderRadius: 'var(--radius-full)'
               }}>
                 <Sparkles size={14} style={{ color: '#a5b4fc' }} />
-                <span>{hero.badge}</span>
+                <span>{heroContent.badge || hero.badge}</span>
               </div>
 
               <h1 style={{
@@ -128,13 +184,13 @@ export default function HomePage() {
                 marginBottom: 'var(--space-5)',
                 letterSpacing: '-0.02em',
               }}>
-                {hero.heading1}<br />
+                {heroContent.heading1 || hero.heading1}<br />
                 <span style={{
                   background: 'linear-gradient(135deg, #a5b4fc 0%, #e0e7ff 50%, #f5d0fe 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent'
                 }}>
-                  {hero.heading2}
+                  {heroContent.heading2 || hero.heading2}
                 </span>
               </h1>
 
@@ -144,7 +200,7 @@ export default function HomePage() {
                 lineHeight: 'var(--leading-relaxed)',
                 maxWidth: 680,
               }}>
-                {hero.subtext}
+                {heroContent.subtext || hero.subtext}
               </p>
             </div>
 
@@ -161,7 +217,7 @@ export default function HomePage() {
                 </span>
                 <input
                   className="search-bar-input"
-                  placeholder={hero.searchPlaceholder}
+                  placeholder={heroContent.searchPlaceholder || hero.searchPlaceholder}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   aria-label="Job search"
@@ -199,7 +255,7 @@ export default function HomePage() {
                     style={{
                       position: 'absolute',
                       top: 'calc(100% + 8px)',
-                      left: 0, // Align dropdown to the left of the button container
+                      left: 0,
                       width: 240,
                       background: 'var(--color-surface)',
                       border: '1px solid var(--color-border)',
@@ -210,7 +266,7 @@ export default function HomePage() {
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 2,
-                      maxHeight: '300px', // About 8 items height
+                      maxHeight: '300px',
                       overflowY: 'auto'
                     }}
                     className="custom-scrollbar"
@@ -263,7 +319,7 @@ export default function HomePage() {
             {/* Quick skill pills */}
             <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
               <span style={{ color: '#94a3b8', fontSize: 'var(--text-xs)', marginRight: 4 }}>{hero.popularSearches}</span>
-              {['React', 'Python', 'Java', 'Data Science', 'Figma', 'Fintech', 'Freshers', 'Remote'].map((tag) => (
+              {popularSearches.map((tag) => (
                 <Link
                   key={tag}
                   to={`/jobs?q=${tag}`}
@@ -342,8 +398,8 @@ export default function HomePage() {
               color: 'var(--color-text)',
               lineHeight: 1.2,
             }}>
-              {wc.heading1}{' '}
-              <span style={{ color: 'var(--color-primary-600)' }}>{wc.heading2}</span>
+              {wcContent.heading1 || wc.heading1}{' '}
+              <span style={{ color: 'var(--color-primary-600)' }}>{wcContent.heading2 || wc.heading2}</span>
             </h2>
             <p style={{
               marginTop: 'var(--space-3)',
@@ -352,7 +408,7 @@ export default function HomePage() {
               maxWidth: 560,
               marginInline: 'auto',
             }}>
-              {wc.subtitle}
+              {wcContent.subtitle || wc.subtitle}
             </p>
           </div>
 
@@ -364,18 +420,31 @@ export default function HomePage() {
           }}
             className="why-choose-grid"
           >
-            {wc.cards.map((item, i) => {
-              const icons = [
-                <ShieldCheck size={20} />,
-                <GraduationCap size={20} />,
-                <CalendarDays size={20} />,
-                <ArrowUpRight size={20} />,
-                <TrendingUp size={20} />,
-                <Users size={20} />,
+            {(wcContent.cards || wc.cards).map((item, i) => {
+              const iconMap20 = {
+                ShieldCheck: <ShieldCheck size={20} />,
+                GraduationCap: <GraduationCap size={20} />,
+                CalendarDays: <CalendarDays size={20} />,
+                ArrowUpRight: <ArrowUpRight size={20} />,
+                TrendingUp: <TrendingUp size={20} />,
+                Users: <Users size={20} />,
+                CheckCircle2: <CheckCircle2 size={20} />,
+                Award: <Award size={20} />,
+                Sparkles: <Sparkles size={20} />,
+                Briefcase: <Briefcase size={20} />,
+                Building2: <Building2 size={20} />,
+              };
+              const defaultIcons = [
+                <ShieldCheck size={20} key="1" />,
+                <GraduationCap size={20} key="2" />,
+                <CalendarDays size={20} key="3" />,
+                <ArrowUpRight size={20} key="4" />,
+                <TrendingUp size={20} key="5" />,
+                <Users size={20} key="6" />,
               ];
               return (
                 <button
-                  key={item.title}
+                  key={item.title || i}
                   type="button"
                   onClick={() => toast({ type: 'success', title: 'Feedback Received', message: 'Thank you for the reply, that helps us.' })}
                   className="card why-choose-card hover-lift"
@@ -401,7 +470,7 @@ export default function HomePage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0,
                   }}>
-                    {icons[i]}
+                    {iconMap20[item.icon] || defaultIcons[i % defaultIcons.length]}
                   </div>
                   <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>
                     {item.title}
@@ -411,7 +480,8 @@ export default function HomePage() {
                   </p>
                 </button>
               );
-            })}          </div>
+            })}
+          </div>
         </div>
       </section>
 
@@ -648,6 +718,123 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── 10. Welcome Popup Poster Overlay ── */}
+      {showWelcomePopup && welcomePopup?.imageUrl && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fadeIn 200ms ease'
+          }}
+          onClick={handleDismissPopup}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '88vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              animation: 'scaleIn 250ms cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Dismiss Close Button */}
+            <button
+              type="button"
+              onClick={handleDismissPopup}
+              aria-label="Close welcome popup"
+              style={{
+                position: 'absolute',
+                top: -14,
+                right: -14,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: '#0f172a',
+                color: '#ffffff',
+                border: '2px solid rgba(255,255,255,0.9)',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                zIndex: 10,
+                transition: 'transform 150ms ease, background 150ms ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              <X size={18} />
+            </button>
+
+            {/* Poster Card */}
+            <div
+              onClick={handlePosterClick}
+              style={{
+                width: '100%',
+                overflow: 'hidden',
+                borderRadius: 'var(--radius-2xl)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+                cursor: welcomePopup.redirectUrl ? 'pointer' : 'default',
+                background: '#1e293b',
+                transition: 'transform 200ms ease'
+              }}
+            >
+              <img
+                src={welcomePopup.imageUrl}
+                alt="Welcome Announcement"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  maxHeight: '80vh',
+                  objectFit: 'contain',
+                  display: 'block',
+                  borderRadius: 'var(--radius-2xl)'
+                }}
+              />
+            </div>
+
+            {welcomePopup.redirectUrl && (
+              <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#f8fafc',
+                    background: 'rgba(15, 23, 42, 0.85)',
+                    padding: '6px 14px',
+                    borderRadius: 'var(--radius-full)',
+                    border: '1px solid rgba(255,255,255,0.25)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={handlePosterClick}
+                >
+                  Click poster to open link <ExternalLink size={12} />
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import FormField from '../../components/ui/FormField';
+import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
@@ -16,7 +17,12 @@ import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminJobsPage() {
   const { addToast } = useToast();
-  const { jobs, approveJob, rejectJob, requestJobChanges } = useAdmin();
+  const {
+    jobs,
+    approveJob,
+    rejectJob,
+    requestJobChanges
+  } = useAdmin();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -247,7 +253,7 @@ export default function AdminJobsPage() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{
               background: '#ecfdf5',
               color: '#047857',

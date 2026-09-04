@@ -1,9 +1,8 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import {
-  Home, LayoutDashboard, Users, Building2, Briefcase, FileText,
-  GraduationCap, UserCheck, ShieldCheck, CheckCircle2,
-  CalendarDays, ClipboardList, AlertTriangle, BarChart3,
-  TrendingUp, History, Bell, Settings
+  Home, LayoutDashboard, Users, Building2,
+  UserCheck, CalendarDays, AlertTriangle,
+  TrendingUp, History, Settings, LayoutTemplate
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import PortalHeader from './PortalHeader';
@@ -36,6 +35,14 @@ function getPageTitle(pathname) {
     '/admin/analytics':               'Platform Performance & Recruitment Analytics',
     '/admin/audit-logs':              'Security & System Audit Logs',
     '/admin/notifications':           'Admin Notifications & System Alerts',
+    '/admin/website-content':         'Website Content Management',
+    '/admin/content':                 'Website Content Management',
+    '/admin/home-content':            'Website Content Management',
+    '/admin/jobs-content':            'Website Content Management',
+    '/admin/skill-content':           'Website Content Management',
+    '/admin/skill-development-content': 'Website Content Management',
+    '/admin/job-melas-content':       'Website Content Management',
+    '/admin/about-content':           'Website Content Management',
     '/admin/settings':                'Platform Administration Settings',
   };
   return map[pathname] || 'NTR VIKASA Administration';
@@ -56,31 +63,18 @@ export default function AdminLayout() {
     { label: 'Recruiters',            href: '/admin/recruiters',            icon: <UserCheck size={18} />,        section: 'USERS' },
     { label: 'Companies',             href: '/admin/companies',             icon: <Building2 size={18} />,        section: 'USERS' },
 
-    // 3. EMPLOYMENT
-    { label: 'Jobs',                  href: '/admin/jobs',                  icon: <Briefcase size={18} />,        section: 'EMPLOYMENT' },
-    { label: 'Internships',           href: '/admin/internships',           icon: <GraduationCap size={18} />,    section: 'EMPLOYMENT' },
-    { label: 'Applications',          href: '/admin/applications',          icon: <FileText size={18} />,         section: 'EMPLOYMENT' },
-
-    // 4. APPROVALS
-    { label: 'Recruiter Verification',href: '/admin/recruiter-verification',icon: <ShieldCheck size={18} />,      section: 'APPROVALS', badge: pendingCounts?.recruiterVerifications || null },
-    { label: 'Company Verification',  href: '/admin/company-verification',  icon: <Building2 size={18} />,        section: 'APPROVALS', badge: pendingCounts?.companyVerifications || null },
-    { label: 'Job Approvals',         href: '/admin/job-approvals',         icon: <CheckCircle2 size={18} />,     section: 'APPROVALS', badge: pendingCounts?.jobApprovals || null },
-    { label: 'Internship Approvals',  href: '/admin/internship-approvals',  icon: <GraduationCap size={18} />,    section: 'APPROVALS', badge: pendingCounts?.internshipApprovals || null },
-
-    // 5. EVENTS
+    // 3. EVENTS
     { label: 'Job Melas',             href: '/admin/job-melas',             icon: <CalendarDays size={18} />,     section: 'EVENTS' },
-    { label: 'Registrations',         href: '/admin/registrations',         icon: <ClipboardList size={18} />,    section: 'EVENTS' },
 
-    // 6. MODERATION
+    // 4. MODERATION
     { label: 'Reports / Complaints',  href: '/admin/reports',               icon: <AlertTriangle size={18} />,    section: 'MODERATION', badge: pendingCounts?.openReports || null },
 
-    // 7. ANALYTICS
-    { label: 'Reports',               href: '/admin/reports',               icon: <BarChart3 size={18} />,        section: 'ANALYTICS' },
+    // 5. ANALYTICS
     { label: 'Analytics',             href: '/admin/analytics',             icon: <TrendingUp size={18} />,       section: 'ANALYTICS' },
     { label: 'Audit Logs',            href: '/admin/audit-logs',            icon: <History size={18} />,          section: 'ANALYTICS' },
 
-    // 8. SYSTEM
-    { label: 'Notifications',         href: '/admin/notifications',         icon: <Bell size={18} />,             section: 'SYSTEM', badge: pendingCounts?.unreadNotifications || null },
+    // 6. SYSTEM
+    { label: 'Website Content',       href: '/admin/website-content',       icon: <LayoutTemplate size={18} />,   section: 'SYSTEM' },
     { label: 'Settings',              href: '/admin/settings',              icon: <Settings size={18} />,         section: 'SYSTEM' },
   ];
 

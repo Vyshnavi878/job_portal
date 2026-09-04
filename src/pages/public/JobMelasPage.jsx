@@ -9,8 +9,13 @@ import { StatusBadge } from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/States';
 import { MOCK_JOB_MELAS } from '../../data/mockData';
+import { useAdmin, DEFAULT_JOB_MELA_CONTENT } from '../../context/AdminContext';
 
 export default function JobMelasPage() {
+  const { jobMelaContent } = useAdmin();
+  const currentContent = jobMelaContent || DEFAULT_JOB_MELA_CONTENT;
+  const hero = currentContent.hero || DEFAULT_JOB_MELA_CONTENT.hero;
+
   const [activeTab, setActiveTab] = useState('upcoming');
   const [cityFilter, setCityFilter] = useState('');
   const [search, setSearch] = useState('');
@@ -58,13 +63,13 @@ export default function JobMelasPage() {
         <div className="container">
           <div style={{ maxWidth: 760 }}>
             <div className="badge badge-primary" style={{ background: 'rgba(255,255,255,0.15)', color: '#c7d2fe', border: '1px solid rgba(255,255,255,0.2)', marginBottom: 'var(--space-3)' }}>
-              <CalendarDays size={12} style={{ marginRight: 4 }} /> Nationwide Recruitment Drives
+              <CalendarDays size={12} style={{ marginRight: 4 }} /> {hero.badge || 'Nationwide Recruitment Drives'}
             </div>
             <h1 style={{ fontSize: 'clamp(2rem, 4vw, 2.75rem)', fontWeight: 800, marginBottom: 'var(--space-3)', color: '#ffffff' }}>
-              Mega Job Melas & Career Fairs
+              {hero.heading || 'Mega Job Melas & Career Fairs'}
             </h1>
             <p style={{ fontSize: 'var(--text-base)', color: '#cbd5e1', lineHeight: 'var(--leading-relaxed)' }}>
-              Attend on-ground walk-in interview sessions with 100+ hiring companies, receive free career guidance, and get spot job offer letters. Free registration for all job seekers.
+              {hero.description || 'Attend on-ground walk-in interview sessions with 100+ hiring companies, receive free career guidance, and get spot job offer letters. Free registration for all job seekers.'}
             </p>
           </div>
         </div>

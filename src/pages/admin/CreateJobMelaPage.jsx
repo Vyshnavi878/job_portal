@@ -10,10 +10,12 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { useToast } from '../../context/ToastContext';
+import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminCreateJobMelaPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { createJobMela } = useAdmin();
 
   const [loading, setLoading] = useState(false);
   const [bannerPreview, setBannerPreview] = useState(null);
@@ -46,6 +48,7 @@ export default function AdminCreateJobMelaPage() {
       toast({ type: 'error', title: 'Event Name Required', message: 'Please enter an event name before saving draft.' });
       return;
     }
+    createJobMela({ ...formData, status: 'UPCOMING' });
     toast({
       type: 'info',
       title: 'Draft Saved',
@@ -62,6 +65,7 @@ export default function AdminCreateJobMelaPage() {
     }
     setLoading(true);
     setTimeout(() => {
+      createJobMela(formData);
       setLoading(false);
       toast({
         type: 'success',
@@ -69,7 +73,7 @@ export default function AdminCreateJobMelaPage() {
         message: `Event "${formData.title}" is now published and open for employer & candidate registrations!`,
       });
       navigate('/admin/job-melas');
-    }, 1000);
+    }, 600);
   };
 
   return (

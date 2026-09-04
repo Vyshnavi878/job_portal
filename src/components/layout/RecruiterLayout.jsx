@@ -2,7 +2,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Briefcase, FileText,
   UserCheck, CalendarCheck, GraduationCap, CalendarDays,
-  BarChart3
+  BarChart3, HelpCircle
 } from 'lucide-react';
 import Sidebar from './Sidebar';
 import PortalHeader from './PortalHeader';
@@ -24,6 +24,9 @@ const NAV_ITEMS = [
 
   // 3. ANALYTICS
   { label: 'Hiring Analytics', href: '/recruiter/analytics',      icon: <BarChart3 size={18} />,      section: 'ANALYTICS' },
+
+  // 4. SUPPORT
+  { label: 'Help & Support',   href: '/recruiter/help-support',   icon: <HelpCircle size={18} />,     section: 'SUPPORT' },
 ];
 
 function getPageTitle(pathname) {
@@ -42,6 +45,7 @@ function getPageTitle(pathname) {
     '/recruiter/job-mela':     'Job Melas Participation',
     '/recruiter/analytics':    'Hiring Analytics',
     '/recruiter/notifications':'Notifications',
+    '/recruiter/help-support': 'Help & Support',
     '/recruiter/settings':     'Recruiter Settings',
   };
   return map[pathname] || 'Recruiter Workspace';

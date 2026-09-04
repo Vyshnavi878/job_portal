@@ -76,6 +76,7 @@ import RecruiterInternshipsPage   from './pages/recruiter/InternshipsPage';
 import RecruiterInterviewsPage    from './pages/recruiter/InterviewsPage';
 import RecruiterJobMelaPage       from './pages/recruiter/JobMelaPage';
 import RecruiterNotificationsPage from './pages/recruiter/NotificationsPage';
+import RecruiterHelpSupportPage   from './pages/recruiter/RecruiterHelpSupportPage';
 import RecruiterSettingsPage      from './pages/recruiter/SettingsPage';
 
 // ── Admin Pages ───────────────────────────────────────────────────────────────
@@ -98,6 +99,10 @@ import AdminNotificationsPage      from './pages/admin/NotificationsPage';
 import AdminReportsPage            from './pages/admin/ReportsPage';
 import AdminAnalyticsPage          from './pages/admin/AnalyticsPage';
 import AdminAuditLogsPage          from './pages/admin/AuditLogsPage';
+import AdminWebsiteContentPage    from './pages/admin/WebsiteContentPage';
+import AdminHomeContentPage        from './pages/admin/HomeContentPage';
+import AdminSkillContentPage       from './pages/admin/SkillContentPage';
+import AdminAboutContentPage       from './pages/admin/AboutContentPage';
 import AdminSettingsPage           from './pages/admin/SettingsPage';
 
 export default function App() {
@@ -182,6 +187,7 @@ export default function App() {
                       <Route path="job-mela"           element={<RecruiterJobMelaPage />} />
                       <Route path="analytics"          element={<RecruiterAnalyticsPage />} />
                       <Route path="notifications"      element={<RecruiterNotificationsPage />} />
+                      <Route path="help-support"        element={<RecruiterHelpSupportPage />} />
                       <Route path="settings"           element={<RecruiterSettingsPage />} />
                     </Route>
 
@@ -212,6 +218,14 @@ export default function App() {
                       <Route path="analytics"                  element={<AdminAnalyticsPage />} />
                       <Route path="audit-logs"                 element={<AdminAuditLogsPage />} />
                       <Route path="notifications"              element={<AdminNotificationsPage />} />
+                      <Route path="website-content"            element={<AdminWebsiteContentPage />} />
+                      <Route path="content"                    element={<AdminWebsiteContentPage />} />
+                      <Route path="home-content"               element={<AdminWebsiteContentPage />} />
+                      <Route path="jobs-content"               element={<AdminWebsiteContentPage />} />
+                      <Route path="skill-content"              element={<AdminWebsiteContentPage />} />
+                      <Route path="skill-development-content"  element={<AdminWebsiteContentPage />} />
+                      <Route path="job-melas-content"          element={<AdminWebsiteContentPage />} />
+                      <Route path="about-content"              element={<AdminWebsiteContentPage />} />
                       <Route path="settings"                   element={<AdminSettingsPage />} />
                     </Route>
 

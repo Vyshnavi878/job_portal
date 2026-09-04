@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import {
   Search, MapPin, SlidersHorizontal, X, RotateCcw, Briefcase,
   DollarSign, Clock, Building2, GraduationCap, Sparkles, AlertCircle,
-  Heart, ShieldCheck, ArrowRight, Filter, Check, Eye
+  Heart, ShieldCheck, ArrowRight, Filter, Check, Eye, ChevronDown
 } from 'lucide-react';
 import Pagination from '../../components/ui/Pagination';
 import { EmptyState, ErrorState } from '../../components/ui/States';
@@ -11,6 +11,8 @@ import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
 import ApplyModal from '../../components/ui/ApplyModal';
 import { useToast } from '../../context/ToastContext';
+import { useAdmin, DEFAULT_JOBS_PAGE_CONTENT } from '../../context/AdminContext';
+import { INDIAN_STATES, INDIAN_UNION_TERRITORIES } from '../../data/indiaLocations';
 import {
   MOCK_JOBS,
   LOCATIONS,
@@ -220,7 +222,12 @@ const EXTENDED_MOCK_JOBS = [
 
 export default function JobsPage() {
   const { toast } = useToast();
+  const { jobsPageContent } = useAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const currentJobsContent = jobsPageContent || DEFAULT_JOBS_PAGE_CONTENT;
+  const heroConfig = currentJobsContent.hero || DEFAULT_JOBS_PAGE_CONTENT.hero;
+  const searchConfig = currentJobsContent.search || DEFAULT_JOBS_PAGE_CONTENT.search;
 
   // Search & Filter state
   const [search, setSearch] = useState(searchParams.get('q') || '');
@@ -353,6 +360,10 @@ export default function JobsPage() {
     experience, salaryRange, jobType, workMode, industry, selectedSkill, datePosted
   ].filter(Boolean).length;
 
+  const popularTags = searchConfig.popularSearches && searchConfig.popularSearches.length > 0
+    ? searchConfig.popularSearches
+    : ['Python Developer', 'React JS', 'Data Analyst', 'Fresher Jobs', 'Hybrid Work', 'FastAPI'];
+
   return (
     <div className="jobs-search-page" style={{ background: 'var(--color-bg)', minHeight: '100vh', paddingBottom: 'var(--space-20)' }}>
       {/* ── 1. Top Search Header Section ── */}
@@ -365,13 +376,13 @@ export default function JobsPage() {
         <div className="container" style={{ maxWidth: 1100 }}>
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: '#c7d2fe', background: 'rgba(255,255,255,0.15)', padding: '3px 12px', borderRadius: 'var(--radius-full)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Corporate Recruitment Portal
+              {heroConfig.badge || 'Corporate Recruitment Portal'}
             </span>
             <h1 style={{ fontSize: 'clamp(1.85rem, 4vw, 2.75rem)', fontWeight: 800, color: '#ffffff', marginTop: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
-              Find Your Dream Job in Andhra Pradesh & India
+              {heroConfig.heading || 'Find Your Dream Job in Andhra Pradesh & India'}
             </h1>
             <p style={{ fontSize: 'var(--text-base)', color: '#cbd5e1' }}>
-              Explore 2,450+ verified corporate job openings with zero placement fees
+              {heroConfig.subtitle || 'Explore 2,450+ verified corporate job openings with zero placement fees'}
             </p>
           </div>
 
@@ -391,7 +402,7 @@ export default function JobsPage() {
               <Search size={18} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
               <input
                 type="text"
-                placeholder="Job title, skills (Python, React...), or company..."
+                placeholder={searchConfig.searchPlaceholder || 'Job title, skills (Python, React...), or company...'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{
@@ -412,23 +423,66 @@ export default function JobsPage() {
 
             <div style={{ width: 1, height: 32, background: 'var(--color-border)', alignSelf: 'center' }} className="hide-mobile" />
 
-            {/* Location input */}
-            <div style={{ flex: '1 1 220px', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)' }}>
+            {/* Location dropdown */}
+            <div style={{ flex: '1 1 230px', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', position: 'relative' }}>
               <MapPin size={18} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
-              <input
-                type="text"
-                placeholder="Location (Hyderabad, Vizag, Bengaluru...)"
+              <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
+                aria-label="Filter by Location"
                 style={{
                   border: 'none',
                   outline: 'none',
                   width: '100%',
                   fontSize: 'var(--text-sm)',
-                  color: 'var(--color-text)',
-                  background: 'transparent'
+                  color: location ? 'var(--color-text)' : 'var(--color-text-muted)',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  paddingRight: '18px'
                 }}
-              />
+              >
+                <option value="" style={{ color: 'var(--color-text-muted)' }}>
+                  {searchConfig.locationPlaceholder || 'All Locations (All India)'}
+                </option>
+                <optgroup label="States (28)" style={{ fontWeight: 700, color: 'var(--color-primary-700)' }}>
+                  {INDIAN_STATES.map((st) => (
+                    <option key={st} value={st} style={{ color: 'var(--color-text)', fontWeight: 500 }}>
+                      {st}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Union Territories (8)" style={{ fontWeight: 700, color: 'var(--color-primary-700)' }}>
+                  {INDIAN_UNION_TERRITORIES.map((ut) => (
+                    <option key={ut} value={ut} style={{ color: 'var(--color-text)', fontWeight: 500 }}>
+                      {ut}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              {location ? (
+                <button
+                  type="button"
+                  onClick={() => setLocation('')}
+                  title="Clear location filter"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 2,
+                    marginLeft: 2
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              ) : (
+                <ChevronDown size={14} style={{ color: 'var(--color-text-muted)', pointerEvents: 'none', position: 'absolute', right: 12 }} />
+              )}
             </div>
 
             <Button
@@ -441,10 +495,10 @@ export default function JobsPage() {
             </Button>
           </div>
 
-          {/* Popular Searches & Recent Searches Chips */}
+          {/* Popular Searches Chips */}
           <div style={{ marginTop: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', fontSize: 'var(--text-xs)' }}>
             <span style={{ color: '#c7d2fe', fontWeight: 700 }}>Popular Searches:</span>
-            {['Python Developer', 'React JS', 'Data Analyst', 'Fresher Jobs', 'Hybrid Work', 'FastAPI'].map((chip) => (
+            {popularTags.map((chip) => (
               <button
                 key={chip}
                 onClick={() => setSearch(chip)}

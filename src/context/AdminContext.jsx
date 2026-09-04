@@ -728,6 +728,280 @@ const SEED_SETTINGS = {
   maintenanceMode: false,
 };
 
+// ─── 13. SEED HOME PAGE CONTENT ───────────────────────────────────────────
+export const DEFAULT_HOME_CONTENT = {
+  hero: {
+    badge: 'Most Trusted Career & Job Fair Network',
+    heading1: 'Find Your Dream Job.',
+    heading2: 'Accelerate Your Career.',
+    subtext: 'Connect with top verified recruiters, apply for high-impact internships, and register for nationwide Mega Job Melas — all with transparent tracking.',
+    searchPlaceholder: 'Search job titles, required skills, keywords, companies...',
+    popularSearches: ['React', 'Python', 'Java', 'Data Science', 'Figma', 'Fintech', 'Freshers', 'Remote'],
+    heroImage: null,
+  },
+  stats: [
+    { id: 'stat-1', label: 'Active Jobs', value: '52,480+', icon: 'Briefcase' },
+    { id: 'stat-2', label: 'Verified Companies', value: '14,200+', icon: 'Building2' },
+    { id: 'stat-3', label: 'Registered Candidates', value: '2,80,000+', icon: 'Users' },
+    { id: 'stat-4', label: 'Successful Placements', value: '1,95,000+', icon: 'TrendingUp' },
+  ],
+  whyChoose: {
+    heading1: 'Why Choose',
+    heading2: 'Our Job Portal?',
+    subtitle: 'Everything you need to launch, accelerate, and safeguard your professional career journey in one integrated ecosystem.',
+    cards: [
+      { id: 'wc-1', title: 'Trusted Opportunities', desc: '100% verified opportunities with strict regulatory compliance and wage transparency.', icon: 'ShieldCheck' },
+      { id: 'wc-2', title: 'Skill Development', desc: 'Government-recognized skill certifications, workshops, and industry bootcamps.', icon: 'GraduationCap' },
+      { id: 'wc-3', title: 'Job Melas', desc: 'Direct entry to state-wide employment summits and mega walk-in recruitment drives.', icon: 'CalendarDays' },
+      { id: 'wc-4', title: 'Easy Applications', desc: 'One-click application process with streamlined digital resume distribution.', icon: 'ArrowUpRight' },
+      { id: 'wc-5', title: 'Application Tracking', desc: 'Transparent real-time status updates from submission to interview scheduling.', icon: 'TrendingUp' },
+      { id: 'wc-6', title: 'Candidate Support', desc: 'Dedicated helpline, career counselling, and automated grievance redressal.', icon: 'Users' },
+    ],
+  },
+  welcomePopup: {
+    enabled: false,
+    imageUrl: '',
+    redirectUrl: '',
+  },
+};
+
+// ─── 14. SEED JOBS PAGE CONTENT ───────────────────────────────────────────
+export const DEFAULT_JOBS_PAGE_CONTENT = {
+  hero: {
+    badge: 'Corporate Recruitment Portal',
+    heading: 'Find Your Dream Job in Andhra Pradesh & India',
+    subtitle: 'Explore 2,450+ verified corporate job openings with zero placement fees',
+  },
+  search: {
+    searchPlaceholder: 'Job title, skills (Python, React...), or company...',
+    locationPlaceholder: 'All Locations (All India)',
+    popularSearches: ['Python Developer', 'React JS', 'Data Analyst', 'Fresher Jobs', 'Hybrid Work', 'FastAPI'],
+  },
+};
+
+// ─── 15. SEED JOB MELA PAGE CONTENT ───────────────────────────────────────
+export const DEFAULT_JOB_MELA_CONTENT = {
+  hero: {
+    badge: 'Nationwide Recruitment Drives',
+    heading: 'Mega Job Melas & Career Fairs',
+    description: 'Attend on-ground walk-in interview sessions with 100+ hiring companies, receive free career guidance, and get spot job offer letters. Free registration for all job seekers.',
+  },
+};
+
+// ─── 16. SEED SKILL DEVELOPMENT PAGE CONTENT ──────────────────────────────
+export const DEFAULT_SKILL_PAGE_CONTENT = {
+  hero: {
+    badge: 'NTR VIKASA • Skill Development & Employment Generation',
+    heading: 'Skill Development & Training Programs',
+    description: 'Empowering job seekers with government-recognized, industry-aligned training, practical learning, and placement support.',
+    exploreBtnText: 'Explore Programs',
+    viewCoursesBtnText: 'View Courses',
+  },
+  highlights: [
+    { id: 'hl-1', icon: 'Award', title: 'Government Recognized', subtitle: 'NSDC / NSQF Certified' },
+    { id: 'hl-2', icon: 'TrendingUp', title: 'Placement Support', subtitle: 'Job Mela / Employment Support' },
+    { id: 'hl-3', icon: 'BookOpen', title: 'Practical Curriculum', subtitle: 'Hands-on Industry Labs' },
+    { id: 'hl-4', icon: 'Users', title: 'Expert Mentors', subtitle: 'Experienced Professionals' },
+  ],
+  empoweringSkills: {
+    badge: 'Institutional Mission',
+    heading: 'Empowering Skills. Enabling Careers.',
+    description: 'The NTR VIKASA Skill Development initiative bridges the critical divide between academic qualifications and industry hiring standards. By partnering with state government bodies, national sector skill councils, and corporate employers, we deliver employment-focused, hands-on training to youth across Andhra Pradesh.',
+    cards: [
+      {
+        id: 'es-1',
+        icon: 'Code2',
+        title: 'Industry-Relevant Learning',
+        desc: 'Curricula designed directly in consultation with tech leaders, BFSI corporations, and manufacturing employers to teach in-demand workplace tools.'
+      },
+      {
+        id: 'es-2',
+        icon: 'Laptop',
+        title: 'Practical Training Labs',
+        desc: 'Over 70% of course time is dedicated to hands-on lab practicals, simulated industrial environments, and live capstone projects.'
+      },
+      {
+        id: 'es-3',
+        icon: 'TrendingUp',
+        title: 'Placement Assistance',
+        desc: 'Trained candidates receive dedicated interview preparation, resume enhancement, and direct fast-track access to regional Mega Job Melas.'
+      }
+    ]
+  },
+  trainingJourney: {
+    badge: 'Candidate Pathway',
+    heading: 'From Training to Employment',
+    description: 'A structured 6-step journey designed to take you from foundational training to confirmed corporate placement.',
+    steps: [
+      { step: '01', title: 'Choose a Program', desc: 'Browse through high-demand domains like Tech, AI, Cloud, and BFSI to select the right skill track aligned with your career goals.' },
+      { step: '02', title: 'Register & Counseling', desc: 'Submit a free online enrollment request. Our skill counselors guide you through batch schedules, prerequisite review, and center allocation.' },
+      { step: '03', title: 'Hands-on Training', desc: 'Undergo practical, lab-based learning with experienced industry mentors, real-world capstone assignments, and modern equipment.' },
+      { step: '04', title: 'Get Certified', desc: 'Earn government-recognized NSDC, NSQF, and Sector Skill Council certifications validating your industry-ready competencies.' },
+      { step: '05', title: 'Placement Preparation', desc: 'Participate in resume enhancement sessions, technical interview simulations, soft skills coaching, and mock tests.' },
+      { step: '06', title: 'Employment & Job Melas', desc: 'Receive direct interview access to 14,000+ verified corporate recruiters and fast-track entry to statewide Mega Job Melas.' },
+    ]
+  },
+  programsWeOffer: {
+    badge: 'Sector Domains',
+    heading: 'Programs We Offer',
+    description: 'Specialized training pathways spanning modern tech, finance, core engineering, and administrative sectors.',
+    categories: [
+      { id: 'it', name: 'Information Technology', icon: 'Code2', desc: 'Web development, cloud computing, and computer fundamentals', count: '3 Courses' },
+      { id: 'data-ai', name: 'Data & AI', icon: 'Database', desc: 'Data analytics, Power BI dashboards, and business intelligence', count: '2 Courses' },
+      { id: 'ai-tools', name: 'AI & Productivity Tools', icon: 'Sparkles', desc: 'ChatGPT prompt engineering, Gemini AI & office automation', count: '2 Courses' },
+      { id: 'banking', name: 'Banking & Finance', icon: 'Landmark', desc: 'BFSI operations, retail banking, credit appraisal & compliance', count: '2 Courses' },
+      { id: 'accounting', name: 'Office & Accounting', icon: 'Calculator', desc: 'Tally Prime, GST return filing, MS Office & Advanced Excel', count: '2 Courses' },
+      { id: 'core-eng', name: 'Core Engineering', icon: 'Cpu', desc: 'PLC automation, SCADA systems, and industrial electrical wiring', count: '2 Courses' },
+      { id: 'healthcare', name: 'Healthcare', icon: 'Activity', desc: 'Hospital administration, patient care, EMR systems & billing', count: '2 Courses' },
+      { id: 'marketing', name: 'Marketing & Sales', icon: 'Megaphone', desc: 'Digital marketing, SEO, social media ads & customer support', count: '2 Courses' },
+    ]
+  },
+  whyChoose: {
+    badge: 'Institutional Excellence',
+    heading: 'Why Choose NTR VIKASA',
+    description: 'Outcome-focused advantages designed to give candidates a real competitive edge in modern job markets.',
+    cards: [
+      { icon: 'Award', title: 'Govt. & NSDC Recognized', desc: 'All programs follow National Skill Qualification Framework (NSQF) standards ensuring nationwide employer recognition.' },
+      { icon: 'Laptop', title: '70% Practical Lab Training', desc: 'Emphasis on experiential lab exercises, software simulations, and hardware setups rather than rote memorization.' },
+      { icon: 'Users', title: 'Certified Expert Mentors', desc: 'Learn directly from seasoned industry practitioners and certified instructors with extensive domain track records.' },
+      { icon: 'TrendingUp', title: '100% Placement Support', desc: 'Direct pipeline to NTR VIKASA verified recruiters, corporate interview drives, and district-wide Mega Job Melas.' },
+      { icon: 'ShieldCheck', title: '100% Free / Subsidized', desc: 'State-sponsored skill development initiatives designed to empower aspiring job seekers across all districts of Andhra Pradesh.' },
+      { icon: 'Sparkles', title: 'Future-Ready Curriculum', desc: 'Regularly updated course modules integrating modern AI tools, cloud platforms, and modern industrial requirements.' },
+    ]
+  }
+};
+
+// ─── 17. SEED ABOUT US PAGE CONTENT ───────────────────────────────────────
+export const DEFAULT_ABOUT_CONTENT = {
+  hero: {
+    badge: 'Our Mission & Impact',
+    heading: 'Bridging Talent with Opportunity Across India',
+    description: 'NTR VIKASA Job Portal was founded on a simple principle: every candidate deserves fair, direct access to employment opportunities without scam fees, opaque processes, or dead ends.',
+  },
+  stats: [
+    { id: 'ab-stat-1', label: 'Registered Job Seekers', value: '2,80,000+', color: 'var(--color-primary-600)' },
+    { id: 'ab-stat-2', label: 'Confirmed Placements', value: '1,95,000+', color: 'var(--color-success-600)' },
+    { id: 'ab-stat-3', label: 'Verified Hiring Employers', value: '14,200+', color: 'var(--color-warning-600)' },
+    { id: 'ab-stat-4', label: 'State-Wide Job Melas Held', value: '24+', color: 'var(--color-info-600)' },
+  ],
+  whatWeStandFor: {
+    heading: 'What We Stand For',
+    description: 'Guiding principles that power our candidate-first architecture and employer verification policies.',
+    cards: [
+      {
+        id: 'wwsf-1',
+        icon: 'ShieldCheck',
+        title: '100% Verified Quality',
+        desc: 'Every single recruiter profile and job listing is reviewed to eliminate illegitimate recruiters and recruitment charges.',
+        color: 'primary'
+      },
+      {
+        id: 'wwsf-2',
+        icon: 'Target',
+        title: 'Transparent Application Lifecycle',
+        desc: 'Candidates receive live feedback across all 20 standard recruitment milestones from applied to interview to offer letters.',
+        color: 'success'
+      },
+      {
+        id: 'wwsf-3',
+        icon: 'Users',
+        title: 'Inclusive Mega Job Melas',
+        desc: 'Bringing top corporate opportunities directly to Tier-2, Tier-3 and rural graduate communities through walk-in physical fairs.',
+        color: 'warning'
+      }
+    ]
+  },
+  team: {
+    badge: 'Our Leadership & Team',
+    heading: 'Our Team',
+    description: 'Experienced leaders with backgrounds across technology, public policy, and corporate recruitment.',
+    members: [
+      {
+        id: 'team-1',
+        name: 'Dr. Ramesh Sundaram',
+        role: 'Founder & Managing Director',
+        organization: 'NTR Vikasa',
+        bio: 'Former National Employment Council advisor with 20+ years driving talent mobility initiatives.',
+        image: null
+      },
+      {
+        id: 'team-2',
+        name: 'Ananya Deshmukh',
+        role: 'Chief Technology Officer',
+        organization: 'NTR Vikasa',
+        bio: 'Ex-Google & Flipkart engineering leader passionate about AI-driven career matching.',
+        image: null
+      },
+      {
+        id: 'team-3',
+        name: 'Siddharth Nair',
+        role: 'Head of Employer Partnerships',
+        organization: 'NTR Vikasa',
+        bio: 'Built recruitment pipelines across 500+ Indian corporate enterprises and SME networks.',
+        image: null
+      },
+      {
+        id: 'team-4',
+        name: 'Meera Sengupta',
+        role: 'Director of Diversity & Job Melas',
+        organization: 'NTR Vikasa',
+        bio: 'Pioneered inclusive job fairs for women, PwD, and tier-2/3 college graduates across India.',
+        image: null
+      },
+    ]
+  },
+  leadershipMessages: {
+    badge: 'LEADERSHIP',
+    heading: 'Leadership Messages',
+    description: 'Words from our esteemed leaders who guide our mission',
+    messages: [
+      {
+        id: 'msg-1',
+        name: 'K Lacha Rao',
+        designation: 'Chairperson',
+        organization: 'NTR Vikasa Jobs',
+        image: null,
+        initials: 'VIKASA',
+        headerBg: '#0f2a59',
+        message: 'Our mission is to bridge the gap between academia and industry by providing industry-aligned curriculum to ICT faculty and students, offering the finest skill, career connect, and mentorship guidance.',
+        fullMessage: 'Our mission is to bridge the gap between academia and industry by providing industry-aligned curriculum to ICT faculty and students, offering the finest skill, career connect, and mentorship guidance. Through deep collaboration with industry leaders and government stakeholders, we are dedicated to providing transformational employment avenues for all aspiring youth across the state.',
+        hasViewAction: false
+      },
+      {
+        id: 'msg-2',
+        name: 'K. Lacha Rao',
+        designation: 'Project Director',
+        organization: 'Vikasa Jobs',
+        image: null,
+        initials: 'KLR',
+        headerBg: '#047857',
+        message: 'At NTR Vikasa, our mission is to empower youth by creating meaningful employment opportunities and building a skilled workforce for the future. We believe that every individual deserves the right guidance, training, and platform to achieve their career aspirations. Through our initiatives such as Job Melas, skill development programs, and industry partnerships,...',
+        fullMessage: 'At NTR Vikasa, our mission is to empower youth by creating meaningful employment opportunities and building a skilled workforce for the future. We believe that every individual deserves the right guidance, training, and platform to achieve their career aspirations. Through our initiatives such as Job Melas, skill development programs, and industry partnerships, we strive to build sustainable bridges between talent and industry requirements across the state.',
+        hasViewAction: true
+      }
+    ]
+  },
+  partners: {
+    heading: 'OUR INDUSTRY & ACADEMIC TRAINING PARTNERS',
+    description: 'Empowering future-ready talent in collaboration with leading corporate and educational organizations.',
+    list: [
+      { id: 'p-1', name: 'Hyundai MOBIS', logoText: 'HYUNDAI MOBIS', active: true, order: 1 },
+      { id: 'p-2', name: 'ISUZU', logoText: 'ISUZU', active: true, order: 2 },
+      { id: 'p-3', name: 'MedPlus+', logoText: 'MedPlus+', active: true, order: 3 },
+      { id: 'p-4', name: 'Apollo Pharmacy', logoText: 'Apollo Pharmacy', active: true, order: 4 },
+      { id: 'p-5', name: 'IndiGo', logoText: 'IndiGo', active: true, order: 5 },
+      { id: 'p-6', name: 'INZI Controls', logoText: 'INZI CONTROLS', active: true, order: 6 },
+      { id: 'p-7', name: 'Dixon', logoText: 'Dixon', active: true, order: 7 },
+      { id: 'p-8', name: 'COGENT', logoText: 'COGENT', active: true, order: 8 },
+      { id: 'p-9', name: 'Indus', logoText: 'Indus', active: true, order: 9 },
+      { id: 'p-10', name: 'NIIT', logoText: 'NIIT', active: true, order: 10 },
+      { id: 'p-11', name: 'iSON', logoText: 'iSON', active: true, order: 11 },
+      { id: 'p-12', name: 'Deccan', logoText: 'deccan', active: true, order: 12 },
+      { id: 'p-13', name: 'ICICI Bank', logoText: 'ICICI Bank', active: true, order: 13 },
+    ]
+  }
+};
+
 const AdminContext = createContext(null);
 
 export function AdminProvider({ children }) {
@@ -873,6 +1147,141 @@ export function AdminProvider({ children }) {
     return SEED_SETTINGS;
   });
 
+  const [homeContent, setHomeContent] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ntr_admin_home_content_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          hero: { ...DEFAULT_HOME_CONTENT.hero, ...(parsed.hero || {}) },
+          stats: parsed.stats?.length ? parsed.stats : DEFAULT_HOME_CONTENT.stats,
+          whyChoose: {
+            ...DEFAULT_HOME_CONTENT.whyChoose,
+            ...(parsed.whyChoose || {}),
+            cards: parsed.whyChoose?.cards?.length ? parsed.whyChoose.cards : DEFAULT_HOME_CONTENT.whyChoose.cards,
+          },
+          welcomePopup: {
+            ...DEFAULT_HOME_CONTENT.welcomePopup,
+            ...(parsed.welcomePopup || {}),
+          },
+        };
+      }
+    } catch (e) {
+      // ignore
+    }
+    return DEFAULT_HOME_CONTENT;
+  });
+
+  const [jobsPageContent, setJobsPageContent] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ntr_admin_jobs_page_content_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          hero: { ...DEFAULT_JOBS_PAGE_CONTENT.hero, ...(parsed.hero || {}) },
+          search: {
+            ...DEFAULT_JOBS_PAGE_CONTENT.search,
+            ...(parsed.search || {}),
+            popularSearches: parsed.search?.popularSearches?.length ? parsed.search.popularSearches : DEFAULT_JOBS_PAGE_CONTENT.search.popularSearches,
+          },
+        };
+      }
+    } catch (e) {
+      // ignore
+    }
+    return DEFAULT_JOBS_PAGE_CONTENT;
+  });
+
+  const [jobMelaContent, setJobMelaContent] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ntr_admin_job_mela_content_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          hero: { ...DEFAULT_JOB_MELA_CONTENT.hero, ...(parsed.hero || {}) },
+        };
+      }
+    } catch (e) {
+      // ignore
+    }
+    return DEFAULT_JOB_MELA_CONTENT;
+  });
+
+  const [skillPageContent, setSkillPageContent] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ntr_admin_skill_page_content_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          hero: { ...DEFAULT_SKILL_PAGE_CONTENT.hero, ...(parsed.hero || {}) },
+          highlights: parsed.highlights?.length ? parsed.highlights : DEFAULT_SKILL_PAGE_CONTENT.highlights,
+          empoweringSkills: {
+            ...DEFAULT_SKILL_PAGE_CONTENT.empoweringSkills,
+            ...(parsed.empoweringSkills || {}),
+            cards: parsed.empoweringSkills?.cards?.length ? parsed.empoweringSkills.cards : DEFAULT_SKILL_PAGE_CONTENT.empoweringSkills.cards,
+          },
+          trainingJourney: {
+            ...DEFAULT_SKILL_PAGE_CONTENT.trainingJourney,
+            ...(parsed.trainingJourney || {}),
+            steps: parsed.trainingJourney?.steps?.length ? parsed.trainingJourney.steps : DEFAULT_SKILL_PAGE_CONTENT.trainingJourney.steps,
+          },
+          programsWeOffer: {
+            ...DEFAULT_SKILL_PAGE_CONTENT.programsWeOffer,
+            ...(parsed.programsWeOffer || {}),
+            categories: parsed.programsWeOffer?.categories?.length ? parsed.programsWeOffer.categories : DEFAULT_SKILL_PAGE_CONTENT.programsWeOffer.categories,
+          },
+          whyChoose: {
+            ...DEFAULT_SKILL_PAGE_CONTENT.whyChoose,
+            ...(parsed.whyChoose || {}),
+            cards: parsed.whyChoose?.cards?.length ? parsed.whyChoose.cards : DEFAULT_SKILL_PAGE_CONTENT.whyChoose.cards,
+          },
+        };
+      }
+    } catch (e) {
+      // ignore
+    }
+    return DEFAULT_SKILL_PAGE_CONTENT;
+  });
+
+  const [aboutContent, setAboutContent] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ntr_admin_about_content_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          hero: {
+            ...DEFAULT_ABOUT_CONTENT.hero,
+            ...(parsed.hero || {}),
+          },
+          stats: parsed.stats?.length ? parsed.stats : DEFAULT_ABOUT_CONTENT.stats,
+          whatWeStandFor: {
+            ...DEFAULT_ABOUT_CONTENT.whatWeStandFor,
+            ...(parsed.whatWeStandFor || {}),
+            cards: parsed.whatWeStandFor?.cards?.length ? parsed.whatWeStandFor.cards : DEFAULT_ABOUT_CONTENT.whatWeStandFor.cards,
+          },
+          team: {
+            ...DEFAULT_ABOUT_CONTENT.team,
+            ...(parsed.team || {}),
+            members: parsed.team?.members?.length ? parsed.team.members : DEFAULT_ABOUT_CONTENT.team.members,
+          },
+          leadershipMessages: {
+            ...DEFAULT_ABOUT_CONTENT.leadershipMessages,
+            ...(parsed.leadershipMessages || {}),
+            messages: parsed.leadershipMessages?.messages?.length ? parsed.leadershipMessages.messages : DEFAULT_ABOUT_CONTENT.leadershipMessages.messages,
+          },
+          partners: {
+            ...DEFAULT_ABOUT_CONTENT.partners,
+            ...(parsed.partners || {}),
+            list: parsed.partners?.list?.length ? parsed.partners.list : DEFAULT_ABOUT_CONTENT.partners.list,
+          },
+        };
+      }
+    } catch (e) {
+      // ignore
+    }
+    return DEFAULT_ABOUT_CONTENT;
+  });
+
   // Persist State to LocalStorage
   useEffect(() => {
     try {
@@ -890,13 +1299,19 @@ export function AdminProvider({ children }) {
       localStorage.setItem('ntr_admin_audit_logs_v1', JSON.stringify(auditLogs));
       localStorage.setItem('ntr_admin_notifications_v1', JSON.stringify(notifications));
       localStorage.setItem('ntr_admin_settings_v1', JSON.stringify(settings));
+      localStorage.setItem('ntr_admin_home_content_v1', JSON.stringify(homeContent));
+      localStorage.setItem('ntr_admin_jobs_page_content_v1', JSON.stringify(jobsPageContent));
+      localStorage.setItem('ntr_admin_job_mela_content_v1', JSON.stringify(jobMelaContent));
+      localStorage.setItem('ntr_admin_skill_page_content_v1', JSON.stringify(skillPageContent));
+      localStorage.setItem('ntr_admin_about_content_v1', JSON.stringify(aboutContent));
     } catch (e) {
       // ignore
     }
   }, [
     activeAdminId, isAdminLoggedIn, candidates, recruiters, companies,
     jobs, internships, applications, jobMelas, registrations,
-    reports, auditLogs, notifications, settings
+    reports, auditLogs, notifications, settings, homeContent,
+    jobsPageContent, jobMelaContent, skillPageContent, aboutContent
   ]);
 
   const currentAdmin = adminUsers.find(a => a.id === activeAdminId) || adminUsers[0];
@@ -1046,6 +1461,28 @@ export function AdminProvider({ children }) {
   };
 
   // Job Mela actions
+  const createJobMela = (melaData) => {
+    const newMela = {
+      id: `mela-${Date.now()}`,
+      event: melaData.title || melaData.event || 'Mega Job Mela Event',
+      title: melaData.title || melaData.event || 'Mega Job Mela Event',
+      date: melaData.date || '2026-11-15',
+      time: `${melaData.startTime || '09:00 AM'} - ${melaData.endTime || '06:00 PM'}`,
+      location: melaData.city && melaData.state ? `${melaData.city}, ${melaData.state}` : (melaData.location || 'Andhra Pradesh'),
+      venue: melaData.venue || melaData.address || 'State Convention Center',
+      organizer: 'NTR Vikasa State Employment Authority (Admin)',
+      createdByAdmin: true,
+      companiesCount: 0,
+      vacanciesCount: Number(melaData.maxCapacity) || 1000,
+      registeredCandidatesCount: 0,
+      status: 'APPROVED',
+      ...melaData
+    };
+    setJobMelas(prev => [newMela, ...prev]);
+    addAuditLog('Job Mela Event Created', newMela.event, 'JOB_MELA');
+    return newMela;
+  };
+
   const approveJobMela = (melaId) => {
     setJobMelas(prev =>
       prev.map(m => (m.id === melaId ? { ...m, status: 'APPROVED' } : m))
@@ -1085,6 +1522,156 @@ export function AdminProvider({ children }) {
     addAuditLog('Admin System Settings Updated', 'System Configuration', 'SETTINGS');
   };
 
+  // Home Page Content CMS update
+  const updateHomeContent = (newContent) => {
+    setHomeContent(prev => {
+      const updated = {
+        ...prev,
+        ...newContent,
+        hero: { ...prev.hero, ...(newContent.hero || {}) },
+        stats: newContent.stats || prev.stats,
+        whyChoose: {
+          ...prev.whyChoose,
+          ...(newContent.whyChoose || {}),
+          cards: newContent.whyChoose?.cards || prev.whyChoose.cards,
+        },
+        welcomePopup: {
+          ...(prev.welcomePopup || DEFAULT_HOME_CONTENT.welcomePopup),
+          ...(newContent.welcomePopup || {}),
+        },
+      };
+      return updated;
+    });
+    addAuditLog('Home Page Content Updated', 'Public Home Page Content CMS', 'SETTINGS');
+  };
+
+  const resetHomeContent = () => {
+    setHomeContent(DEFAULT_HOME_CONTENT);
+    addAuditLog('Home Page Content Reset to Defaults', 'Public Home Page Content CMS', 'SETTINGS');
+  };
+
+  // Jobs Page Hero & Search Content CMS update
+  const updateJobsPageContent = (newContent) => {
+    setJobsPageContent(prev => {
+      const updated = {
+        ...prev,
+        ...newContent,
+        hero: { ...prev.hero, ...(newContent.hero || {}) },
+        search: {
+          ...prev.search,
+          ...(newContent.search || {}),
+          popularSearches: newContent.search?.popularSearches || prev.search.popularSearches,
+        },
+      };
+      return updated;
+    });
+    addAuditLog('Jobs Page Content Updated', 'Public Jobs Page Hero & Search CMS', 'SETTINGS');
+  };
+
+  const resetJobsPageContent = () => {
+    setJobsPageContent(DEFAULT_JOBS_PAGE_CONTENT);
+    addAuditLog('Jobs Page Content Reset to Defaults', 'Public Jobs Page Hero & Search CMS', 'SETTINGS');
+  };
+
+  // Job Mela Page Hero Content CMS update
+  const updateJobMelaContent = (newContent) => {
+    setJobMelaContent(prev => {
+      const updated = {
+        ...prev,
+        ...newContent,
+        hero: { ...prev.hero, ...(newContent.hero || {}) },
+      };
+      return updated;
+    });
+    addAuditLog('Job Mela Page Content Updated', 'Public Job Mela Hero CMS', 'SETTINGS');
+  };
+
+  const resetJobMelaContent = () => {
+    setJobMelaContent(DEFAULT_JOB_MELA_CONTENT);
+    addAuditLog('Job Mela Page Content Reset to Defaults', 'Public Job Mela Hero CMS', 'SETTINGS');
+  };
+
+  // Skill Development Page Content CMS update
+  const updateSkillPageContent = (newContent) => {
+    setSkillPageContent(prev => {
+      const updated = {
+        ...prev,
+        ...newContent,
+        hero: { ...prev.hero, ...(newContent.hero || {}) },
+        highlights: newContent.highlights || prev.highlights,
+        empoweringSkills: {
+          ...prev.empoweringSkills,
+          ...(newContent.empoweringSkills || {}),
+          cards: newContent.empoweringSkills?.cards || prev.empoweringSkills.cards,
+        },
+        trainingJourney: {
+          ...prev.trainingJourney,
+          ...(newContent.trainingJourney || {}),
+          steps: newContent.trainingJourney?.steps || prev.trainingJourney.steps,
+        },
+        programsWeOffer: {
+          ...prev.programsWeOffer,
+          ...(newContent.programsWeOffer || {}),
+          categories: newContent.programsWeOffer?.categories || prev.programsWeOffer.categories,
+        },
+        whyChoose: {
+          ...prev.whyChoose,
+          ...(newContent.whyChoose || {}),
+          cards: newContent.whyChoose?.cards || prev.whyChoose.cards,
+        },
+      };
+      return updated;
+    });
+    addAuditLog('Skill Development Page Content Updated', 'Public Skill Development CMS', 'SETTINGS');
+  };
+
+  const resetSkillPageContent = () => {
+    setSkillPageContent(DEFAULT_SKILL_PAGE_CONTENT);
+    addAuditLog('Skill Development Page Content Reset to Defaults', 'Public Skill Development CMS', 'SETTINGS');
+  };
+
+  // About Us Page Content CMS update
+  const updateAboutContent = (newContent) => {
+    setAboutContent(prev => {
+      const updated = {
+        ...prev,
+        ...newContent,
+        hero: {
+          ...prev.hero,
+          ...(newContent.hero || {}),
+        },
+        stats: newContent.stats || prev.stats,
+        whatWeStandFor: {
+          ...prev.whatWeStandFor,
+          ...(newContent.whatWeStandFor || {}),
+          cards: newContent.whatWeStandFor?.cards || prev.whatWeStandFor.cards,
+        },
+        team: {
+          ...prev.team,
+          ...(newContent.team || {}),
+          members: newContent.team?.members || prev.team.members,
+        },
+        leadershipMessages: {
+          ...prev.leadershipMessages,
+          ...(newContent.leadershipMessages || {}),
+          messages: newContent.leadershipMessages?.messages || prev.leadershipMessages.messages,
+        },
+        partners: {
+          ...prev.partners,
+          ...(newContent.partners || {}),
+          list: newContent.partners?.list || prev.partners.list,
+        },
+      };
+      return updated;
+    });
+    addAuditLog('About Us Page Content Updated', 'Public About Us Page CMS', 'SETTINGS');
+  };
+
+  const resetAboutContent = () => {
+    setAboutContent(DEFAULT_ABOUT_CONTENT);
+    addAuditLog('About Us Page Content Reset to Defaults', 'Public About Us Page CMS', 'SETTINGS');
+  };
+
   // Summary counts for badges
   const pendingCounts = {
     recruiterVerifications: recruiters.filter(r => r.verificationStatus === 'PENDING').length,
@@ -1118,6 +1705,11 @@ export function AdminProvider({ children }) {
         auditLogs,
         notifications,
         settings,
+        homeContent,
+        jobsPageContent,
+        jobMelaContent,
+        skillPageContent,
+        aboutContent,
         pendingCounts,
         verifyRecruiter,
         suspendRecruiter,
@@ -1133,9 +1725,20 @@ export function AdminProvider({ children }) {
         rejectInternship,
         approveJobMela,
         rejectJobMela,
+        createJobMela,
         resolveReport,
         rejectReport,
         updateAdminSettings,
+        updateHomeContent,
+        resetHomeContent,
+        updateJobsPageContent,
+        resetJobsPageContent,
+        updateJobMelaContent,
+        resetJobMelaContent,
+        updateSkillPageContent,
+        resetSkillPageContent,
+        updateAboutContent,
+        resetAboutContent,
         addAuditLog,
       }}
     >

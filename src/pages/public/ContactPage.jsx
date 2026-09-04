@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Mail, Phone, MapPin, Clock, Send, MessageSquare,
-  HelpCircle, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck
+  HelpCircle, CheckCircle2, ShieldCheck
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import FormField from '../../components/ui/FormField';
@@ -9,33 +9,9 @@ import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
 import { useToast } from '../../context/ToastContext';
 
-const FAQS = [
-  {
-    q: 'Are job applications completely free for job seekers?',
-    a: 'Yes, 100%. NTR VIKASA Job Portal is completely free for all job seekers. We strictly prohibit any employer or agency from asking for money, registration charges, or training fees for job applications or interview slots.'
-  },
-  {
-    q: 'How do I participate in upcoming Job Melas?',
-    a: 'Simply browse the Job Mela section, choose an event in your city or region, and click "Register for Free Entry". You will receive a digital Fast-Track QR pass in your candidate portal. Print and bring your resume copies to the venue on the event date.'
-  },
-  {
-    q: 'How long does employer recruiter account verification take?',
-    a: 'Recruiter verification takes between 24 to 48 business hours. Our compliance team verifies your corporate CIN/GST and official identification documents to ensure high platform integrity.'
-  },
-  {
-    q: 'Can I track the status of my submitted applications?',
-    a: 'Yes. Once logged into your Candidate Dashboard, navigate to "My Applications". You will see real-time updates for each submission across our 20 visual status badges (Applied, Under Review, Shortlisted, Interview, Selected, etc.).'
-  },
-  {
-    q: 'How can our company sponsor or participate in an upcoming Job Mela?',
-    a: 'Registered recruiters can apply directly from the Recruiter Portal under "Job Mela" or contact our Employer Relations team at employers@jobconnect.example.com.'
-  },
-];
-
 export default function ContactPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [openFaq, setOpenFaq] = useState(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -254,58 +230,6 @@ export default function ContactPage() {
           </div>
 
         </div>
-
-        {/* ── FAQ Section Accordion ── */}
-        <section style={{ marginTop: 'var(--space-16)' }}>
-          <div style={{ textAlign: 'center', maxWidth: 700, margin: '0 auto var(--space-10)' }}>
-            <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, marginBottom: 'var(--space-2)' }}>
-              Frequently Asked Questions
-            </h2>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--text-sm)' }}>
-              Quick answers to common questions regarding jobs, applications, and employer verification.
-            </p>
-          </div>
-
-          <div style={{ maxWidth: 840, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            {FAQS.map((faq, idx) => (
-              <div
-                key={idx}
-                className="card"
-                style={{
-                  borderRadius: 'var(--radius-xl)',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  border: '1px solid var(--color-border)'
-                }}
-                onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-              >
-                <div style={{
-                  padding: 'var(--space-4) var(--space-6)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)' }}>
-                    {faq.q}
-                  </h3>
-                  {openFaq === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </div>
-
-                {openFaq === idx && (
-                  <div style={{
-                    padding: '0 var(--space-6) var(--space-5)',
-                    borderTop: '1px solid var(--color-gray-100)',
-                    paddingTop: 'var(--space-3)'
-                  }}>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>
-                      {faq.a}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   );

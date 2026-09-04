@@ -16,34 +16,40 @@ import {
   HOW_IT_WORKS_STEPS,
   WHY_CHOOSE_SKILL_PORTAL
 } from '../../data/skillData';
+import { useAdmin, DEFAULT_SKILL_PAGE_CONTENT } from '../../context/AdminContext';
 
 export default function SkillDevelopmentOverviewPage() {
   const navigate = useNavigate();
+  const { skillPageContent } = useAdmin();
 
-  // Helper for dynamic category icons
-  const getCategoryIcon = (iconName) => {
-    switch (iconName) {
-      case 'Code2': return <Code2 size={24} />;
-      case 'Database': return <Database size={24} />;
-      case 'Sparkles': return <Sparkles size={24} />;
-      case 'Landmark': return <Landmark size={24} />;
-      case 'Calculator': return <Calculator size={24} />;
-      case 'Cpu': return <Cpu size={24} />;
-      case 'Activity': return <Activity size={24} />;
-      case 'Megaphone': return <Megaphone size={24} />;
-      default: return <BookOpen size={24} />;
-    }
-  };
+  const currentContent = skillPageContent || DEFAULT_SKILL_PAGE_CONTENT;
+  const hero = currentContent.hero || DEFAULT_SKILL_PAGE_CONTENT.hero;
+  const highlights = currentContent.highlights?.length ? currentContent.highlights : DEFAULT_SKILL_PAGE_CONTENT.highlights;
+  const empoweringSkills = currentContent.empoweringSkills || DEFAULT_SKILL_PAGE_CONTENT.empoweringSkills;
+  const trainingJourney = currentContent.trainingJourney || DEFAULT_SKILL_PAGE_CONTENT.trainingJourney;
+  const programsWeOffer = currentContent.programsWeOffer || DEFAULT_SKILL_PAGE_CONTENT.programsWeOffer;
+  const whyChoose = currentContent.whyChoose || DEFAULT_SKILL_PAGE_CONTENT.whyChoose;
 
-  const getWhyChooseIcon = (iconName) => {
+  // Helper for dynamic category and feature icons
+  const renderSkillIcon = (iconName, size = 24) => {
     switch (iconName) {
-      case 'Award': return <Award size={22} />;
-      case 'Laptop': return <Laptop size={22} />;
-      case 'Users': return <Users size={22} />;
-      case 'TrendingUp': return <TrendingUp size={22} />;
-      case 'ShieldCheck': return <ShieldCheck size={22} />;
-      case 'Sparkles': return <Sparkles size={22} />;
-      default: return <CheckCircle2 size={22} />;
+      case 'Award': return <Award size={size} />;
+      case 'BookOpen': return <BookOpen size={size} />;
+      case 'TrendingUp': return <TrendingUp size={size} />;
+      case 'Users': return <Users size={size} />;
+      case 'Code2': return <Code2 size={size} />;
+      case 'Laptop': return <Laptop size={size} />;
+      case 'ShieldCheck': return <ShieldCheck size={size} />;
+      case 'Sparkles': return <Sparkles size={size} />;
+      case 'Database': return <Database size={size} />;
+      case 'Landmark': return <Landmark size={size} />;
+      case 'Calculator': return <Calculator size={size} />;
+      case 'Cpu': return <Cpu size={size} />;
+      case 'Activity': return <Activity size={size} />;
+      case 'Megaphone': return <Megaphone size={size} />;
+      case 'Clock': return <Clock size={size} />;
+      case 'GraduationCap': return <GraduationCap size={size} />;
+      default: return <CheckCircle2 size={size} />;
     }
   };
 
@@ -92,7 +98,7 @@ export default function SkillDevelopmentOverviewPage() {
             letterSpacing: '0.02em'
           }}>
             <Sparkles size={14} style={{ color: '#fbbf24' }} />
-            NTR VIKASA • Skill Development & Employment Generation
+            {hero.badge || 'NTR VIKASA • Skill Development & Employment Generation'}
           </div>
 
           <h1 style={{
@@ -102,7 +108,7 @@ export default function SkillDevelopmentOverviewPage() {
             marginBottom: 'var(--space-5)',
             letterSpacing: '-0.02em'
           }}>
-            Skill Development & Training Programs
+            {hero.heading || 'Skill Development & Training Programs'}
           </h1>
 
           <p style={{
@@ -112,7 +118,7 @@ export default function SkillDevelopmentOverviewPage() {
             maxWidth: 760,
             margin: '0 auto var(--space-8)'
           }}>
-            Empowering job seekers with government-recognized, industry-aligned training, practical learning, and placement support.
+            {hero.description || 'Empowering job seekers with government-recognized, industry-aligned training, practical learning, and placement support.'}
           </p>
 
           <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -123,7 +129,7 @@ export default function SkillDevelopmentOverviewPage() {
               rightIcon={<ArrowRight size={18} />}
               style={{ padding: '12px 28px', fontWeight: 700 }}
             >
-              Explore Programs
+              {hero.exploreBtnText || 'Explore Programs'}
             </Button>
             <Link to="/skill-development/courses">
               <Button
@@ -131,7 +137,7 @@ export default function SkillDevelopmentOverviewPage() {
                 size="lg"
                 style={{ borderColor: 'rgba(255,255,255,0.4)', color: '#ffffff', padding: '12px 28px', fontWeight: 600 }}
               >
-                View Courses
+                {hero.viewCoursesBtnText || 'View Courses'}
               </Button>
             </Link>
           </div>
@@ -150,66 +156,32 @@ export default function SkillDevelopmentOverviewPage() {
             gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
             gap: 'var(--space-6)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: 'var(--radius-xl)',
-                background: 'var(--color-primary-50)', color: 'var(--color-primary-600)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <Award size={24} />
-              </div>
-              <div>
-                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text)' }}>Government Recognized</p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>NSDC / NSQF Certified</p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: 'var(--radius-xl)',
-                background: 'var(--color-success-50)', color: 'var(--color-success-600)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <TrendingUp size={24} />
-              </div>
-              <div>
-                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text)' }}>Placement Support</p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>Job Mela / Employment Support</p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: 'var(--radius-xl)',
-                background: 'var(--color-info-50)', color: 'var(--color-info-600)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <BookOpen size={24} />
-              </div>
-              <div>
-                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text)' }}>Practical Curriculum</p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>Hands-on Industry Labs</p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: 'var(--radius-xl)',
-                background: 'var(--color-accent-50)', color: 'var(--color-accent-600)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <Users size={24} />
-              </div>
-              <div>
-                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text)' }}>Expert Mentors</p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>Experienced Professionals</p>
-              </div>
-            </div>
+            {highlights.map((hl, idx) => {
+              const bgColors = ['var(--color-primary-50)', 'var(--color-success-50)', 'var(--color-info-50)', 'var(--color-accent-50)'];
+              const textColors = ['var(--color-primary-600)', 'var(--color-success-600)', 'var(--color-info-600)', 'var(--color-accent-600)'];
+              const bg = bgColors[idx % bgColors.length];
+              const clr = textColors[idx % textColors.length];
+              return (
+                <div key={hl.id || hl.title || idx} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 'var(--radius-xl)',
+                    background: bg, color: clr,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                  }}>
+                    {renderSkillIcon(hl.icon, 24)}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text)' }}>{hl.title}</p>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>{hl.subtitle}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* ── 3. About Skill Development Section ── */}
+      {/* ── 3. About Skill Development Section ("Empowering Skills") ── */}
       <section className="container" style={{ paddingTop: 'var(--space-16)' }}>
         <div style={{
           background: 'var(--color-surface)',
@@ -220,13 +192,13 @@ export default function SkillDevelopmentOverviewPage() {
         }}>
           <div style={{ maxWidth: 840, margin: '0 auto', textAlign: 'center', marginBottom: 'var(--space-10)' }}>
             <div className="badge badge-primary" style={{ marginBottom: 'var(--space-3)' }}>
-              <ShieldCheck size={14} style={{ marginRight: 6 }} /> Institutional Mission
+              <ShieldCheck size={14} style={{ marginRight: 6 }} /> {empoweringSkills.badge || 'Institutional Mission'}
             </div>
             <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginBottom: 'var(--space-4)' }}>
-              Empowering Skills. Enabling Careers.
+              {empoweringSkills.heading || 'Empowering Skills. Enabling Careers.'}
             </h2>
             <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>
-              The NTR VIKASA Skill Development initiative bridges the critical divide between academic qualifications and industry hiring standards. By partnering with state government bodies, national sector skill councils, and corporate employers, we deliver employment-focused, hands-on training to youth across Andhra Pradesh.
+              {empoweringSkills.description || 'The NTR VIKASA Skill Development initiative bridges the critical divide between academic qualifications and industry hiring standards. By partnering with state government bodies, national sector skill councils, and corporate employers, we deliver employment-focused, hands-on training to youth across Andhra Pradesh.'}
             </p>
           </div>
 
@@ -235,68 +207,34 @@ export default function SkillDevelopmentOverviewPage() {
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: 'var(--space-6)'
           }}>
-            <div style={{
-              background: 'var(--color-bg)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-2xl)',
-              padding: 'var(--space-6)'
-            }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 'var(--radius-lg)',
-                background: 'var(--color-primary-100)', color: 'var(--color-primary-700)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-4)'
-              }}>
-                <Code2 size={22} />
-              </div>
-              <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, marginBottom: 'var(--space-2)', color: 'var(--color-text)' }}>
-                Industry-Relevant Learning
-              </h3>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>
-                Curricula designed directly in consultation with tech leaders, BFSI corporations, and manufacturing employers to teach in-demand workplace tools.
-              </p>
-            </div>
-
-            <div style={{
-              background: 'var(--color-bg)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-2xl)',
-              padding: 'var(--space-6)'
-            }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 'var(--radius-lg)',
-                background: 'var(--color-success-100)', color: 'var(--color-success-700)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-4)'
-              }}>
-                <Laptop size={22} />
-              </div>
-              <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, marginBottom: 'var(--space-2)', color: 'var(--color-text)' }}>
-                Practical Training Labs
-              </h3>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>
-                Over 70% of course time is dedicated to hands-on lab practicals, simulated industrial environments, and live capstone projects.
-              </p>
-            </div>
-
-            <div style={{
-              background: 'var(--color-bg)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-2xl)',
-              padding: 'var(--space-6)'
-            }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 'var(--radius-lg)',
-                background: 'var(--color-accent-100)', color: 'var(--color-accent-700)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-4)'
-              }}>
-                <TrendingUp size={22} />
-              </div>
-              <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, marginBottom: 'var(--space-2)', color: 'var(--color-text)' }}>
-                Placement Assistance
-              </h3>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>
-                Trained candidates receive dedicated interview preparation, resume enhancement, and direct fast-track access to regional Mega Job Melas.
-              </p>
-            </div>
+            {(empoweringSkills.cards || []).map((card, idx) => {
+              const bgColors = ['var(--color-primary-100)', 'var(--color-success-100)', 'var(--color-accent-100)'];
+              const textColors = ['var(--color-primary-700)', 'var(--color-success-700)', 'var(--color-accent-700)'];
+              const bg = bgColors[idx % bgColors.length];
+              const clr = textColors[idx % textColors.length];
+              return (
+                <div key={card.id || card.title || idx} style={{
+                  background: 'var(--color-bg)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-2xl)',
+                  padding: 'var(--space-6)'
+                }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 'var(--radius-lg)',
+                    background: bg, color: clr,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-4)'
+                  }}>
+                    {renderSkillIcon(card.icon, 22)}
+                  </div>
+                  <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, marginBottom: 'var(--space-2)', color: 'var(--color-text)' }}>
+                    {card.title}
+                  </h3>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 'var(--leading-relaxed)' }}>
+                    {card.desc}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -305,18 +243,18 @@ export default function SkillDevelopmentOverviewPage() {
       <section className="container" style={{ paddingTop: 'var(--space-16)' }}>
         <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto var(--space-10)' }}>
           <div className="badge badge-primary" style={{ marginBottom: 'var(--space-3)' }}>
-            <BookOpen size={14} style={{ marginRight: 6 }} /> Sector Domains
+            <BookOpen size={14} style={{ marginRight: 6 }} /> {programsWeOffer.badge || 'Sector Domains'}
           </div>
           <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginBottom: 'var(--space-3)' }}>
-            Programs We Offer
+            {programsWeOffer.heading || 'Programs We Offer'}
           </h2>
           <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-text-muted)' }}>
-            Specialized training pathways spanning modern tech, finance, core engineering, and administrative sectors.
+            {programsWeOffer.description || 'Specialized training pathways spanning modern tech, finance, core engineering, and administrative sectors.'}
           </p>
         </div>
 
         <CardCarousel
-          items={SKILL_CATEGORIES}
+          items={programsWeOffer.categories || SKILL_CATEGORIES}
           desktopItems={4}
           tabletItems={2}
           mobileItems={1}
@@ -343,7 +281,7 @@ export default function SkillDevelopmentOverviewPage() {
                     background: 'var(--color-primary-50)', color: 'var(--color-primary-600)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    {getCategoryIcon(cat.icon)}
+                    {renderSkillIcon(cat.icon, 24)}
                   </div>
                   <span style={{
                     fontSize: '11px',
@@ -510,18 +448,18 @@ export default function SkillDevelopmentOverviewPage() {
       <section className="container" style={{ paddingTop: 'var(--space-16)' }}>
         <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto var(--space-10)' }}>
           <div className="badge badge-primary" style={{ marginBottom: 'var(--space-3)' }}>
-            <TrendingUp size={14} style={{ marginRight: 6 }} /> Candidate Pathway
+            <TrendingUp size={14} style={{ marginRight: 6 }} /> {trainingJourney.badge || 'Candidate Pathway'}
           </div>
           <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginBottom: 'var(--space-3)' }}>
-            From Training to Employment
+            {trainingJourney.heading || 'From Training to Employment'}
           </h2>
           <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-text-muted)' }}>
-            A structured 6-step journey designed to take you from foundational training to confirmed corporate placement.
+            {trainingJourney.description || 'A structured 6-step journey designed to take you from foundational training to confirmed corporate placement.'}
           </p>
         </div>
 
         <CardCarousel
-          items={HOW_IT_WORKS_STEPS}
+          items={trainingJourney.steps || HOW_IT_WORKS_STEPS}
           desktopItems={4}
           tabletItems={2}
           mobileItems={1}
@@ -580,13 +518,13 @@ export default function SkillDevelopmentOverviewPage() {
         }}>
           <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto var(--space-10)' }}>
             <div className="badge badge-primary" style={{ marginBottom: 'var(--space-3)' }}>
-              <Award size={14} style={{ marginRight: 6 }} /> Institutional Excellence
+              <Award size={14} style={{ marginRight: 6 }} /> {whyChoose.badge || 'Institutional Excellence'}
             </div>
             <h2 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)', fontWeight: 800, color: 'var(--color-text)', marginBottom: 'var(--space-3)' }}>
-              Why Choose NTR VIKASA
+              {whyChoose.heading || 'Why Choose NTR VIKASA'}
             </h2>
             <p style={{ fontSize: 'var(--text-base)', color: 'var(--color-text-muted)' }}>
-              Outcome-focused advantages designed to give candidates a real competitive edge in modern job markets.
+              {whyChoose.description || 'Outcome-focused advantages designed to give candidates a real competitive edge in modern job markets.'}
             </p>
           </div>
 
@@ -595,9 +533,9 @@ export default function SkillDevelopmentOverviewPage() {
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: 'var(--space-6)'
           }}>
-            {WHY_CHOOSE_SKILL_PORTAL.map((item) => (
+            {(whyChoose.cards || []).map((item, idx) => (
               <div
-                key={item.title}
+                key={item.title || idx}
                 style={{
                   background: 'var(--color-bg)',
                   border: '1px solid var(--color-border)',
@@ -610,7 +548,7 @@ export default function SkillDevelopmentOverviewPage() {
                   background: 'var(--color-primary-50)', color: 'var(--color-primary-600)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-4)'
                 }}>
-                  {getWhyChooseIcon(item.icon)}
+                  {renderSkillIcon(item.icon, 22)}
                 </div>
                 <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 'var(--space-2)' }}>
                   {item.title}

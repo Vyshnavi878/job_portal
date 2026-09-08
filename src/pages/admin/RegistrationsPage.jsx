@@ -8,15 +8,24 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminRegistrationsPage() {
+  const { addToast } = useToast();
   const { registrations } = useAdmin();
 
   const [search, setSearch] = useState('');
   const [eventFilter, setEventFilter] = useState('ALL');
   const [selectedPass, setSelectedPass] = useState(null);
   const [passModalOpen, setPassModalOpen] = useState(false);
+
+  const availableEvents = useMemo(() => {
+    const list = (registrations || []).map(r => r.event || r.eventName).filter(Boolean);
+    return Array.from(new Set(list));
+  }, [registrations]);
 
   const filtered = useMemo(() => {
     return registrations.filter((r) => {
@@ -35,6 +44,62 @@ export default function AdminRegistrationsPage() {
       return true;
     });
   }, [registrations, search, eventFilter]);
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting registrations list to Excel...', 'info');
+    const headers = ['Registration ID', 'Candidate Name', 'Email', 'Phone', 'Job Mela', 'Registration Date', 'Registration Status'];
+    const rows = filtered.map(r => [
+      r.id || 'REG-N/A',
+      r.candidate || r.candidateName || 'Candidate',
+      r.email || r.candidateEmail || 'N/A',
+      r.phone || '+91 98765 43210',
+      r.event || r.eventName || 'Job Mela',
+      r.registrationDate || r.registeredDate || 'Aug 2026',
+      r.status || 'CONFIRMED'
+    ]);
+    exportToExcel({
+      filename: getExportFilename('job_mela_registrations', eventFilter !== 'ALL' ? eventFilter : 'all', 'xlsx'),
+      sheetName: 'Registrations',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting registrations list to PDF...', 'info');
+    const headers = ['Reg ID', 'Candidate Name', 'Email', 'Phone', 'Job Mela', 'Date', 'Status'];
+    const rows = filtered.map(r => [
+      r.id || 'REG-N/A',
+      r.candidate || r.candidateName || 'Candidate',
+      r.email || r.candidateEmail || 'N/A',
+      r.phone || '+91 98765 43210',
+      r.event || r.eventName || 'Job Mela',
+      r.registrationDate || r.registeredDate || 'Aug 2026',
+      r.status || 'CONFIRMED'
+    ]);
+    exportToPDF({
+      filename: getExportFilename('job_mela_registrations', eventFilter !== 'ALL' ? eventFilter : 'all', 'pdf'),
+      title: 'Job Mela Candidate Registrations',
+      subtitle: eventFilter !== 'ALL' ? `Event: ${eventFilter}` : 'All Job Mela Events',
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Event Filter': eventFilter !== 'ALL' ? eventFilter : 'All Events',
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
 
   const columns = [
     {
@@ -164,6 +229,31 @@ export default function AdminRegistrationsPage() {
               onChange={(e) => setSearch(e.target.value)}
               className="form-control"
               style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+            {availableEvents.length > 0 && (
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+                <select
+                  value={eventFilter}
+                  onChange={(e) => setEventFilter(e.target.value)}
+                  className="form-control"
+                  style={{ height: 38, borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-xs)', fontWeight: 600, maxWidth: 220 }}
+                >
+                  <option value="ALL">All Job Melas</option>
+                  {availableEvents.map(evt => (
+                    <option key={evt} value={evt}>{evt}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <ExportDropdown
+              onExportExcel={handleExportExcel}
+              onExportPdf={handleExportPdf}
+              disabled={filtered.length === 0}
             />
           </div>
         </div>

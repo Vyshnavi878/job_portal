@@ -12,6 +12,8 @@ import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminReportsPage() {
   const { addToast } = useToast();
@@ -52,6 +54,71 @@ export default function AdminReportsPage() {
       return true;
     });
   }, [reports, search, statusFilter]);
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting reports to Excel...', 'info');
+    const headers = [
+      'Report ID',
+      'Reporter',
+      'Reported User/Entity',
+      'Report Type',
+      'Subject / Reason',
+      'Created Date',
+      'Status',
+      'Resolution / Action'
+    ];
+    const rows = filtered.map(r => [
+      r.id,
+      r.reporter || 'Anonymous',
+      r.reportedEntity || 'N/A',
+      r.reportType || r.type || 'Flagged Content',
+      r.reason || r.subject || 'Violation Report',
+      r.date || 'Aug 2026',
+      r.status || 'PENDING',
+      r.actionTaken || (r.status === 'RESOLVED' ? 'Action enforced' : (r.status === 'DISMISSED' ? 'Dismissed' : 'Under Investigation'))
+    ]);
+    exportToExcel({
+      filename: getExportFilename('reports_complaints', statusFilter !== 'ALL' ? statusFilter.toLowerCase() : '', 'xlsx'),
+      sheetName: 'Reports & Complaints',
+      headers,
+      rows
+    });
+    addToast('Reports & complaints Excel downloaded!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting reports to PDF...', 'info');
+    const headers = ['Report ID', 'Reporter', 'Reported Entity', 'Type', 'Date', 'Status'];
+    const rows = filtered.map(r => [
+      `#${r.id}`,
+      r.reporter || 'Candidate',
+      r.reportedEntity || 'N/A',
+      r.reportType || r.type || 'Violation',
+      r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
+      r.status || 'PENDING'
+    ]);
+    exportToPDF({
+      filename: getExportFilename('reports_complaints', statusFilter !== 'ALL' ? statusFilter.toLowerCase() : '', 'pdf'),
+      title: 'Reports & Complaints Moderation List',
+      metadata: {
+        'Status Filter': statusFilter === 'ALL' ? 'All Reports' : statusFilter,
+        'Search Query': search || 'All',
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('Reports & complaints PDF downloaded!', 'success');
+  };
 
   const handleOpenResolve = (rep) => {
     setResolveTarget(rep);
@@ -245,28 +312,36 @@ export default function AdminReportsPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-            {['ALL', 'PENDING', 'RESOLVED', 'DISMISSED'].map((filterKey) => (
-              <button
-                key={filterKey}
-                type="button"
-                onClick={() => setStatusFilter(filterKey)}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                  background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                  color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
-                  transition: 'all 150ms ease'
-                }}
-              >
-                {filterKey === 'ALL' ? 'All Reports' : filterKey}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+              <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+              {['ALL', 'PENDING', 'RESOLVED', 'DISMISSED'].map((filterKey) => (
+                <button
+                  key={filterKey}
+                  type="button"
+                  onClick={() => setStatusFilter(filterKey)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                    background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                    color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
+                    transition: 'all 150ms ease'
+                  }}
+                >
+                  {filterKey === 'ALL' ? 'All Reports' : filterKey}
+                </button>
+              ))}
+            </div>
+
+            <ExportDropdown
+              onExportExcel={handleExportExcel}
+              onExportPdf={handleExportPdf}
+              disabled={filtered.length === 0}
+            />
           </div>
         </div>
       </div>

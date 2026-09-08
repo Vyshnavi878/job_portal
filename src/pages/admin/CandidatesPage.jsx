@@ -11,8 +11,10 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
+import ExportDropdown from '../../components/ui/ExportDropdown';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 // Consolidated Pages
 import AdminApplicationsPage from './ApplicationsPage';
@@ -20,7 +22,7 @@ import AdminRegistrationsPage from './RegistrationsPage';
 
 export default function AdminCandidatesPage() {
   const { addToast } = useToast();
-  const { candidates, suspendCandidate, activateCandidate, applications } = useAdmin();
+  const { candidates, suspendCandidate, activateCandidate } = useAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabParam = searchParams.get('tab');
@@ -56,158 +58,6 @@ export default function AdminCandidatesPage() {
   // Suspend Dialog
   const [suspendTarget, setSuspendTarget] = useState(null);
 
-  // Export Candidates State
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [selectedExportStatus, setSelectedExportStatus] = useState('ALL');
-  const [selectedExportPlace, setSelectedExportPlace] = useState('ALL');
-  const [isExporting, setIsExporting] = useState(false);
-
-  const exportStatusOptions = [
-    { id: 'ALL', label: 'All Candidates' },
-    { id: 'SELECTED', label: 'Selected Candidates' },
-    { id: 'SHORTLISTED', label: 'Shortlisted Candidates' },
-    { id: 'INTERVIEW', label: 'Interview Candidates' },
-    { id: 'REJECTED', label: 'Rejected Candidates' },
-  ];
-
-  // Available unique places from candidate data
-  const availablePlaces = useMemo(() => {
-    const placesSet = new Set();
-    (candidates || []).forEach((c) => {
-      if (c.location) {
-        const city = c.location.split(',')[0].trim();
-        if (city && city !== 'Unknown') placesSet.add(city);
-      }
-    });
-    // Include common region hubs if available in candidate pool
-    ['Bengaluru', 'Hyderabad', 'Visakhapatnam', 'Vijayawada', 'Chennai', 'Pune'].forEach((city) => placesSet.add(city));
-    return Array.from(placesSet).sort();
-  }, [candidates]);
-
-  // Combined candidate + application records dataset
-  const exportDataset = useMemo(() => {
-    const appList = applications || [];
-    const candList = candidates || [];
-
-    // Map applications enriched with candidate details
-    const appRecords = appList.map((app) => {
-      const cand = candList.find(
-        (c) => c.email?.toLowerCase() === app.candidateEmail?.toLowerCase() ||
-               c.name?.toLowerCase() === app.candidate?.toLowerCase()
-      );
-      return {
-        name: app.candidate || app.candidateName || cand?.name || 'Candidate',
-        email: app.candidateEmail || cand?.email || 'N/A',
-        phone: cand?.phone || app.phone || '+91 98765 43210',
-        location: cand?.location || app.location || 'India',
-        appliedJob: app.job || app.jobTitle || 'General Application',
-        company: app.company || 'N/A',
-        applicationDate: app.appliedDate || app.date || cand?.registrationDate || '2026-08-20',
-        applicationStatus: app.status || 'APPLIED',
-      };
-    });
-
-    // Candidates without an active application record
-    const standaloneCandidates = candList
-      .filter((cand) => !appRecords.some((r) => r.email?.toLowerCase() === cand.email?.toLowerCase()))
-      .map((cand) => ({
-        name: cand.name || 'Candidate',
-        email: cand.email || 'N/A',
-        phone: cand.phone || 'N/A',
-        location: cand.location || 'India',
-        appliedJob: 'Direct Platform Registration',
-        company: 'NTR Vikasa Platform',
-        applicationDate: cand.registrationDate || '2026-08-01',
-        applicationStatus: cand.accountStatus === 'ACTIVE' ? 'REGISTERED' : cand.accountStatus || 'ACTIVE',
-      }));
-
-    return [...appRecords, ...standaloneCandidates];
-  }, [applications, candidates]);
-
-  // Matching records based on selected export status & location
-  const matchingExportRecords = useMemo(() => {
-    return exportDataset.filter((item) => {
-      // Status filtering
-      if (selectedExportStatus !== 'ALL') {
-        if (item.applicationStatus !== selectedExportStatus) {
-          return false;
-        }
-      }
-      // Place filtering
-      if (selectedExportPlace !== 'ALL') {
-        const placeQuery = selectedExportPlace.toLowerCase();
-        if (!item.location?.toLowerCase().includes(placeQuery)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [exportDataset, selectedExportStatus, selectedExportPlace]);
-
-  // Handle CSV generation and download
-  const handleDownloadCSV = () => {
-    if (matchingExportRecords.length === 0) return;
-
-    setIsExporting(true);
-
-    setTimeout(() => {
-      const headers = [
-        'Candidate Name',
-        'Email',
-        'Phone',
-        'Place/Location',
-        'Applied Job',
-        'Company',
-        'Application Date',
-        'Application Status'
-      ];
-
-      const escapeCSV = (str) => {
-        if (str === null || str === undefined) return '""';
-        const escaped = String(str).replace(/"/g, '""');
-        return `"${escaped}"`;
-      };
-
-      const csvRows = [
-        headers.map(escapeCSV).join(','),
-        ...matchingExportRecords.map((r) => [
-          escapeCSV(r.name),
-          escapeCSV(r.email),
-          escapeCSV(r.phone),
-          escapeCSV(r.location),
-          escapeCSV(r.appliedJob),
-          escapeCSV(r.company),
-          escapeCSV(r.applicationDate),
-          escapeCSV(r.applicationStatus),
-        ].join(','))
-      ];
-
-      const csvContent = csvRows.join('\r\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-
-      const statusSlug = selectedExportStatus.toLowerCase() === 'all'
-        ? 'all_candidates'
-        : `${selectedExportStatus.toLowerCase()}_candidates`;
-      const placeSlug = selectedExportPlace === 'ALL'
-        ? 'all_places'
-        : selectedExportPlace.toLowerCase().replace(/[^a-z0-9]/g, '_');
-      const filename = `${statusSlug}_${placeSlug}.csv`;
-
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      setIsExporting(false);
-      setExportModalOpen(false);
-      addToast(`Exported ${matchingExportRecords.length} candidate(s) to ${filename}`, 'success');
-    }, 300);
-  };
-
   const filtered = useMemo(() => {
     return candidates.filter((c) => {
       if (search.trim()) {
@@ -215,19 +65,71 @@ export default function AdminCandidatesPage() {
         const matchesName = c.name?.toLowerCase().includes(q);
         const matchesEmail = c.email?.toLowerCase().includes(q);
         const matchesHeadline = c.headline?.toLowerCase().includes(q);
-        const matchesSkills = c.skills?.some(s => s.toLowerCase().includes(q));
-        if (!matchesName && !matchesEmail && !matchesHeadline && !matchesSkills) {
-          return false;
-        }
+        const matchesSkills = c.skills?.some((s) => s.toLowerCase().includes(q));
+        if (!matchesName && !matchesEmail && !matchesHeadline && !matchesSkills) return false;
       }
       if (statusFilter !== 'ALL') {
-        if (c.accountStatus !== statusFilter && c.profileStatus !== statusFilter) {
-          return false;
-        }
+        if (statusFilter === 'ACTIVE' && c.accountStatus !== 'ACTIVE') return false;
+        if (statusFilter === 'SUSPENDED' && c.accountStatus !== 'SUSPENDED') return false;
       }
       return true;
     });
   }, [candidates, search, statusFilter]);
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting candidates list to Excel...', 'info');
+    const headers = ['Candidate Name', 'Email', 'Phone', 'Location', 'Registration Date', 'Profile Status', 'Account Status'];
+    const rows = filtered.map(c => [
+      c.name || 'Candidate',
+      c.email || 'N/A',
+      c.phone || 'N/A',
+      c.location || 'N/A',
+      c.registrationDate || '01 Aug 2026',
+      c.profileStatus || 'COMPLETE',
+      c.accountStatus || 'ACTIVE'
+    ]);
+    exportToExcel({
+      filename: getExportFilename('candidates', statusFilter, 'xlsx'),
+      sheetName: 'Candidates',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting candidates list to PDF...', 'info');
+    const headers = ['Candidate Name', 'Email', 'Phone', 'Location', 'Reg Date', 'Account Status'];
+    const rows = filtered.map(c => [
+      c.name || 'Candidate',
+      c.email || 'N/A',
+      c.phone || 'N/A',
+      c.location || 'N/A',
+      c.registrationDate || '01 Aug 2026',
+      c.accountStatus || 'ACTIVE'
+    ]);
+    exportToPDF({
+      filename: getExportFilename('candidates', statusFilter, 'pdf'),
+      title: 'Platform Candidates Directory',
+      subtitle: 'Registered Job Seekers Management Report',
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusFilter === 'ALL' ? 'All Accounts' : statusFilter,
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
 
   const handleActivate = (c) => {
     activateCandidate(c.id);
@@ -489,16 +391,6 @@ export default function AdminCandidatesPage() {
               </div>
 
               <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<Download size={15} />}
-                  onClick={() => setExportModalOpen(true)}
-                  style={{ fontWeight: 700 }}
-                >
-                  Export Candidates
-                </Button>
-
                 <span style={{
                   background: '#ecfdf5',
                   color: '#047857',
@@ -529,28 +421,36 @@ export default function AdminCandidatesPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-                {['ALL', 'ACTIVE', 'SUSPENDED'].map((filterKey) => (
-                  <button
-                    key={filterKey}
-                    type="button"
-                    onClick={() => setStatusFilter(filterKey)}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: 'var(--radius-lg)',
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                      background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                      color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
-                      transition: 'all 150ms ease'
-                    }}
-                  >
-                    {filterKey === 'ALL' ? 'All Accounts' : filterKey}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+                  {['ALL', 'ACTIVE', 'SUSPENDED'].map((filterKey) => (
+                    <button
+                      key={filterKey}
+                      type="button"
+                      onClick={() => setStatusFilter(filterKey)}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-lg)',
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                        background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                        color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
+                        transition: 'all 150ms ease'
+                      }}
+                    >
+                      {filterKey === 'ALL' ? 'All Accounts' : filterKey}
+                    </button>
+                  ))}
+                </div>
+
+                <ExportDropdown
+                  onExportExcel={handleExportExcel}
+                  onExportPdf={handleExportPdf}
+                  disabled={filtered.length === 0}
+                />
               </div>
             </div>
           </div>
@@ -697,129 +597,6 @@ export default function AdminCandidatesPage() {
               onConfirm={handleConfirmSuspend}
               onCancel={() => setSuspendTarget(null)}
             />
-          )}
-
-          {/* ── 3. Export Candidates Modal ── */}
-          {exportModalOpen && (
-            <Modal
-              isOpen={exportModalOpen}
-              onClose={() => setExportModalOpen(false)}
-              title="Export Candidates to CSV"
-              size="md"
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-                {/* Description */}
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', margin: 0 }}>
-                  Select candidate application status and optional place/location to generate and download a filtered CSV report.
-                </p>
-
-                {/* 1. Candidate Application Status Selection */}
-                <div>
-                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', display: 'block', marginBottom: 'var(--space-2)' }}>
-                    1. Application Status
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 'var(--space-2)' }}>
-                    {exportStatusOptions.map((opt) => {
-                      const isSelected = selectedExportStatus === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setSelectedExportStatus(opt.id)}
-                          style={{
-                            padding: '10px 12px',
-                            borderRadius: 'var(--radius-lg)',
-                            fontSize: 'var(--text-xs)',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: isSelected ? '2px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                            background: isSelected ? 'var(--color-primary-50)' : 'var(--color-surface)',
-                            color: isSelected ? 'var(--color-primary-700)' : 'var(--color-text)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            textAlign: 'center',
-                            transition: 'all 150ms ease'
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. Place / Location Selection */}
-                <div>
-                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', display: 'block', marginBottom: 'var(--space-2)' }}>
-                    2. Filter by Place / Location
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <MapPin size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-                    <select
-                      value={selectedExportPlace}
-                      onChange={(e) => setSelectedExportPlace(e.target.value)}
-                      className="form-control"
-                      style={{ width: '100%', paddingLeft: 36, height: 42, borderRadius: 'var(--radius-lg)', fontWeight: 600 }}
-                    >
-                      <option value="ALL">All Places / Locations</option>
-                      {availablePlaces.map((place) => (
-                        <option key={place} value={place}>
-                          {place}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* 3. Live Matching Summary & Empty State Message */}
-                <div style={{
-                  padding: 'var(--space-4)',
-                  borderRadius: 'var(--radius-lg)',
-                  background: matchingExportRecords.length > 0 ? '#f0fdf4' : '#fffbeb',
-                  border: matchingExportRecords.length > 0 ? '1px solid #bbf7d0' : '1px solid #fde68a',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 'var(--space-2)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    {matchingExportRecords.length > 0 ? (
-                      <CheckCircle2 size={18} style={{ color: '#16a34a' }} />
-                    ) : (
-                      <AlertTriangle size={18} style={{ color: '#d97706' }} />
-                    )}
-                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: matchingExportRecords.length > 0 ? '#15803d' : '#b45309' }}>
-                      {matchingExportRecords.length > 0
-                        ? `${matchingExportRecords.length} matching candidate record(s) ready for export`
-                        : `No candidates match "${exportStatusOptions.find(o => o.id === selectedExportStatus)?.label}" in "${selectedExportPlace === 'ALL' ? 'All Places' : selectedExportPlace}"`}
-                    </span>
-                  </div>
-
-                  {matchingExportRecords.length > 0 && (
-                    <span style={{ fontSize: '11px', color: '#166534', fontWeight: 600 }}>
-                      {selectedExportStatus.toLowerCase() === 'all' ? 'all_candidates' : `${selectedExportStatus.toLowerCase()}_candidates`}_{selectedExportPlace === 'ALL' ? 'all_places' : selectedExportPlace.toLowerCase().replace(/[^a-z0-9]/g, '_')}.csv
-                    </span>
-                  )}
-                </div>
-
-                {/* 4. Action Buttons */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-                  <Button variant="outline" onClick={() => setExportModalOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="primary"
-                    leftIcon={<Download size={15} />}
-                    disabled={matchingExportRecords.length === 0 || isExporting}
-                    onClick={handleDownloadCSV}
-                  >
-                    {isExporting ? 'Preparing CSV...' : 'Download CSV'}
-                  </Button>
-                </div>
-              </div>
-            </Modal>
           )}
         </>
       )}

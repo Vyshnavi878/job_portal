@@ -106,7 +106,8 @@ export default function SkillDevelopmentOverviewPage() {
             fontWeight: 800,
             lineHeight: 1.15,
             marginBottom: 'var(--space-5)',
-            letterSpacing: '-0.02em'
+            letterSpacing: '-0.02em',
+            color: '#ffffff'
           }}>
             {hero.heading || 'Skill Development & Training Programs'}
           </h1>

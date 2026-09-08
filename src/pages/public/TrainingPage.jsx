@@ -178,7 +178,7 @@ export default function TrainingPage() {
             <Sparkles size={14} style={{ color: '#fbbf24' }} />
             NTR VIKASA • Skill Development & Employment Generation
           </div>
-          <h1 style={{ fontSize: 'clamp(2rem, 4.5vw, 3rem)', fontWeight: 800, lineHeight: 1.15, marginBottom: 'var(--space-4)' }}>
+          <h1 style={{ fontSize: 'clamp(2rem, 4.5vw, 3rem)', fontWeight: 800, lineHeight: 1.15, marginBottom: 'var(--space-4)', color: '#ffffff' }}>
             Skill Development & Training Programs
           </h1>
           <p style={{ fontSize: 'var(--text-base)', color: '#cbd5e1', lineHeight: 'var(--leading-relaxed)', maxWidth: 720, margin: '0 auto' }}>

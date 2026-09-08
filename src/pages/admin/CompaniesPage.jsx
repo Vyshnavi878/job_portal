@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useMemo } from 'react';
 import {
   Building2, Search, Filter, Eye, ShieldCheck, ShieldAlert,
   Users, Briefcase, Globe, Mail, Phone, MapPin, CheckCircle2,
@@ -12,45 +11,14 @@ import Table from '../../components/ui/Table';
 import FormField from '../../components/ui/FormField';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
+import ExportDropdown from '../../components/ui/ExportDropdown';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
-
-// Consolidated Sub-Pages
-import CompanyVerificationPage from './CompanyVerificationPage';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminCompaniesPage() {
   const { addToast } = useToast();
-  const { companies, approveCompany, rejectCompany, pendingCounts } = useAdmin();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const tabParam = searchParams.get('tab');
-  const tabAliasMap = {
-    'companies': 'companies',
-    'verification': 'verification',
-    'company-verification': 'verification',
-    'company-requests': 'verification',
-    'requests': 'verification',
-  };
-  const currentTab = tabAliasMap[tabParam] || 'companies';
-
-  const [activeSection, setActiveSection] = useState(currentTab);
-
-  useEffect(() => {
-    if (tabParam && tabAliasMap[tabParam]) {
-      setActiveSection(tabAliasMap[tabParam]);
-    } else if (!tabParam) {
-      setActiveSection('companies');
-    }
-  }, [tabParam]);
-
-  const handleTabChange = (tabKey) => {
-    setActiveSection(tabKey);
-    if (tabKey === 'companies') {
-      setSearchParams({});
-    } else {
-      setSearchParams({ tab: tabKey });
-    }
-  };
+  const { companies, approveCompany, rejectCompany } = useAdmin();
 
   const [search, setSearch] = useState('');
   const [industryFilter, setIndustryFilter] = useState('ALL');
@@ -80,6 +48,61 @@ export default function AdminCompaniesPage() {
       return true;
     });
   }, [companies, search, industryFilter, statusFilter]);
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting companies list to Excel...', 'info');
+    const headers = ['Company Name', 'Recruiter Lead', 'Industry', 'Employee Count', 'Location', 'Registration Date', 'Verification Status'];
+    const rows = filtered.map(c => [
+      c.name || 'Company Name',
+      c.recruiter || 'N/A',
+      c.industry || 'IT & Services',
+      c.size || '100-500 emp',
+      c.location || 'India',
+      c.registrationDate || '01 Aug 2026',
+      c.verificationStatus || 'PENDING'
+    ]);
+    exportToExcel({
+      filename: getExportFilename('companies', statusFilter.toLowerCase(), 'xlsx'),
+      sheetName: 'Companies',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting companies list to PDF...', 'info');
+    const headers = ['Company Name', 'Recruiter Lead', 'Industry', 'Size', 'Location', 'Verification Status'];
+    const rows = filtered.map(c => [
+      c.name || 'Company Name',
+      c.recruiter || 'N/A',
+      c.industry || 'IT & Services',
+      c.size || '100-500 emp',
+      c.location || 'India',
+      c.verificationStatus || 'PENDING'
+    ]);
+    exportToPDF({
+      filename: getExportFilename('companies', statusFilter.toLowerCase(), 'pdf'),
+      title: 'Registered Companies Directory',
+      subtitle: `Status: ${statusFilter === 'ALL' ? 'All Companies' : statusFilter}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusFilter === 'ALL' ? 'All Status' : statusFilter,
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
 
   const handleApprove = (c) => {
     approveCompany(c.id);
@@ -238,85 +261,8 @@ export default function AdminCompaniesPage() {
 
   return (
     <div className="admin-companies-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
-
-      {/* ── 0. Consolidated Navigation Tabs (Companies | Verification) ── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-2)',
-        background: 'var(--color-surface)',
-        padding: '6px',
-        borderRadius: 'var(--radius-xl)',
-        border: '1px solid var(--color-border)',
-        width: 'fit-content',
-        boxShadow: 'var(--shadow-sm)',
-        flexWrap: 'wrap'
-      }}>
-        <button
-          type="button"
-          onClick={() => handleTabChange('companies')}
-          style={{
-            padding: '8px 18px',
-            borderRadius: 'var(--radius-lg)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            border: 'none',
-            background: activeSection === 'companies' ? 'var(--color-primary-600)' : 'transparent',
-            color: activeSection === 'companies' ? '#fff' : 'var(--color-text-muted)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: activeSection === 'companies' ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
-            transition: 'all 150ms ease'
-          }}
-        >
-          <Building2 size={16} /> Companies
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabChange('verification')}
-          style={{
-            padding: '8px 18px',
-            borderRadius: 'var(--radius-lg)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            border: 'none',
-            background: activeSection === 'verification' ? 'var(--color-primary-600)' : 'transparent',
-            color: activeSection === 'verification' ? '#fff' : 'var(--color-text-muted)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: activeSection === 'verification' ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
-            transition: 'all 150ms ease'
-          }}
-        >
-          <ShieldCheck size={16} /> Verification
-          {pendingCounts?.companyVerifications > 0 && (
-            <span style={{
-              background: activeSection === 'verification' ? 'rgba(255,255,255,0.25)' : 'var(--color-warning-500)',
-              color: '#fff',
-              fontSize: '11px',
-              padding: '2px 6px',
-              borderRadius: 'var(--radius-full)',
-              fontWeight: 800,
-              lineHeight: 1
-            }}>
-              {pendingCounts.companyVerifications}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* ── Tab Content ── */}
-      {activeSection === 'verification' ? (
-        <CompanyVerificationPage />
-      ) : (
-        <>
-          {/* Header Bar */}
-          <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
+      {/* Header Bar */}
+      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
@@ -359,28 +305,36 @@ export default function AdminCompaniesPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-                {['ALL', 'VERIFIED', 'PENDING', 'REJECTED'].map((filterKey) => (
-                  <button
-                    key={filterKey}
-                    type="button"
-                    onClick={() => setStatusFilter(filterKey)}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: 'var(--radius-lg)',
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                      background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                      color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
-                      transition: 'all 150ms ease'
-                    }}
-                  >
-                    {filterKey === 'ALL' ? 'All Status' : filterKey}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+                  {['ALL', 'VERIFIED', 'PENDING', 'REJECTED'].map((filterKey) => (
+                    <button
+                      key={filterKey}
+                      type="button"
+                      onClick={() => setStatusFilter(filterKey)}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-lg)',
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                        background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                        color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
+                        transition: 'all 150ms ease'
+                      }}
+                    >
+                      {filterKey === 'ALL' ? 'All Status' : filterKey}
+                    </button>
+                  ))}
+                </div>
+
+                <ExportDropdown
+                  onExportExcel={handleExportExcel}
+                  onExportPdf={handleExportPdf}
+                  disabled={filtered.length === 0}
+                />
               </div>
             </div>
           </div>
@@ -529,8 +483,6 @@ export default function AdminCompaniesPage() {
               </form>
             </Modal>
           )}
-        </>
-      )}
     </div>
   );
 }

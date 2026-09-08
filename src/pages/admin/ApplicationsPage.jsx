@@ -8,9 +8,13 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminApplicationsPage() {
+  const { addToast } = useToast();
   const { applications } = useAdmin();
 
   const [search, setSearch] = useState('');
@@ -44,6 +48,63 @@ export default function AdminApplicationsPage() {
       return true;
     });
   }, [applications, search, statusFilter]);
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting applications list to Excel...', 'info');
+    const headers = ['Candidate Name', 'Candidate Email', 'Job Title', 'Company', 'Applied Date', 'Application Status'];
+    const rows = filtered.map(app => [
+      app.candidate || app.candidateName || 'Candidate',
+      app.candidateEmail || 'N/A',
+      app.job || app.jobTitle || 'Role',
+      app.company || 'N/A',
+      app.appliedDate || '24 Aug 2026',
+      app.status || 'APPLIED'
+    ]);
+    const statusLabel = statusFilter === 'SELECTED' ? 'selected_hired' : statusFilter.toLowerCase();
+    exportToExcel({
+      filename: getExportFilename('applications', statusLabel, 'xlsx'),
+      sheetName: 'Applications',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting applications list to PDF...', 'info');
+    const headers = ['Candidate Name', 'Candidate Email', 'Job Title', 'Company', 'Applied Date', 'Status'];
+    const rows = filtered.map(app => [
+      app.candidate || app.candidateName || 'Candidate',
+      app.candidateEmail || 'N/A',
+      app.job || app.jobTitle || 'Role',
+      app.company || 'N/A',
+      app.appliedDate || '24 Aug 2026',
+      app.status || 'APPLIED'
+    ]);
+    const currentTabObj = filterTabs.find(t => t.key === statusFilter);
+    const statusTitle = currentTabObj ? currentTabObj.label : statusFilter;
+    exportToPDF({
+      filename: getExportFilename('applications', statusFilter.toLowerCase(), 'pdf'),
+      title: statusFilter === 'SELECTED' ? 'Selected / Hired Candidates' : 'Applications Activity Report',
+      subtitle: `Status: ${statusTitle}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusTitle,
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
 
   const columns = [
     {
@@ -178,28 +239,36 @@ export default function AdminApplicationsPage() {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-            {filterTabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setStatusFilter(tab.key)}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: statusFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                  background: statusFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                  color: statusFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
-                  transition: 'all 150ms ease'
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+              <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+              {filterTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.key)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: statusFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                    background: statusFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                    color: statusFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
+                    transition: 'all 150ms ease'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <ExportDropdown
+              onExportExcel={handleExportExcel}
+              onExportPdf={handleExportPdf}
+              disabled={filtered.length === 0}
+            />
           </div>
         </div>
       </div>

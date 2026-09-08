@@ -1062,7 +1062,16 @@
   text-align: left;
   text-decoration: none;
 }
-.dropdown-item:hover { background: var(--color-gray-100); text-decoration: none; }
+.dropdown-item:hover,
+.dropdown-item:focus,
+.dropdown-item:focus-visible {
+  background: var(--color-gray-100);
+  text-decoration: none;
+  outline: none;
+}
+.dropdown-item:active {
+  background: var(--color-gray-200);
+}
 .dropdown-item.danger { color: var(--color-danger-600); }
 .dropdown-item.danger:hover { background: var(--color-danger-50); }
 .dropdown-divider { height: 1px; background: var(--color-border); margin: var(--space-1) 0; }

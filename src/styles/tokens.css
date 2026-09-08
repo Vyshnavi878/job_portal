@@ -82,12 +82,12 @@
   --color-text-inverse: #ffffff;
 
   /* ─── Sidebar ─── */
-  --color-sidebar-bg:       #1e293b;
-  --color-sidebar-border:   #334155;
-  --color-sidebar-text:     #cbd5e1;
+  --color-sidebar-bg:          #ffffff;
+  --color-sidebar-border:      #e2e8f0;
+  --color-sidebar-text:        #475569;
   --color-sidebar-text-active: #ffffff;
-  --color-sidebar-item-active: rgba(99, 102, 241, 0.2);
-  --color-sidebar-item-hover:  rgba(255, 255, 255, 0.06);
+  --color-sidebar-item-active: var(--color-primary-600);
+  --color-sidebar-item-hover:  #f1f5f9;
 
   /* ─── Typography ─── */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;

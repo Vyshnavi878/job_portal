@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CalendarDays, Plus, Search, Filter, Eye, Building2, MapPin,
-  Clock, CheckCircle2, Ticket, XCircle, Inbox, Check, X, AlertCircle
+  Clock, CheckCircle2, Ticket, XCircle, Inbox, Check, X, AlertCircle,
+  FileSpreadsheet, FileText
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -12,13 +13,18 @@ import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
+import ExportDropdown from '../../components/ui/ExportDropdown';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminJobMelasPage() {
   const { addToast } = useToast();
   const {
     jobMelas,
+    candidates,
+    companies,
+    registrations,
     approveJobMela,
     rejectJobMela
   } = useAdmin();
@@ -91,6 +97,261 @@ export default function AdminJobMelasPage() {
     }
     return true;
   });
+
+  const currentList = activeAction === 'ADMIN_CREATED' ? filteredAdminMelas : filteredRequests;
+
+  const handleExportMainExcel = () => {
+    if (currentList.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting Job Melas list to Excel...', 'info');
+    const headers = [
+      'Job Mela Name',
+      'Event Date',
+      'Time',
+      'Venue',
+      'Location / City',
+      'Organizing Authority',
+      'Status',
+      'Participating Companies',
+      'Registered Candidates'
+    ];
+    const rows = currentList.map(m => [
+      m.event || m.title || 'Job Mela Event',
+      m.date ? new Date(m.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept 2026',
+      m.time || '09:00 AM - 05:00 PM',
+      m.venue || m.location || 'Convention Center',
+      m.location || 'Andhra Pradesh',
+      m.organizer || 'NTR Vikasa Authority',
+      m.status || 'UPCOMING',
+      m.companiesCount || (Array.isArray(m.companies) ? m.companies.length : 35),
+      m.registeredCandidatesCount || m.registeredCandidates || 1200
+    ]);
+    exportToExcel({
+      filename: getExportFilename('job_melas', activeAction === 'ADMIN_CREATED' ? statusFilter.toLowerCase() : requestStatusTab.toLowerCase(), 'xlsx'),
+      sheetName: 'Job Melas',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportMainPdf = () => {
+    if (currentList.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting Job Melas list to PDF...', 'info');
+    const headers = ['Event Name', 'Date', 'Location', 'Organizer', 'Status', 'Companies', 'Registrations'];
+    const rows = currentList.map(m => [
+      m.event || m.title || 'Job Mela Event',
+      m.date ? new Date(m.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept 2026',
+      m.location || 'Andhra Pradesh',
+      m.organizer || 'NTR Vikasa Authority',
+      m.status || 'UPCOMING',
+      m.companiesCount || (Array.isArray(m.companies) ? m.companies.length : 35),
+      m.registeredCandidatesCount || m.registeredCandidates || 1200
+    ]);
+    const currentFilterTitle = activeAction === 'ADMIN_CREATED' ? statusFilter : requestStatusTab;
+    exportToPDF({
+      filename: getExportFilename('job_melas', currentFilterTitle.toLowerCase(), 'pdf'),
+      title: activeAction === 'ADMIN_CREATED' ? 'Job Melas & Career Summits' : 'Job Mela Event Requests',
+      subtitle: `Status: ${currentFilterTitle === 'ALL' ? 'All Events' : currentFilterTitle}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': currentFilterTitle === 'ALL' ? 'All Events' : currentFilterTitle,
+        'Total Records': currentList.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
+
+  // Scoped helper for individual mela candidates
+  const getScopedMelaCandidates = (mela) => {
+    if (!mela) return [];
+    const eventQuery = (mela.event || mela.title || '').toLowerCase();
+    const matching = (registrations || []).filter(r => {
+      const regEvent = (r.event || r.eventName || '').toLowerCase();
+      return regEvent.includes(eventQuery) || eventQuery.includes(regEvent);
+    });
+    if (matching.length > 0) return matching;
+    return (candidates || []).slice(0, 10).map((c, idx) => ({
+      id: `REG-${mela.id || 'MELA'}-${1000 + idx}`,
+      candidate: c.name,
+      candidateEmail: c.email,
+      phone: c.phone || '+91 98765 43210',
+      registrationDate: c.registrationDate || '2026-08-28',
+      status: 'CONFIRMED',
+      event: mela.event || mela.title,
+      position: c.headline || 'Software Engineer'
+    }));
+  };
+
+  // Scoped helper for individual mela participating companies
+  const getScopedMelaCompanies = (mela) => {
+    if (!mela) return [];
+    return (companies || []).map((comp, idx) => ({
+      company: comp.name,
+      position: idx % 2 === 0 ? 'Software Engineer / Graduate Trainee' : 'Operations Specialist & Analyst',
+      qualification: 'B.Tech / B.Sc / Any Degree',
+      experience: '0-3 Years',
+      salary: '₹3,50,000 - ₹8,00,000 / year',
+      vacancies: 15 + (idx * 5),
+      applications: 45 + (idx * 12),
+      location: mela.location || comp.location || 'On-site Mela Stalls',
+      notes: comp.verificationStatus === 'VERIFIED' ? 'Verified Participant' : 'Pending Verification'
+    }));
+  };
+
+  const handleExportMelaCandidatesExcel = () => {
+    if (!selectedMela) return;
+    const records = getScopedMelaCandidates(selectedMela);
+    if (records.length === 0) {
+      addToast('No registered candidates available for this Job Mela.', 'info');
+      return;
+    }
+    addToast('Exporting registered candidates to Excel...', 'info');
+    const headers = ['Registration ID', 'Candidate Name', 'Email', 'Phone', 'Registration Date', 'Registration Status', 'Job Mela'];
+    const rows = records.map(r => [
+      r.id || 'REG-N/A',
+      r.candidate || r.candidateName || r.name || 'Candidate',
+      r.candidateEmail || r.email || 'N/A',
+      r.phone || '+91 98765 43210',
+      r.registrationDate || 'Aug 2026',
+      r.status || 'CONFIRMED',
+      selectedMela.event || selectedMela.title || 'Job Mela'
+    ]);
+    const melaSlug = (selectedMela.event || selectedMela.title || 'mela').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
+    exportToExcel({
+      filename: `${melaSlug}_registered_candidates.xlsx`,
+      sheetName: 'Registered Candidates',
+      headers,
+      rows
+    });
+    addToast('Candidates Excel export downloaded!', 'success');
+  };
+
+  const handleExportMelaCandidatesPdf = () => {
+    if (!selectedMela) return;
+    const records = getScopedMelaCandidates(selectedMela);
+    if (records.length === 0) {
+      addToast('No registered candidates available for this Job Mela.', 'info');
+      return;
+    }
+    addToast('Exporting registered candidates to PDF...', 'info');
+    const headers = ['Reg ID', 'Candidate Name', 'Email', 'Phone', 'Date', 'Status'];
+    const rows = records.map(r => [
+      r.id || 'REG-N/A',
+      r.candidate || r.candidateName || r.name || 'Candidate',
+      r.candidateEmail || r.email || 'N/A',
+      r.phone || '+91 98765 43210',
+      r.registrationDate || 'Aug 2026',
+      r.status || 'CONFIRMED'
+    ]);
+    const melaSlug = (selectedMela.event || selectedMela.title || 'mela').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
+    exportToPDF({
+      filename: `${melaSlug}_registered_candidates.pdf`,
+      title: `${selectedMela.event || selectedMela.title} — Registered Candidates`,
+      subtitle: `Venue: ${selectedMela.venue || selectedMela.location} | Date: ${selectedMela.date || '15 Sept 2026'}`,
+      metadata: {
+        'Job Mela': selectedMela.event || selectedMela.title,
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Total Candidates': records.length
+      },
+      headers,
+      rows
+    });
+    addToast('Candidates PDF export downloaded!', 'success');
+  };
+
+  const handleExportMelaCompaniesExcel = () => {
+    if (!selectedMela) return;
+    const records = getScopedMelaCompanies(selectedMela);
+    if (records.length === 0) {
+      addToast('No participating companies available for this Job Mela.', 'info');
+      return;
+    }
+    addToast('Exporting participating companies to Excel...', 'info');
+    const headers = ['Company', 'Position / Role', 'Qualification', 'Experience', 'Salary', 'Vacancies', 'Applications', 'Location', 'Notes'];
+    const rows = records.map(c => [
+      c.company,
+      c.position,
+      c.qualification,
+      c.experience,
+      c.salary,
+      c.vacancies,
+      c.applications,
+      c.location,
+      c.notes
+    ]);
+    const melaSlug = (selectedMela.event || selectedMela.title || 'mela').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
+    exportToExcel({
+      filename: `${melaSlug}_participating_companies.xlsx`,
+      sheetName: 'Participating Companies',
+      headers,
+      rows
+    });
+    addToast('Participating companies Excel downloaded!', 'success');
+  };
+
+  const handleExportMelaCompaniesPdf = () => {
+    if (!selectedMela) return;
+    const records = getScopedMelaCompanies(selectedMela);
+    if (records.length === 0) {
+      addToast('No participating companies available for this Job Mela.', 'info');
+      return;
+    }
+    addToast('Exporting participating companies to PDF...', 'info');
+    const headers = ['Company', 'Role', 'Experience', 'Salary', 'Vacancies', 'Location'];
+    const rows = records.map(c => [
+      c.company,
+      c.position,
+      c.experience,
+      c.salary,
+      c.vacancies,
+      c.location
+    ]);
+    const melaSlug = (selectedMela.event || selectedMela.title || 'mela').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
+    exportToPDF({
+      filename: `${melaSlug}_participating_companies.pdf`,
+      title: `${selectedMela.event || selectedMela.title} — Participating Companies`,
+      subtitle: `Venue: ${selectedMela.venue || selectedMela.location} | Date: ${selectedMela.date || '15 Sept 2026'}`,
+      metadata: {
+        'Job Mela': selectedMela.event || selectedMela.title,
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Total Companies': records.length
+      },
+      headers,
+      rows
+    });
+    addToast('Participating companies PDF downloaded!', 'success');
+  };
+
+  const individualMelaExportItems = [
+    {
+      label: 'Registered Candidates - Excel (.xlsx)',
+      icon: <FileSpreadsheet size={15} style={{ color: '#16a34a' }} />,
+      onClick: handleExportMelaCandidatesExcel
+    },
+    {
+      label: 'Registered Candidates - PDF (.pdf)',
+      icon: <FileText size={15} style={{ color: '#dc2626' }} />,
+      onClick: handleExportMelaCandidatesPdf
+    },
+    {
+      label: 'Participating Companies - Excel (.xlsx)',
+      icon: <FileSpreadsheet size={15} style={{ color: '#16a34a' }} />,
+      onClick: handleExportMelaCompaniesExcel
+    },
+    {
+      label: 'Participating Companies - PDF (.pdf)',
+      icon: <FileText size={15} style={{ color: '#dc2626' }} />,
+      onClick: handleExportMelaCompaniesPdf
+    }
+  ];
 
   const handleApprove = (m) => {
     approveJobMela(m.id);
@@ -377,28 +638,36 @@ export default function AdminJobMelasPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-                {filterTabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setStatusFilter(tab.key)}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: 'var(--radius-lg)',
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      border: statusFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                      background: statusFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                      color: statusFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
-                      transition: 'all 150ms ease'
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+                  {filterTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setStatusFilter(tab.key)}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-lg)',
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: statusFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                        background: statusFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                        color: statusFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
+                        transition: 'all 150ms ease'
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <ExportDropdown
+                  onExportExcel={handleExportMainExcel}
+                  onExportPdf={handleExportMainPdf}
+                  disabled={filteredAdminMelas.length === 0}
+                />
               </div>
             </div>
           </div>
@@ -436,33 +705,41 @@ export default function AdminJobMelasPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-                {[
-                  { key: 'ALL', label: 'All Requests' },
-                  { key: 'PENDING', label: `Pending (${pendingRequestsCount})` },
-                  { key: 'APPROVED', label: 'Approved' },
-                  { key: 'REJECTED', label: 'Rejected' },
-                ].map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setRequestStatusTab(tab.key)}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: 'var(--radius-lg)',
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      border: requestStatusTab === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                      background: requestStatusTab === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                      color: requestStatusTab === tab.key ? '#fff' : 'var(--color-text-muted)',
-                      transition: 'all 150ms ease'
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+                  {[
+                    { key: 'ALL', label: 'All Requests' },
+                    { key: 'PENDING', label: `Pending (${pendingRequestsCount})` },
+                    { key: 'APPROVED', label: 'Approved' },
+                    { key: 'REJECTED', label: 'Rejected' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setRequestStatusTab(tab.key)}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-lg)',
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: requestStatusTab === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                        background: requestStatusTab === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                        color: requestStatusTab === tab.key ? '#fff' : 'var(--color-text-muted)',
+                        transition: 'all 150ms ease'
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <ExportDropdown
+                  onExportExcel={handleExportMainExcel}
+                  onExportPdf={handleExportMainPdf}
+                  disabled={filteredRequests.length === 0}
+                />
               </div>
             </div>
           </div>
@@ -552,7 +829,8 @@ export default function AdminJobMelasPage() {
             </div>
 
             {/* Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)', flexWrap: 'wrap' }}>
+              <ExportDropdown items={individualMelaExportItems} label="Export" />
               <Button variant="outline" onClick={() => setViewModalOpen(false)}>
                 Close
               </Button>

@@ -10,19 +10,18 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
+import ExportDropdown from '../../components/ui/ExportDropdown';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 // Consolidated Sub-Pages
 import AdminJobsPage from './JobsPage';
 import AdminInternshipsPage from './InternshipsPage';
-import AdminRecruiterRequestsPage from './RecruiterRequestsPage';
-import AdminJobRequestsPage from './JobRequestsPage';
-import AdminInternshipRequestsPage from './InternshipRequestsPage';
 
 export default function AdminRecruitersPage() {
   const { addToast } = useToast();
-  const { recruiters, verifyRecruiter, suspendRecruiter, activateRecruiter, pendingCounts } = useAdmin();
+  const { recruiters, verifyRecruiter, suspendRecruiter, activateRecruiter } = useAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabParam = searchParams.get('tab');
@@ -30,18 +29,6 @@ export default function AdminRecruitersPage() {
     'recruiters': 'recruiters',
     'jobs': 'jobs',
     'internships': 'internships',
-    'verification': 'verification',
-    'recruiter-verification': 'verification',
-    'recruiter-requests': 'verification',
-    'requests': 'verification',
-    'job-approvals': 'job-approvals',
-    'job_approvals': 'job-approvals',
-    'job-requests': 'job-approvals',
-    'jobs-requests': 'job-approvals',
-    'internship-approvals': 'internship-approvals',
-    'internship_approvals': 'internship-approvals',
-    'internship-requests': 'internship-approvals',
-    'internships-requests': 'internship-approvals',
   };
   const currentTab = tabAliasMap[tabParam] || 'recruiters';
 
@@ -92,6 +79,64 @@ export default function AdminRecruitersPage() {
       return true;
     });
   }, [recruiters, search, statusFilter]);
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting recruiters list to Excel...', 'info');
+    const headers = ['Recruiter Name', 'Email', 'Company', 'Designation', 'Industry', 'Location', 'Registration Date', 'Verification Status', 'Account Status'];
+    const rows = filtered.map(r => [
+      r.name || 'Recruiter',
+      r.email || 'N/A',
+      r.company || 'N/A',
+      r.designation || 'Talent Acquisition',
+      r.industry || 'IT & Services',
+      r.location || 'India',
+      r.registrationDate || '01 Aug 2026',
+      r.verificationStatus || 'PENDING',
+      r.accountStatus || 'ACTIVE'
+    ]);
+    exportToExcel({
+      filename: getExportFilename('recruiters', statusFilter.toLowerCase(), 'xlsx'),
+      sheetName: 'Recruiters',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting recruiters list to PDF...', 'info');
+    const headers = ['Recruiter Name', 'Email', 'Company', 'Designation', 'Industry', 'Verification', 'Account'];
+    const rows = filtered.map(r => [
+      r.name || 'Recruiter',
+      r.email || 'N/A',
+      r.company || 'N/A',
+      r.designation || 'Talent Acquisition',
+      r.industry || 'IT & Services',
+      r.verificationStatus || 'PENDING',
+      r.accountStatus || 'ACTIVE'
+    ]);
+    exportToPDF({
+      filename: getExportFilename('recruiters', statusFilter.toLowerCase(), 'pdf'),
+      title: 'Registered Recruiters Directory',
+      subtitle: `Status: ${statusFilter === 'ALL' ? 'All Recruiters' : statusFilter}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusFilter === 'ALL' ? 'All Recruiters' : statusFilter,
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
 
   const handleVerify = (r) => {
     verifyRecruiter(r.id);
@@ -262,7 +307,7 @@ export default function AdminRecruitersPage() {
   return (
     <div className="admin-recruiters-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
 
-      {/* ── 0. Consolidated Navigation Tabs (Recruiters | Jobs | Internships | Verification | Job Approvals | Internship Approvals) ── */}
+      {/* ── 0. Consolidated Navigation Tabs (Recruiters | Jobs | Internships) ── */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -340,111 +385,6 @@ export default function AdminRecruitersPage() {
         >
           <GraduationCap size={16} /> Internships
         </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabChange('verification')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 'var(--radius-lg)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            border: 'none',
-            background: activeSection === 'verification' ? 'var(--color-primary-600)' : 'transparent',
-            color: activeSection === 'verification' ? '#fff' : 'var(--color-text-muted)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: activeSection === 'verification' ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
-            transition: 'all 150ms ease'
-          }}
-        >
-          <ShieldCheck size={16} /> Verification
-          {pendingCounts?.recruiterVerifications > 0 && (
-            <span style={{
-              background: activeSection === 'verification' ? 'rgba(255,255,255,0.25)' : 'var(--color-warning-500)',
-              color: '#fff',
-              fontSize: '11px',
-              padding: '2px 6px',
-              borderRadius: 'var(--radius-full)',
-              fontWeight: 800,
-              lineHeight: 1
-            }}>
-              {pendingCounts.recruiterVerifications}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabChange('job-approvals')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 'var(--radius-lg)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            border: 'none',
-            background: activeSection === 'job-approvals' ? 'var(--color-primary-600)' : 'transparent',
-            color: activeSection === 'job-approvals' ? '#fff' : 'var(--color-text-muted)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: activeSection === 'job-approvals' ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
-            transition: 'all 150ms ease'
-          }}
-        >
-          <CheckCircle2 size={16} /> Job Approvals
-          {pendingCounts?.jobApprovals > 0 && (
-            <span style={{
-              background: activeSection === 'job-approvals' ? 'rgba(255,255,255,0.25)' : 'var(--color-primary-600)',
-              color: '#fff',
-              fontSize: '11px',
-              padding: '2px 6px',
-              borderRadius: 'var(--radius-full)',
-              fontWeight: 800,
-              lineHeight: 1
-            }}>
-              {pendingCounts.jobApprovals}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => handleTabChange('internship-approvals')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 'var(--radius-lg)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 700,
-            cursor: 'pointer',
-            border: 'none',
-            background: activeSection === 'internship-approvals' ? 'var(--color-primary-600)' : 'transparent',
-            color: activeSection === 'internship-approvals' ? '#fff' : 'var(--color-text-muted)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: activeSection === 'internship-approvals' ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
-            transition: 'all 150ms ease'
-          }}
-        >
-          <GraduationCap size={16} /> Internship Approvals
-          {pendingCounts?.internshipApprovals > 0 && (
-            <span style={{
-              background: activeSection === 'internship-approvals' ? 'rgba(255,255,255,0.25)' : 'var(--color-primary-600)',
-              color: '#fff',
-              fontSize: '11px',
-              padding: '2px 6px',
-              borderRadius: 'var(--radius-full)',
-              fontWeight: 800,
-              lineHeight: 1
-            }}>
-              {pendingCounts.internshipApprovals}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* ── Tab Content ── */}
@@ -452,12 +392,6 @@ export default function AdminRecruitersPage() {
         <AdminJobsPage />
       ) : activeSection === 'internships' ? (
         <AdminInternshipsPage />
-      ) : activeSection === 'verification' ? (
-        <AdminRecruiterRequestsPage />
-      ) : activeSection === 'job-approvals' ? (
-        <AdminJobRequestsPage />
-      ) : activeSection === 'internship-approvals' ? (
-        <AdminInternshipRequestsPage />
       ) : (
         <>
           {/* Header Bar */}
@@ -504,28 +438,36 @@ export default function AdminRecruitersPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-                {['ALL', 'VERIFIED', 'PENDING', 'SUSPENDED'].map((filterKey) => (
-                  <button
-                    key={filterKey}
-                    type="button"
-                    onClick={() => setStatusFilter(filterKey)}
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: 'var(--radius-lg)',
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                      background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                      color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
-                      transition: 'all 150ms ease'
-                    }}
-                  >
-                    {filterKey === 'ALL' ? 'All Recruiters' : filterKey}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                  <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+                  {['ALL', 'VERIFIED', 'PENDING', 'SUSPENDED'].map((filterKey) => (
+                    <button
+                      key={filterKey}
+                      type="button"
+                      onClick={() => setStatusFilter(filterKey)}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: 'var(--radius-lg)',
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                        background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                        color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
+                        transition: 'all 150ms ease'
+                      }}
+                    >
+                      {filterKey === 'ALL' ? 'All Recruiters' : filterKey}
+                    </button>
+                  ))}
+                </div>
+
+                <ExportDropdown
+                  onExportExcel={handleExportExcel}
+                  onExportPdf={handleExportPdf}
+                  disabled={filtered.length === 0}
+                />
               </div>
             </div>
           </div>

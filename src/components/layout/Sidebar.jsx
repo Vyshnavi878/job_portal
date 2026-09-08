@@ -40,7 +40,7 @@ export default function Sidebar({ navItems = [], user, footerItems = [], portalN
           <button
             className="hide-desktop"
             onClick={close}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-gray-400)', display: 'flex', marginLeft: 'auto' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', marginLeft: 'auto' }}
             aria-label="Close sidebar"
           >
             <X size={18} />

@@ -326,8 +326,12 @@ export default function PublicHeader() {
                       >
                         <User size={18} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
                         <div>
-                          <p style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text)', lineHeight: 1.2 }}>{nav.asJobSeeker}</p>
-                          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>{nav.asJobSeekerDesc}</p>
+                          <p style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text)', lineHeight: 1.2 }}>
+                            {nav.asJobSeeker || nav.candidateReg || 'Candidate Registration'}
+                          </p>
+                          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                            {nav.asJobSeekerDesc || nav.candidateDesc || 'Find jobs, internships & job fairs'}
+                          </p>
                         </div>
                       </Link>
 
@@ -341,8 +345,12 @@ export default function PublicHeader() {
                       >
                         <Building2 size={18} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
                         <div>
-                          <p style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text)', lineHeight: 1.2 }}>{nav.asEmployer}</p>
-                          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>{nav.asEmployerDesc}</p>
+                          <p style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-text)', lineHeight: 1.2 }}>
+                            {nav.asEmployer || nav.recruiterReg || 'Recruiter Registration'}
+                          </p>
+                          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                            {nav.asEmployerDesc || nav.recruiterDesc || 'Post jobs & hire verified talent'}
+                          </p>
                         </div>
                       </Link>
                     </div>

@@ -12,6 +12,8 @@ import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 const INITIAL_PARTICIPATION_REQUESTS = [
   {
@@ -98,6 +100,73 @@ export default function AdminParticipationPage() {
     return r.companyName.toLowerCase().includes(q) || r.eventName.toLowerCase().includes(q) || r.recruiterName.toLowerCase().includes(q);
   });
 
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      toast({ type: 'info', title: 'No Records', message: 'No records available to export for the selected filters.' });
+      return;
+    }
+    toast({ type: 'info', title: 'Exporting', message: 'Exporting participation requests to Excel...' });
+    const headers = [
+      'Company Name',
+      'Event Name',
+      'Recruiter SPOC',
+      'Recruiter Phone',
+      'Stall Tier',
+      'Allocated Booth',
+      'Target Hires',
+      'Requested Date',
+      'Status'
+    ];
+    const rows = filtered.map(r => [
+      r.companyName,
+      r.eventName,
+      r.recruiterName,
+      r.recruiterPhone,
+      r.boothPreference,
+      r.allocatedBooth,
+      r.expectedHires,
+      r.requestedDate,
+      r.status
+    ]);
+    exportToExcel({
+      filename: getExportFilename('job_mela_participation', '', 'xlsx'),
+      sheetName: 'Participation Requests',
+      headers,
+      rows
+    });
+    toast({ type: 'success', title: 'Export Complete', message: 'Participation requests Excel downloaded!' });
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      toast({ type: 'info', title: 'No Records', message: 'No records available to export for the selected filters.' });
+      return;
+    }
+    toast({ type: 'info', title: 'Exporting', message: 'Exporting participation requests to PDF...' });
+    const headers = ['Company', 'Event', 'Recruiter SPOC', 'Stall Tier', 'Allocated Booth', 'Target Hires', 'Status'];
+    const rows = filtered.map(r => [
+      r.companyName,
+      r.eventName,
+      `${r.recruiterName} (${r.recruiterPhone})`,
+      r.boothPreference,
+      r.allocatedBooth,
+      `${r.expectedHires} Positions`,
+      r.status
+    ]);
+    exportToPDF({
+      filename: getExportFilename('job_mela_participation', '', 'pdf'),
+      title: 'Employer Job Mela Participation Requests',
+      metadata: {
+        'Search Query': search || 'All',
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    toast({ type: 'success', title: 'Export Complete', message: 'Participation requests PDF downloaded!' });
+  };
+
   const columns = [
     {
       key: 'companyName',
@@ -181,13 +250,20 @@ export default function AdminParticipationPage() {
       {/* Table Card */}
       <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
         <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
-          <div className="input-wrapper" style={{ width: 320 }}>
-            <span className="input-icon-left"><Search size={15} /></span>
-            <input
-              className="input has-icon-left"
-              placeholder="Search company or event..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="input-wrapper" style={{ width: 320 }}>
+              <span className="input-icon-left"><Search size={15} /></span>
+              <input
+                className="input has-icon-left"
+                placeholder="Search company or event..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <ExportDropdown
+              onExportExcel={handleExportExcel}
+              onExportPdf={handleExportPdf}
+              disabled={filtered.length === 0}
             />
           </div>
 

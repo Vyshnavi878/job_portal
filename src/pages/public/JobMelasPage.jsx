@@ -260,6 +260,7 @@ export default function JobMelasPage() {
                     totalPages={totalPages}
                     totalItems={currentList.length}
                     pageSize={PER_PAGE}
+                    itemName="job melas"
                     onPageChange={(p) => {
                       setPage(p);
                       window.scrollTo({ top: 180, behavior: 'smooth' });

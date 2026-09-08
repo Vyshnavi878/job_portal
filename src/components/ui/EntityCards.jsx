@@ -5,7 +5,7 @@ import Button from './Button';
 import { JobCardSkeleton } from './Skeleton';
 
 /**
- * JobCard — displays a job listing
+ * JobCard — displays a job listing matching Company cards design
  * @param {Object}   job
  * @param {boolean}  saved
  * @param {Function} onSave
@@ -17,82 +17,126 @@ export function JobCard({ job, saved = false, onSave, loading = false, showStatu
 
   const {
     id, title, company, companyLogo, location, type, salary,
-    experience, deadline, status, tags = [], isNew, isFeatured,
+    experience, deadline, status, tags = [], isNew, isFeatured, workMode
   } = job;
 
   const timeLeft = deadline ? getTimeLeft(deadline) : null;
 
   return (
-    <div className="job-card fade-in hover-lift">
-      <div className="job-card-header">
-        <div className="job-card-logo">
-          {companyLogo ? (
-            <img src={companyLogo} alt={`${company} logo`} />
-          ) : (
-            <span>{company?.[0] || 'J'}</span>
+    <div
+      className="card card-hoverable"
+      style={{
+        borderRadius: 'var(--radius-2xl)',
+        padding: 'var(--space-6)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: 'var(--space-4)'
+      }}
+    >
+      <div>
+        {/* Header: Logo + Badges + Bookmark */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
+          <div style={{
+            width: 56,
+            height: 56,
+            borderRadius: 'var(--radius-xl)',
+            background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-accent-500))',
+            color: '#fff',
+            fontSize: 'var(--text-2xl)',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: 'var(--shadow-sm)',
+            flexShrink: 0
+          }}>
+            {companyLogo ? <img src={companyLogo} alt={company} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--radius-xl)' }} /> : (company?.[0] || 'J')}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            {isFeatured && <Badge variant="primary">Featured</Badge>}
+            {isNew && <Badge variant="success">New</Badge>}
+            {onSave && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); onSave(id); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: saved ? 'var(--color-primary-600)' : 'var(--color-text-light)', padding: 2 }}
+                aria-label={saved ? 'Unsave job' : 'Save job'}
+              >
+                {saved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Title */}
+        <Link to={`/jobs/${id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <h3 style={{
+            fontSize: 'var(--text-base)',
+            fontWeight: 700,
+            marginBottom: 4,
+            lineHeight: 1.3,
+            display: '-webkit-box',
+            WebkitLineClamp: 1,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}>
+            {title}
+          </h3>
+        </Link>
+
+        {/* Company */}
+        <Link to={`/companies/${job.companyId || id}`} style={{ textDecoration: 'none' }}>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+            {company}
+          </p>
+        </Link>
+
+        {/* Meta Info */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+          {location && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <MapPin size={13} style={{ flexShrink: 0 }} /> {location}
+            </span>
+          )}
+          {salary && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text)', fontWeight: 700 }}>
+              <Banknote size={13} style={{ flexShrink: 0 }} /> {salary}
+            </span>
+          )}
+          {(experience || type || workMode) && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Briefcase size={13} style={{ flexShrink: 0 }} />
+              {[experience, type, workMode].filter(Boolean).join(' • ')}
+            </span>
           )}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-            <Link to={`/jobs/${id}`} className="job-card-title" style={{ textDecoration: 'none', color: 'inherit' }}>
-              {title}
-            </Link>
-            {isNew && <Badge variant="success">New</Badge>}
-            {isFeatured && <Badge variant="primary">Featured</Badge>}
+
+        {tags.length > 0 && (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: 'var(--space-3)' }}>
+            {tags.slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="gray">{tag}</Badge>
+            ))}
+            {tags.length > 3 && <Badge variant="gray">+{tags.length - 3}</Badge>}
           </div>
-          <Link to={`/companies/${job.companyId}`} className="job-card-company">{company}</Link>
-        </div>
-        {onSave && (
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); onSave(id); }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: saved ? 'var(--color-primary-600)' : 'var(--color-text-light)', flexShrink: 0 }}
-            aria-label={saved ? 'Unsave job' : 'Save job'}
-          >
-            {saved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
-          </button>
         )}
       </div>
 
-      <div className="job-card-meta">
-        {location && (
-          <span className="job-card-meta-item">
-            <MapPin size={13} />{location}
-          </span>
-        )}
-        {type && (
-          <span className="job-card-meta-item">
-            <Briefcase size={13} />{type}
-          </span>
-        )}
-        {salary && (
-          <span className="job-card-meta-item">
-            <Banknote size={13} />{salary}
-          </span>
-        )}
-        {experience && (
-          <span className="job-card-meta-item">
-            <Clock size={13} />{experience}
-          </span>
-        )}
-      </div>
-
-      {tags.length > 0 && (
-        <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap', marginTop: 'var(--space-3)' }}>
-          {tags.slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="gray">{tag}</Badge>
-          ))}
-          {tags.length > 3 && <Badge variant="gray">+{tags.length - 3}</Badge>}
-        </div>
-      )}
-
-      <div className="job-card-footer">
+      {/* Footer */}
+      <div style={{
+        paddingTop: 'var(--space-4)',
+        borderTop: '1px solid var(--color-gray-100)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 'var(--space-2)'
+      }}>
         <div>
           {showStatus && status && <StatusBadge status={status} />}
           {timeLeft && !showStatus && (
-            <span className="job-card-deadline">
-              <Clock size={12} style={{ display: 'inline', marginRight: 3 }} />
-              {timeLeft}
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Clock size={12} /> {timeLeft}
             </span>
           )}
         </div>
@@ -157,53 +201,144 @@ export function CompanyCard({ company, loading = false }) {
 
 
 /**
- * InternshipCard — same shape as JobCard, specialized display
+ * InternshipCard — matching Companies cards design & visual density
  */
 export function InternshipCard({ internship, saved = false, onSave, loading = false }) {
   if (loading) return <JobCardSkeleton />;
 
-  const { id, title, company, companyLogo, location, duration, stipend, mode, deadline, tags = [] } = internship;
+  const { id, title, company, companyLogo, location, duration, stipend, mode, deadline, tags = [], skills = [] } = internship;
+  const displaySkills = tags.length > 0 ? tags : skills;
 
   return (
-    <div className="job-card fade-in hover-lift">
-      <div className="job-card-header">
-        <div className="job-card-logo">
-          {companyLogo ? <img src={companyLogo} alt={`${company} logo`} /> : <span>{company?.[0] || 'I'}</span>}
+    <div
+      className="card card-hoverable"
+      style={{
+        borderRadius: 'var(--radius-2xl)',
+        padding: 'var(--space-6)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        gap: 'var(--space-4)'
+      }}
+    >
+      <div>
+        {/* Header: Company Logo & Stipend Badge */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
+          <div style={{
+            width: 56,
+            height: 56,
+            borderRadius: 'var(--radius-xl)',
+            background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-accent-500))',
+            color: '#fff',
+            fontSize: 'var(--text-2xl)',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: 'var(--shadow-sm)',
+            flexShrink: 0
+          }}>
+            {companyLogo ? <img src={companyLogo} alt={company} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--radius-xl)' }} /> : (company?.[0] || 'I')}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <span style={{
+              fontSize: 'var(--text-xs)',
+              fontWeight: 700,
+              color: 'var(--color-success-700)',
+              background: 'var(--color-success-50)',
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-md)'
+            }}>
+              {stipend || 'Paid Stipend'}
+            </span>
+            {onSave && (
+              <button
+                type="button"
+                onClick={() => onSave(id)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: saved ? 'var(--color-primary-600)' : 'var(--color-text-light)', padding: 2 }}
+                aria-label={saved ? 'Remove Bookmark' : 'Save Internship'}
+              >
+                {saved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+              </button>
+            )}
+          </div>
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Link to={`/internships/${id}`} className="job-card-title" style={{ textDecoration: 'none', color: 'inherit' }}>
+
+        {/* Title */}
+        <Link to={`/internships/${id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <h3 style={{
+            fontSize: 'var(--text-base)',
+            fontWeight: 700,
+            marginBottom: 4,
+            lineHeight: 1.3,
+            display: '-webkit-box',
+            WebkitLineClamp: 1,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}>
             {title}
-          </Link>
-          <p className="job-card-company">{company}</p>
+          </h3>
+        </Link>
+
+        {/* Company */}
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600, marginBottom: 'var(--space-3)' }}>
+          {company}
+        </p>
+
+        {/* Meta Info: Location, Work Mode, Duration */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: displaySkills.length > 0 ? 'var(--space-3)' : 0 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <MapPin size={13} style={{ flexShrink: 0 }} /> {location}
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Briefcase size={13} style={{ flexShrink: 0 }} /> {mode || 'Hybrid'} • {duration || '3 Months'}
+          </span>
         </div>
-        {onSave && (
-          <button type="button" onClick={() => onSave(id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: saved ? 'var(--color-primary-600)' : 'var(--color-text-light)' }}>
-            {saved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
-          </button>
+
+        {/* Skills/Tags if any */}
+        {displaySkills && displaySkills.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {displaySkills.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: 'var(--color-primary-800)',
+                  background: 'var(--color-primary-50)',
+                  padding: '2px 7px',
+                  borderRadius: 'var(--radius-md)'
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+            {displaySkills.length > 3 && (
+              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', alignSelf: 'center', fontWeight: 600 }}>
+                +{displaySkills.length - 3}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
-      <div className="job-card-meta">
-        {location && <span className="job-card-meta-item"><MapPin size={13} />{location}</span>}
-        {mode && <span className="job-card-meta-item"><Briefcase size={13} />{mode}</span>}
-        {duration && <span className="job-card-meta-item"><Clock size={13} />{duration}</span>}
-        {stipend && <span className="job-card-meta-item"><Banknote size={13} />{stipend.includes('/ month') || stipend.includes('/mo') ? stipend : `${stipend}/mo`}</span>}
-      </div>
-
-      {tags.length > 0 && (
-        <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap', marginTop: 'var(--space-3)' }}>
-          {tags.slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="gray">{tag}</Badge>
-          ))}
-        </div>
-      )}
-
-      <div className="job-card-footer">
-        <span className="job-card-deadline">
-          {deadline && `Apply by ${new Date(deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}`}
+      {/* Footer: Apply by deadline & View Details CTA */}
+      <div style={{
+        paddingTop: 'var(--space-4)',
+        borderTop: '1px solid var(--color-gray-100)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 'var(--space-2)'
+      }}>
+        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+          {deadline ? `Apply by ${new Date(deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : 'Actively Hiring'}
         </span>
         <Link to={`/internships/${id}`}>
-          <Button size="sm" variant="outline">View Details</Button>
+          <Button size="sm" variant="outline">
+            View Details
+          </Button>
         </Link>
       </div>
     </div>

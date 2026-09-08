@@ -93,7 +93,7 @@ export default function InternshipsPage() {
     });
   }, [search, location, workMode, stipendRange, duration, selectedSkill, industry]);
 
-  const PER_PAGE = 6;
+  const PER_PAGE = 9;
   const totalPages = Math.ceil(filteredInternships.length / PER_PAGE);
   const paginatedInternships = filteredInternships.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
@@ -161,16 +161,14 @@ export default function InternshipsPage() {
         <div className="responsive-split-sidebar">
 
           {/* ── Filters Sidebar (All required filters: location, work mode, stipend, duration, skills, industry) ── */}
-          <aside style={{
+          <aside className="sticky-filter-sidebar" style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-2xl)',
             padding: 'var(--space-6)',
             display: 'flex',
             flexDirection: 'column',
-            gap: 'var(--space-5)',
-            position: 'sticky',
-            top: '80px'
+            gap: 'var(--space-5)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -238,7 +236,7 @@ export default function InternshipsPage() {
           </aside>
 
           {/* ── Main Results ── */}
-          <main>
+          <main style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
                 Showing <strong style={{ color: 'var(--color-text)' }}>{filteredInternships.length}</strong> available internships
@@ -254,7 +252,7 @@ export default function InternshipsPage() {
               />
             ) : (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-5)' }}>
+                <div className="responsive-card-grid">
                   {paginatedInternships.map((internship) => (
                     <InternshipCard key={internship.id} internship={internship} />
                   ))}
@@ -267,10 +265,8 @@ export default function InternshipsPage() {
                       totalPages={totalPages}
                       totalItems={filteredInternships.length}
                       pageSize={PER_PAGE}
-                      onPageChange={(p) => {
-                        setPage(p);
-                        window.scrollTo({ top: 180, behavior: 'smooth' });
-                      }}
+                      itemName="internships"
+                      onPageChange={setPage}
                     />
                   </div>
                 )}

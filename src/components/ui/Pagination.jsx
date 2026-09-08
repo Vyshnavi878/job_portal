@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
  * @param {number}   totalItems
  * @param {number}   pageSize
  * @param {Function} onPageChange - (page: number) => void
+ * @param {string}   itemName - plural unit name (e.g. 'results', 'internships', 'job melas')
  */
 export default function Pagination({
   currentPage = 1,
@@ -14,6 +15,7 @@ export default function Pagination({
   totalItems,
   pageSize,
   onPageChange,
+  itemName = 'results',
 }) {
   const from = totalItems ? (currentPage - 1) * pageSize + 1 : 0;
   const to   = totalItems ? Math.min(currentPage * pageSize, totalItems) : 0;
@@ -46,7 +48,7 @@ export default function Pagination({
     <div className="pagination">
       {totalItems !== undefined && (
         <p className="pagination-info">
-          Showing <strong>{from}–{to}</strong> of <strong>{totalItems}</strong> results
+          Showing <strong>{from}–{to}</strong> of <strong>{totalItems}</strong> {itemName}
         </p>
       )}
       <div className="pagination-controls">

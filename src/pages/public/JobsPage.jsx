@@ -217,6 +217,234 @@ const EXTENDED_MOCK_JOBS = [
     postedTime: 'Posted 2 days ago',
     featured: false,
     description: 'Benchmark large language model outputs and design robust safety evaluation datasets.'
+  },
+  {
+    id: '11',
+    title: 'Cloud Security & DevOps Architect',
+    company: 'TechCorp India',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹18 - ₹30 LPA',
+    salaryMin: 18,
+    salaryMax: 30,
+    experience: '5-8 years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'Information Technology',
+    skills: ['AWS', 'Docker', 'Kubernetes', 'Python', 'CI/CD'],
+    matchScore: 91,
+    postedTime: 'Posted 1 day ago',
+    featured: true,
+    description: 'Lead enterprise cloud migration architectures, zero-trust security postures, and Kubernetes orchestration pipelines.'
+  },
+  {
+    id: '12',
+    title: 'Senior QA Automation Engineer (Cypress / Playwright)',
+    company: 'Flipkart',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹10 - ₹18 LPA',
+    salaryMin: 10,
+    salaryMax: 18,
+    experience: '3-5 Years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'E-Commerce & Retail',
+    skills: ['JavaScript', 'TypeScript', 'Node.js', 'React'],
+    matchScore: 88,
+    postedTime: 'Posted 3 days ago',
+    featured: false,
+    description: 'Design robust automated E2E test suites for checkout and payment flows across multi-device viewports.'
+  },
+  {
+    id: '13',
+    title: 'Data Analyst & BI Specialist',
+    company: 'Razorpay',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹8 - ₹14 LPA',
+    salaryMin: 8,
+    salaryMax: 14,
+    experience: '1-3 years',
+    type: 'Full-time',
+    workMode: 'Remote',
+    industry: 'Fintech & Banking',
+    skills: ['SQL', 'Python', 'Analytics', 'Financial Modeling'],
+    matchScore: 84,
+    postedTime: 'Posted 4 days ago',
+    featured: false,
+    description: 'Analyze payment conversion funnels, transaction latency trends, and build automated Looker / Tableau dashboards.'
+  },
+  {
+    id: '14',
+    title: 'Growth Marketing & SEO Specialist',
+    company: 'Zomato',
+    verified: true,
+    location: 'Gurugram, Haryana',
+    salary: '₹10 - ₹16 LPA',
+    salaryMin: 10,
+    salaryMax: 16,
+    experience: '3-5 Years',
+    type: 'Full-time',
+    workMode: 'On-site',
+    industry: 'E-Commerce & Retail',
+    skills: ['Digital Marketing', 'SEO', 'Analytics'],
+    matchScore: 83,
+    postedTime: 'Posted 2 days ago',
+    featured: false,
+    description: 'Scale organic restaurant discovery and user acquisition through data-driven performance marketing and content SEO.'
+  },
+  {
+    id: '15',
+    title: 'Embedded Firmware Engineer (Automotive / EV)',
+    company: 'Ola Electric',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹12 - ₹20 LPA',
+    salaryMin: 12,
+    salaryMax: 20,
+    experience: '2-4 Years',
+    type: 'Full-time',
+    workMode: 'On-site',
+    industry: 'Automotive & EV',
+    skills: ['Python', 'Docker'],
+    matchScore: 89,
+    postedTime: 'Posted 5 days ago',
+    featured: true,
+    description: 'Develop real-time CAN-bus protocols and battery management firmware for Ola next-gen electric scooter platforms.'
+  },
+  {
+    id: '16',
+    title: 'Human Resources Talent Partner',
+    company: 'Infosys',
+    verified: true,
+    location: 'Hyderabad, Telangana',
+    salary: '₹6 - ₹10 LPA',
+    salaryMin: 6,
+    salaryMax: 10,
+    experience: '1-3 years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'Information Technology',
+    skills: ['Human Resources'],
+    matchScore: 80,
+    postedTime: 'Posted today',
+    featured: false,
+    description: 'Manage full-cycle campus hiring and lateral technical talent acquisition across Pan-India development hubs.'
+  },
+  {
+    id: '17',
+    title: 'Site Reliability & Cloud Ops Engineer',
+    company: 'Razorpay',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹14 - ₹24 LPA',
+    salaryMin: 14,
+    salaryMax: 24,
+    experience: '3-5 Years',
+    type: 'Full-time',
+    workMode: 'Remote',
+    industry: 'Fintech & Banking',
+    skills: ['AWS', 'Docker', 'Kubernetes', 'Python'],
+    matchScore: 90,
+    postedTime: 'Posted 2 days ago',
+    featured: false,
+    description: 'Ensure 99.999% system availability, automated incident response, and latency optimization across payment clusters.'
+  },
+  {
+    id: '18',
+    title: 'Senior Mobile App Developer (React Native)',
+    company: 'Swiggy',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹16 - ₹26 LPA',
+    salaryMin: 16,
+    salaryMax: 26,
+    experience: '3-5 Years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'Information Technology',
+    skills: ['React', 'JavaScript', 'TypeScript'],
+    matchScore: 88,
+    postedTime: 'Posted 3 days ago',
+    featured: true,
+    description: 'Build responsive iOS and Android consumer experiences with seamless real-time map tracking and smooth checkout animations.'
+  },
+  {
+    id: '19',
+    title: 'Backend Microservices Specialist (Java / Spring)',
+    company: 'TechCorp India',
+    verified: true,
+    location: 'Hyderabad, Telangana',
+    salary: '₹12 - ₹20 LPA',
+    salaryMin: 12,
+    salaryMax: 20,
+    experience: '2-4 Years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'Information Technology',
+    skills: ['Java', 'Spring Boot', 'SQL'],
+    matchScore: 85,
+    postedTime: 'Posted 1 day ago',
+    featured: false,
+    description: 'Architect secure enterprise transactional microservices and RESTful integrations for global cloud banking clients.'
+  },
+  {
+    id: '20',
+    title: 'Product Data Scientist & Experimentation Lead',
+    company: 'Flipkart',
+    verified: true,
+    location: 'Bengaluru, Karnataka',
+    salary: '₹22 - ₹35 LPA',
+    salaryMin: 22,
+    salaryMax: 35,
+    experience: '5-8 years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'E-Commerce & Retail',
+    skills: ['Python', 'Machine Learning', 'SQL', 'Analytics'],
+    matchScore: 93,
+    postedTime: 'Posted 4 days ago',
+    featured: true,
+    description: 'Lead marketplace pricing intelligence, recommendation algorithms, and statistical multivariate A/B experimentation.'
+  },
+  {
+    id: '21',
+    title: 'Security Operations & Compliance Analyst',
+    company: 'Cognizant',
+    verified: true,
+    location: 'Visakhapatnam, Andhra Pradesh',
+    salary: '₹8 - ₹14 LPA',
+    salaryMin: 8,
+    salaryMax: 14,
+    experience: '1-3 years',
+    type: 'Full-time',
+    workMode: 'Remote',
+    industry: 'Information Technology',
+    skills: ['SQL', 'Python', 'Analytics'],
+    matchScore: 81,
+    postedTime: 'Posted 5 days ago',
+    featured: false,
+    description: 'Monitor enterprise SOC telemetry, conduct vulnerability assessments, and ensure ISO 27001 / SOC 2 compliance.'
+  },
+  {
+    id: '22',
+    title: 'Associate Technical Project Manager',
+    company: 'Wipro Technologies',
+    verified: true,
+    location: 'Vijayawada, Andhra Pradesh',
+    salary: '₹10 - ₹16 LPA',
+    salaryMin: 10,
+    salaryMax: 16,
+    experience: '3-5 Years',
+    type: 'Full-time',
+    workMode: 'Hybrid',
+    industry: 'Information Technology',
+    skills: ['Product Management', 'Analytics'],
+    matchScore: 84,
+    postedTime: 'Posted today',
+    featured: false,
+    description: 'Coordinate cross-functional delivery milestones, sprint backlogs, and client stakeholder communications across enterprise projects.'
   }
 ];
 
@@ -363,7 +591,7 @@ export default function JobsPage() {
     return result;
   }, [search, location, experience, salaryRange, jobType, workMode, industry, selectedSkill, sortBy]);
 
-  const PER_PAGE = 6;
+  const PER_PAGE = 9;
   const totalPages = Math.ceil(filteredJobs.length / PER_PAGE);
   const paginatedJobs = filteredJobs.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
@@ -534,11 +762,11 @@ export default function JobsPage() {
 
       {/* ── 2. Main Two-Column Layout: Filters on Left, Results on Right ── */}
       <div className="container" style={{ marginTop: 'var(--space-8)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 'var(--space-6)', alignItems: 'start' }}>
+        <div className="responsive-split-sidebar">
 
-          {/* Left Column: Filters Panel */}
-          <aside style={{ gridColumn: 'span 4' }} className="hide-mobile">
-            <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', border: '1px solid var(--color-border)', position: 'sticky', top: 90 }}>
+          {/* Left Column: Sticky Filters Panel */}
+          <aside className="sticky-filter-sidebar hide-mobile">
+            <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', border: '1px solid var(--color-border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--color-border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                   <Filter size={16} style={{ color: 'var(--color-primary-600)' }} />
@@ -679,7 +907,7 @@ export default function JobsPage() {
           </aside>
 
           {/* Right Column: Results Section */}
-          <main style={{ gridColumn: 'span 8' }} className="jobs-results-column">
+          <main style={{ minWidth: 0 }} className="jobs-results-column">
             {/* Results Header Bar */}
             <div style={{
               display: 'flex',
@@ -723,7 +951,7 @@ export default function JobsPage() {
               </div>
             </div>
 
-            {/* Jobs Cards List */}
+            {/* Jobs Cards Grid */}
             {filteredJobs.length === 0 ? (
               <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-12)' }}>
                 <EmptyState
@@ -734,7 +962,7 @@ export default function JobsPage() {
                 />
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <div className="responsive-card-grid">
                 {paginatedJobs.map((job) => {
                   const isSaved = savedJobIds.includes(job.id);
                   return (
@@ -744,15 +972,33 @@ export default function JobsPage() {
                       style={{
                         borderRadius: 'var(--radius-2xl)',
                         padding: 'var(--space-6)',
-                        border: '1px solid var(--color-border)',
-                        background: 'var(--color-surface)',
-                        transition: 'all var(--transition-base)'
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: 'var(--space-4)'
                       }}
                     >
-                      {/* Top Bar: Title & Save Button */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', marginBottom: 4 }}>
+                      <div>
+                        {/* Header: Company Avatar/Logo + Badges + Bookmark */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
+                          <div style={{
+                            width: 56,
+                            height: 56,
+                            borderRadius: 'var(--radius-xl)',
+                            background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-accent-500))',
+                            color: '#fff',
+                            fontSize: 'var(--text-2xl)',
+                            fontWeight: 800,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: 'var(--shadow-sm)',
+                            flexShrink: 0
+                          }}>
+                            {job.company?.[0] || 'J'}
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                             <span style={{
                               fontSize: '11px',
                               fontWeight: 800,
@@ -760,7 +1006,7 @@ export default function JobsPage() {
                               background: 'var(--color-primary-50)',
                               padding: '2px 8px',
                               borderRadius: 'var(--radius-full)',
-                              display: 'flex',
+                              display: 'inline-flex',
                               alignItems: 'center',
                               gap: 4
                             }}>
@@ -776,97 +1022,100 @@ export default function JobsPage() {
                                 padding: '2px 6px',
                                 borderRadius: 'var(--radius-md)'
                               }}>
-                                ★ Featured Hiring
+                                ★ Featured
+                              </span>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSave(job.id, job.title)}
+                              style={{
+                                background: isSaved ? 'var(--color-primary-50)' : 'none',
+                                border: 'none',
+                                color: isSaved ? 'var(--color-primary-600)' : 'var(--color-text-muted)',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                borderRadius: 'var(--radius-full)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              aria-label={isSaved ? 'Remove Bookmark' : 'Save Job'}
+                            >
+                              <Heart size={18} fill={isSaved ? 'currentColor' : 'none'} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Title */}
+                        <Link to={`/jobs/${job.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          <h3 style={{
+                            fontSize: 'var(--text-base)',
+                            fontWeight: 700,
+                            marginBottom: 4,
+                            lineHeight: 1.3,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}>
+                            {job.title}
+                          </h3>
+                        </Link>
+
+                        {/* Company */}
+                        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600, marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span>{job.company}</span>
+                          {job.verified && <ShieldCheck size={13} style={{ color: 'var(--color-primary-600)' }} />}
+                        </p>
+
+                        {/* Meta Info */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <MapPin size={13} style={{ flexShrink: 0 }} /> {job.location}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text)', fontWeight: 700 }}>
+                            <DollarSign size={13} style={{ flexShrink: 0 }} /> {job.salary}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Briefcase size={13} style={{ flexShrink: 0 }} /> {job.experience} • {job.type} ({job.workMode})
+                          </span>
+                        </div>
+
+                        {/* Skills Chips */}
+                        {job.skills && job.skills.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {job.skills.slice(0, 3).map((skill) => (
+                              <span
+                                key={skill}
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  color: 'var(--color-primary-800)',
+                                  background: 'var(--color-primary-50)',
+                                  padding: '2px 7px',
+                                  borderRadius: 'var(--radius-md)'
+                                }}
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                            {job.skills.length > 3 && (
+                              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', alignSelf: 'center', fontWeight: 600 }}>
+                                +{job.skills.length - 3}
                               </span>
                             )}
                           </div>
-
-                          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, color: 'var(--color-text)', marginBottom: 2 }}>
-                            <Link to={`/jobs/${job.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                              {job.title}
-                            </Link>
-                          </h3>
-
-                          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <strong style={{ color: 'var(--color-text)' }}>{job.company}</strong>
-                            {job.verified && <ShieldCheck size={14} style={{ color: 'var(--color-primary-600)' }} />}
-                          </p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleToggleSave(job.id, job.title)}
-                          style={{
-                            background: isSaved ? 'var(--color-primary-50)' : 'none',
-                            border: 'none',
-                            color: isSaved ? 'var(--color-primary-600)' : 'var(--color-text-muted)',
-                            cursor: 'pointer',
-                            padding: '6px',
-                            borderRadius: 'var(--radius-full)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                          aria-label={isSaved ? 'Remove Bookmark' : 'Save Job'}
-                        >
-                          <Heart size={18} fill={isSaved ? 'currentColor' : 'none'} />
-                        </button>
+                        )}
                       </div>
 
-                      {/* Key Attributes Row */}
+                      {/* Footer: Posted time & Action Buttons */}
                       <div style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: 'var(--space-3)',
-                        fontSize: 'var(--text-xs)',
-                        color: 'var(--color-text-muted)',
-                        margin: 'var(--space-3) 0',
-                        alignItems: 'center'
-                      }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <MapPin size={13} /> {job.location}
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700, color: 'var(--color-text)' }}>
-                          <DollarSign size={13} /> {job.salary}
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Briefcase size={13} /> {job.experience}
-                        </span>
-                        <span style={{ background: 'var(--color-gray-100)', padding: '2px 8px', borderRadius: 'var(--radius-md)', color: 'var(--color-text)' }}>
-                          {job.type}
-                        </span>
-                        <span style={{ background: 'var(--color-primary-50)', color: 'var(--color-primary-700)', padding: '2px 8px', borderRadius: 'var(--radius-md)', fontWeight: 600 }}>
-                          {job.workMode}
-                        </span>
-                      </div>
-
-                      {/* Skills Chips */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-1)', marginBottom: 'var(--space-4)' }}>
-                        {job.skills.map((skill) => (
-                          <span
-                            key={skill}
-                            style={{
-                              fontSize: '11px',
-                              fontWeight: 600,
-                              color: 'var(--color-primary-800)',
-                              background: 'var(--color-primary-50)',
-                              padding: '2px 8px',
-                              borderRadius: 'var(--radius-md)'
-                            }}
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Footer: Posted time & CTA */}
-                      <div style={{
+                        paddingTop: 'var(--space-4)',
+                        borderTop: '1px solid var(--color-gray-100)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        paddingTop: 'var(--space-3)',
-                        borderTop: '1px solid var(--color-gray-100)',
-                        flexWrap: 'wrap',
                         gap: 'var(--space-2)'
                       }}>
                         <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
@@ -897,10 +1146,8 @@ export default function JobsPage() {
                   totalPages={totalPages}
                   totalItems={filteredJobs.length}
                   pageSize={PER_PAGE}
-                  onPageChange={(p) => {
-                    setPage(p);
-                    window.scrollTo({ top: 180, behavior: 'smooth' });
-                  }}
+                  itemName="jobs"
+                  onPageChange={setPage}
                 />
               </div>
             )}

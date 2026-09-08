@@ -260,6 +260,7 @@ export default function CompaniesPage() {
                   totalPages={totalPages}
                   totalItems={filteredCompanies.length}
                   pageSize={PER_PAGE}
+                  itemName="companies"
                   onPageChange={setPage}
                 />
               </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search, MapPin, SlidersHorizontal, RotateCcw, GraduationCap,
@@ -28,6 +28,11 @@ export default function InternshipsPage() {
   const [selectedSkill, setSelectedSkill] = useState('');
   const [industry, setIndustry] = useState('');
   const [page, setPage] = useState(1);
+
+  // Reset pagination to page 1 whenever filters or search query change
+  useEffect(() => {
+    setPage(1);
+  }, [search, location, workMode, stipendRange, duration, selectedSkill, industry]);
 
   const handleReset = () => {
     setSearch('');

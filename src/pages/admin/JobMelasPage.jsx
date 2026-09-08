@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   CalendarDays, Plus, Search, Filter, Eye, Building2, MapPin,
   Clock, CheckCircle2, Ticket, XCircle, Inbox, Check, X, AlertCircle,
-  FileSpreadsheet, FileText
+  Pencil, Trash2, ExternalLink, Share2, Users, Briefcase,
+  ChevronLeft, ChevronRight, User, Phone, Mail, Award, DollarSign
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -13,10 +14,9 @@ import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
-import ExportDropdown from '../../components/ui/ExportDropdown';
+import Pagination from '../../components/ui/Pagination';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
-import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminJobMelasPage() {
   const { addToast } = useToast();
@@ -26,8 +26,13 @@ export default function AdminJobMelasPage() {
     companies,
     registrations,
     approveJobMela,
-    rejectJobMela
+    rejectJobMela,
+    addCompanyToJobMela,
+    updateCompanyInJobMela,
+    removeCompanyFromJobMela
   } = useAdmin();
+
+  const location = useLocation();
 
   // Three primary actions state: 'ADMIN_CREATED' | 'REQUESTS'
   const [activeAction, setActiveAction] = useState('ADMIN_CREATED');
@@ -40,6 +45,85 @@ export default function AdminJobMelasPage() {
   // Main event view modal
   const [selectedMela, setSelectedMela] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+
+  // Participating Company filtering, search & pagination within modal
+  const [companySearch, setCompanySearch] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('ALL');
+  const [companyPage, setCompanyPage] = useState(1);
+  const [companyPageSize, setCompanyPageSize] = useState(25);
+
+  // View Company Details modal state
+  const [viewingCompany, setViewingCompany] = useState(null);
+  const [companyDetailsModalOpen, setCompanyDetailsModalOpen] = useState(false);
+
+  // Add / Edit Participating Company Modal states
+  const [companyModalOpen, setCompanyModalOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState(null);
+  const [companyFormData, setCompanyFormData] = useState({
+    company: '',
+    companyId: '',
+    recruiter: '',
+    position: '',
+    qualification: '',
+    experience: '',
+    salary: '',
+    vacancies: '15',
+    location: '',
+    notes: ''
+  });
+
+  // Registered candidates modal state for specific Job Mela
+  const [selectedMelaForRegs, setSelectedMelaForRegs] = useState(null);
+  const [melaRegistrationsOpen, setMelaRegistrationsOpen] = useState(false);
+  const [candidateSearch, setCandidateSearch] = useState('');
+  const [candidateStatusFilter, setCandidateStatusFilter] = useState('ALL');
+  const [candidatePage, setCandidatePage] = useState(1);
+  const [candidatePageSize, setCandidatePageSize] = useState(10);
+  const [selectedPass, setSelectedPass] = useState(null);
+  const [passModalOpen, setPassModalOpen] = useState(false);
+
+  const handleOpenMelaRegistrations = (mela) => {
+    setSelectedMelaForRegs(mela);
+    setCandidateSearch('');
+    setCandidateStatusFilter('ALL');
+    setCandidatePage(1);
+    setMelaRegistrationsOpen(true);
+  };
+
+  // Reset company pagination and search whenever selectedMela changes
+  const handleOpenMelaManagement = (mela) => {
+    setSelectedMela(mela);
+    setCompanySearch('');
+    setCompanyFilter('ALL');
+    setCompanyPage(1);
+    setViewModalOpen(true);
+  };
+
+  // Automatically open management view if navigated from create event
+  useEffect(() => {
+    if (location.state?.openMelaId) {
+      const targetMela = jobMelas.find(m => m.id === location.state.openMelaId);
+      if (targetMela) {
+        handleOpenMelaManagement(targetMela);
+      }
+    }
+  }, [location.state, jobMelas]);
+
+  // Keep selectedMela and selectedMelaForRegs in sync with jobMelas context updates
+  useEffect(() => {
+    if (selectedMela) {
+      const current = jobMelas.find(m => m.id === selectedMela.id);
+      if (current) {
+        setSelectedMela(current);
+      }
+    }
+    if (selectedMelaForRegs) {
+      const currentReg = jobMelas.find(m => m.id === selectedMelaForRegs.id);
+      if (currentReg) {
+        setSelectedMelaForRegs(currentReg);
+      }
+    }
+  }, [jobMelas]);
 
   // Request details modal
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -98,76 +182,29 @@ export default function AdminJobMelasPage() {
     return true;
   });
 
-  const currentList = activeAction === 'ADMIN_CREATED' ? filteredAdminMelas : filteredRequests;
+  const PAGE_SIZE = 10;
+  const [adminMelasPage, setAdminMelasPage] = useState(1);
+  const [requestsPage, setRequestsPage] = useState(1);
 
-  const handleExportMainExcel = () => {
-    if (currentList.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting Job Melas list to Excel...', 'info');
-    const headers = [
-      'Job Mela Name',
-      'Event Date',
-      'Time',
-      'Venue',
-      'Location / City',
-      'Organizing Authority',
-      'Status',
-      'Participating Companies',
-      'Registered Candidates'
-    ];
-    const rows = currentList.map(m => [
-      m.event || m.title || 'Job Mela Event',
-      m.date ? new Date(m.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept 2026',
-      m.time || '09:00 AM - 05:00 PM',
-      m.venue || m.location || 'Convention Center',
-      m.location || 'Andhra Pradesh',
-      m.organizer || 'NTR Vikasa Authority',
-      m.status || 'UPCOMING',
-      m.companiesCount || (Array.isArray(m.companies) ? m.companies.length : 35),
-      m.registeredCandidatesCount || m.registeredCandidates || 1200
-    ]);
-    exportToExcel({
-      filename: getExportFilename('job_melas', activeAction === 'ADMIN_CREATED' ? statusFilter.toLowerCase() : requestStatusTab.toLowerCase(), 'xlsx'),
-      sheetName: 'Job Melas',
-      headers,
-      rows
-    });
-    addToast('Excel export downloaded successfully!', 'success');
-  };
+  useEffect(() => {
+    setAdminMelasPage(1);
+  }, [search, statusFilter, activeAction]);
 
-  const handleExportMainPdf = () => {
-    if (currentList.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting Job Melas list to PDF...', 'info');
-    const headers = ['Event Name', 'Date', 'Location', 'Organizer', 'Status', 'Companies', 'Registrations'];
-    const rows = currentList.map(m => [
-      m.event || m.title || 'Job Mela Event',
-      m.date ? new Date(m.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept 2026',
-      m.location || 'Andhra Pradesh',
-      m.organizer || 'NTR Vikasa Authority',
-      m.status || 'UPCOMING',
-      m.companiesCount || (Array.isArray(m.companies) ? m.companies.length : 35),
-      m.registeredCandidatesCount || m.registeredCandidates || 1200
-    ]);
-    const currentFilterTitle = activeAction === 'ADMIN_CREATED' ? statusFilter : requestStatusTab;
-    exportToPDF({
-      filename: getExportFilename('job_melas', currentFilterTitle.toLowerCase(), 'pdf'),
-      title: activeAction === 'ADMIN_CREATED' ? 'Job Melas & Career Summits' : 'Job Mela Event Requests',
-      subtitle: `Status: ${currentFilterTitle === 'ALL' ? 'All Events' : currentFilterTitle}`,
-      metadata: {
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Status Filter': currentFilterTitle === 'ALL' ? 'All Events' : currentFilterTitle,
-        'Total Records': currentList.length
-      },
-      headers,
-      rows
-    });
-    addToast('PDF export downloaded successfully!', 'success');
-  };
+  useEffect(() => {
+    setRequestsPage(1);
+  }, [search, requestStatusTab, activeAction]);
+
+  const totalAdminMelasPages = Math.max(1, Math.ceil(filteredAdminMelas.length / PAGE_SIZE));
+  const paginatedAdminMelas = useMemo(() => {
+    const startIndex = (adminMelasPage - 1) * PAGE_SIZE;
+    return filteredAdminMelas.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredAdminMelas, adminMelasPage]);
+
+  const totalRequestsPages = Math.max(1, Math.ceil(filteredRequests.length / PAGE_SIZE));
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (requestsPage - 1) * PAGE_SIZE;
+    return filteredRequests.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredRequests, requestsPage]);
 
   // Scoped helper for individual mela candidates
   const getScopedMelaCandidates = (mela) => {
@@ -177,181 +214,139 @@ export default function AdminJobMelasPage() {
       const regEvent = (r.event || r.eventName || '').toLowerCase();
       return regEvent.includes(eventQuery) || eventQuery.includes(regEvent);
     });
-    if (matching.length > 0) return matching;
+    if (matching.length > 0) {
+      return matching.map((r, idx) => ({
+        ...r,
+        id: r.id || `REG-${mela.id || 'MELA'}-${1000 + idx}`,
+        candidate: r.candidate || r.candidateName || 'Candidate',
+        candidateEmail: r.candidateEmail || r.email || 'candidate@example.com',
+        phone: r.phone || '+91 98765 43210',
+        entryToken: r.entryToken || `TKN-${(mela.location || 'AP').substring(0, 3).toUpperCase()}-${String(100 + idx).padStart(4, '0')}`,
+        gateNumber: r.gateNumber || (idx % 2 === 0 ? 'Gate 1 (Main Hall)' : 'Gate 2 (Tech Wing)'),
+        registrationDate: r.registrationDate || r.registeredDate || '2026-08-28',
+        status: r.status || 'CONFIRMED',
+        event: mela.event || mela.title
+      }));
+    }
     return (candidates || []).slice(0, 10).map((c, idx) => ({
       id: `REG-${mela.id || 'MELA'}-${1000 + idx}`,
       candidate: c.name,
       candidateEmail: c.email,
       phone: c.phone || '+91 98765 43210',
       registrationDate: c.registrationDate || '2026-08-28',
-      status: 'CONFIRMED',
+      status: idx % 4 === 3 ? 'WAITLISTED' : 'CONFIRMED',
       event: mela.event || mela.title,
-      position: c.headline || 'Software Engineer'
+      position: c.headline || 'Software Engineer',
+      entryToken: `TKN-${(mela.location || 'AP').substring(0, 3).toUpperCase()}-${String(100 + idx).padStart(4, '0')}`,
+      gateNumber: idx % 2 === 0 ? 'Gate 1 (Main Hall)' : 'Gate 2 (Tech Wing)'
     }));
   };
 
   // Scoped helper for individual mela participating companies
   const getScopedMelaCompanies = (mela) => {
     if (!mela) return [];
-    return (companies || []).map((comp, idx) => ({
-      company: comp.name,
-      position: idx % 2 === 0 ? 'Software Engineer / Graduate Trainee' : 'Operations Specialist & Analyst',
-      qualification: 'B.Tech / B.Sc / Any Degree',
-      experience: '0-3 Years',
-      salary: '₹3,50,000 - ₹8,00,000 / year',
-      vacancies: 15 + (idx * 5),
-      applications: 45 + (idx * 12),
-      location: mela.location || comp.location || 'On-site Mela Stalls',
-      notes: comp.verificationStatus === 'VERIFIED' ? 'Verified Participant' : 'Pending Verification'
-    }));
+    const baseList = (Array.isArray(mela.participatingCompanies) && mela.participatingCompanies.length > 0)
+      ? mela.participatingCompanies
+      : (companies || []).map((comp, idx) => ({
+          id: `pmc-default-${idx}`,
+          companyId: comp.id,
+          company: comp.name,
+          recruiter: comp.recruiter || 'Talent Acquisition Lead',
+          position: idx % 2 === 0 ? 'Software Engineer / Graduate Trainee' : 'Operations Specialist & Analyst',
+          qualification: 'B.Tech / B.Sc / Any Degree',
+          experience: '0-3 Years',
+          salary: '₹3,50,000 - ₹8,00,000 / year',
+          vacancies: 15 + (idx * 5),
+          applications: 45 + (idx * 12),
+          location: mela.location || comp.location || 'On-site Mela Stalls',
+          notes: comp.verificationStatus === 'VERIFIED' ? 'Verified Participant' : 'Pending Verification'
+        }));
+
+    return baseList.map(item => {
+      if (!item.recruiter) {
+        const found = companies.find(c => c.id === item.companyId || c.name === item.company);
+        return { ...item, recruiter: found?.recruiter || 'Talent Acquisition Lead' };
+      }
+      return item;
+    });
   };
 
-  const handleExportMelaCandidatesExcel = () => {
+  const handleOpenViewCompany = (companyRow) => {
+    setViewingCompany(companyRow);
+    setCompanyDetailsModalOpen(true);
+  };
+
+  const handleOpenAddCompany = () => {
+    setEditingCompany(null);
+    setCompanyFormData({
+      company: companies?.[0]?.name || '',
+      companyId: companies?.[0]?.id || '',
+      recruiter: companies?.[0]?.recruiter || 'Talent Acquisition Lead',
+      position: '',
+      qualification: 'B.Tech / B.E / MCA / Any Graduate',
+      experience: '0-2 Years',
+      salary: '₹4,00,000 - ₹7,00,000 / year',
+      vacancies: '15',
+      location: selectedMela?.venue ? `${selectedMela.venue}, Stall A-1` : 'Stall A-1 (Hall 1)',
+      notes: 'Direct walk-in technical interview.'
+    });
+    setCompanyModalOpen(true);
+  };
+
+  const handleOpenEditCompany = (companyRow) => {
+    setEditingCompany(companyRow);
+    setCompanyFormData({
+      company: companyRow.company || '',
+      companyId: companyRow.companyId || '',
+      recruiter: companyRow.recruiter || '',
+      position: companyRow.position || '',
+      qualification: companyRow.qualification || '',
+      experience: companyRow.experience || '',
+      salary: companyRow.salary || '',
+      vacancies: String(companyRow.vacancies || '10'),
+      location: companyRow.location || '',
+      notes: companyRow.notes || ''
+    });
+    setCompanyModalOpen(true);
+  };
+
+  const handleRemoveCompany = (companyRow) => {
     if (!selectedMela) return;
-    const records = getScopedMelaCandidates(selectedMela);
-    if (records.length === 0) {
-      addToast('No registered candidates available for this Job Mela.', 'info');
+    removeCompanyFromJobMela(selectedMela.id, companyRow.id);
+    addToast(`Removed ${companyRow.company} from this Job Mela.`, 'info');
+  };
+
+  const handleSaveCompany = (e) => {
+    e.preventDefault();
+    if (!selectedMela) return;
+    if (!companyFormData.company.trim() || !companyFormData.position.trim()) {
+      addToast('Please enter company name and hiring position/role.', 'error');
       return;
     }
-    addToast('Exporting registered candidates to Excel...', 'info');
-    const headers = ['Registration ID', 'Candidate Name', 'Email', 'Phone', 'Registration Date', 'Registration Status', 'Job Mela'];
-    const rows = records.map(r => [
-      r.id || 'REG-N/A',
-      r.candidate || r.candidateName || r.name || 'Candidate',
-      r.candidateEmail || r.email || 'N/A',
-      r.phone || '+91 98765 43210',
-      r.registrationDate || 'Aug 2026',
-      r.status || 'CONFIRMED',
-      selectedMela.event || selectedMela.title || 'Job Mela'
-    ]);
-    const melaSlug = (selectedMela.event || selectedMela.title || 'mela').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
-    exportToExcel({
-      filename: `${melaSlug}_registered_candidates.xlsx`,
-      sheetName: 'Registered Candidates',
-      headers,
-      rows
-    });
-    addToast('Candidates Excel export downloaded!', 'success');
+
+    if (editingCompany) {
+      updateCompanyInJobMela(selectedMela.id, editingCompany.id, companyFormData);
+      addToast(`Updated participation details for ${companyFormData.company}.`, 'success');
+      if (viewingCompany?.id === editingCompany.id) {
+        setViewingCompany({ ...viewingCompany, ...companyFormData });
+      }
+    } else {
+      const currentList = Array.isArray(selectedMela.participatingCompanies) ? selectedMela.participatingCompanies : [];
+      const duplicate = currentList.some(
+        c => c.company.toLowerCase() === companyFormData.company.toLowerCase() &&
+             c.position.toLowerCase() === companyFormData.position.toLowerCase()
+      );
+      if (duplicate) {
+        addToast('This company with this specific role is already added to this Job Mela.', 'error');
+        return;
+      }
+      addCompanyToJobMela(selectedMela.id, companyFormData);
+      addToast(`Added ${companyFormData.company} to ${selectedMela.event || selectedMela.title}!`, 'success');
+    }
+
+    setCompanyModalOpen(false);
   };
 
-  const handleExportMelaCandidatesPdf = () => {
-    if (!selectedMela) return;
-    const records = getScopedMelaCandidates(selectedMela);
-    if (records.length === 0) {
-      addToast('No registered candidates available for this Job Mela.', 'info');
-      return;
-    }
-    addToast('Exporting registered candidates to PDF...', 'info');
-    const headers = ['Reg ID', 'Candidate Name', 'Email', 'Phone', 'Date', 'Status'];
-    const rows = records.map(r => [
-      r.id || 'REG-N/A',
-      r.candidate || r.candidateName || r.name || 'Candidate',
-      r.candidateEmail || r.email || 'N/A',
-      r.phone || '+91 98765 43210',
-      r.registrationDate || 'Aug 2026',
-      r.status || 'CONFIRMED'
-    ]);
-    const melaSlug = (selectedMela.event || selectedMela.title || 'mela').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
-    exportToPDF({
-      filename: `${melaSlug}_registered_candidates.pdf`,
-      title: `${selectedMela.event || selectedMela.title} — Registered Candidates`,
-      subtitle: `Venue: ${selectedMela.venue || selectedMela.location} | Date: ${selectedMela.date || '15 Sept 2026'}`,
-      metadata: {
-        'Job Mela': selectedMela.event || selectedMela.title,
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Total Candidates': records.length
-      },
-      headers,
-      rows
-    });
-    addToast('Candidates PDF export downloaded!', 'success');
-  };
-
-  const handleExportMelaCompaniesExcel = () => {
-    if (!selectedMela) return;
-    const records = getScopedMelaCompanies(selectedMela);
-    if (records.length === 0) {
-      addToast('No participating companies available for this Job Mela.', 'info');
-      return;
-    }
-    addToast('Exporting participating companies to Excel...', 'info');
-    const headers = ['Company', 'Position / Role', 'Qualification', 'Experience', 'Salary', 'Vacancies', 'Applications', 'Location', 'Notes'];
-    const rows = records.map(c => [
-      c.company,
-      c.position,
-      c.qualification,
-      c.experience,
-      c.salary,
-      c.vacancies,
-      c.applications,
-      c.location,
-      c.notes
-    ]);
-    const melaSlug = (selectedMela.event || selectedMela.title || 'mela').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
-    exportToExcel({
-      filename: `${melaSlug}_participating_companies.xlsx`,
-      sheetName: 'Participating Companies',
-      headers,
-      rows
-    });
-    addToast('Participating companies Excel downloaded!', 'success');
-  };
-
-  const handleExportMelaCompaniesPdf = () => {
-    if (!selectedMela) return;
-    const records = getScopedMelaCompanies(selectedMela);
-    if (records.length === 0) {
-      addToast('No participating companies available for this Job Mela.', 'info');
-      return;
-    }
-    addToast('Exporting participating companies to PDF...', 'info');
-    const headers = ['Company', 'Role', 'Experience', 'Salary', 'Vacancies', 'Location'];
-    const rows = records.map(c => [
-      c.company,
-      c.position,
-      c.experience,
-      c.salary,
-      c.vacancies,
-      c.location
-    ]);
-    const melaSlug = (selectedMela.event || selectedMela.title || 'mela').toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 30);
-    exportToPDF({
-      filename: `${melaSlug}_participating_companies.pdf`,
-      title: `${selectedMela.event || selectedMela.title} — Participating Companies`,
-      subtitle: `Venue: ${selectedMela.venue || selectedMela.location} | Date: ${selectedMela.date || '15 Sept 2026'}`,
-      metadata: {
-        'Job Mela': selectedMela.event || selectedMela.title,
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Total Companies': records.length
-      },
-      headers,
-      rows
-    });
-    addToast('Participating companies PDF downloaded!', 'success');
-  };
-
-  const individualMelaExportItems = [
-    {
-      label: 'Registered Candidates - Excel (.xlsx)',
-      icon: <FileSpreadsheet size={15} style={{ color: '#16a34a' }} />,
-      onClick: handleExportMelaCandidatesExcel
-    },
-    {
-      label: 'Registered Candidates - PDF (.pdf)',
-      icon: <FileText size={15} style={{ color: '#dc2626' }} />,
-      onClick: handleExportMelaCandidatesPdf
-    },
-    {
-      label: 'Participating Companies - Excel (.xlsx)',
-      icon: <FileSpreadsheet size={15} style={{ color: '#16a34a' }} />,
-      onClick: handleExportMelaCompaniesExcel
-    },
-    {
-      label: 'Participating Companies - PDF (.pdf)',
-      icon: <FileText size={15} style={{ color: '#dc2626' }} />,
-      onClick: handleExportMelaCompaniesPdf
-    }
-  ];
 
   const handleApprove = (m) => {
     approveJobMela(m.id);
@@ -417,13 +412,41 @@ export default function AdminJobMelasPage() {
       key: 'companies',
       label: 'Companies',
       render: (v, row) => {
-        const count = typeof v === 'number' ? v : (Array.isArray(v) ? v.length : 35);
+        const count = Array.isArray(row.participatingCompanies)
+          ? row.participatingCompanies.length
+          : (typeof v === 'number' ? v : (Array.isArray(v) ? v.length : (row.companiesCount || 0)));
         return (
-          <Link to="/admin/job-melas/participation" style={{ textDecoration: 'none' }}>
-            <span className="badge badge-primary" style={{ cursor: 'pointer' }}>
-              <Building2 size={12} style={{ marginRight: 4 }} /> {count} Companies
+          <button
+            type="button"
+            onClick={() => handleOpenMelaManagement(row)}
+            title="Click to view all participating companies"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}
+          >
+            <span
+              className="badge badge-primary"
+              style={{
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '4px 10px',
+                fontSize: '11px',
+                fontWeight: 700,
+                transition: 'transform 120ms ease, box-shadow 120ms ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              <Building2 size={13} /> {count} Companies
             </span>
-          </Link>
+          </button>
         );
       }
     },
@@ -439,14 +462,12 @@ export default function AdminJobMelasPage() {
         <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
           <Button
             size="xs"
-            variant="outline"
-            leftIcon={<Eye size={12} />}
-            onClick={() => {
-              setSelectedMela(row);
-              setViewModalOpen(true);
-            }}
+            variant="secondary"
+            leftIcon={<Users size={12} />}
+            onClick={() => handleOpenMelaRegistrations(row)}
+            title="View candidates registered for this Job Mela"
           >
-            View
+            Registrations
           </Button>
 
           {row.status !== 'APPROVED' && row.status !== 'UPCOMING' && (
@@ -468,12 +489,6 @@ export default function AdminJobMelasPage() {
               Reject
             </Button>
           )}
-
-          <Link to="/admin/registrations" style={{ textDecoration: 'none' }}>
-            <Button size="xs" variant="secondary">
-              Manage
-            </Button>
-          </Link>
         </div>
       )
     }
@@ -662,12 +677,6 @@ export default function AdminJobMelasPage() {
                     </button>
                   ))}
                 </div>
-
-                <ExportDropdown
-                  onExportExcel={handleExportMainExcel}
-                  onExportPdf={handleExportMainPdf}
-                  disabled={filteredAdminMelas.length === 0}
-                />
               </div>
             </div>
           </div>
@@ -681,7 +690,16 @@ export default function AdminJobMelasPage() {
                 description="No admin-created job mela events match your search or status filter."
               />
             ) : (
-              <Table columns={adminColumns} data={filteredAdminMelas} />
+              <>
+                <Table columns={adminColumns} data={paginatedAdminMelas} />
+                <Pagination
+                  currentPage={adminMelasPage}
+                  totalPages={totalAdminMelasPages}
+                  totalItems={filteredAdminMelas.length}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setAdminMelasPage}
+                />
+              </>
             )}
           </div>
         </>
@@ -734,12 +752,6 @@ export default function AdminJobMelasPage() {
                     </button>
                   ))}
                 </div>
-
-                <ExportDropdown
-                  onExportExcel={handleExportMainExcel}
-                  onExportPdf={handleExportMainPdf}
-                  disabled={filteredRequests.length === 0}
-                />
               </div>
             </div>
           </div>
@@ -753,105 +765,844 @@ export default function AdminJobMelasPage() {
                 description="No external organization requests match your search or filter."
               />
             ) : (
-              <Table columns={requestColumns} data={filteredRequests} />
+              <>
+                <Table columns={requestColumns} data={paginatedRequests} />
+                <Pagination
+                  currentPage={requestsPage}
+                  totalPages={totalRequestsPages}
+                  totalItems={filteredRequests.length}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setRequestsPage}
+                />
+              </>
             )}
           </div>
         </>
       )}
 
-      {/* ── 1. Event Details View Modal ── */}
+      {/* ── 1. Job Mela Management View Modal ── */}
       {viewModalOpen && selectedMela && (
         <Modal
           isOpen={viewModalOpen}
           onClose={() => setViewModalOpen(false)}
-          title={`Job Mela Event: ${selectedMela.event || selectedMela.title}`}
-          size="lg"
+          title={`Job Mela Management: ${selectedMela.event || selectedMela.title}`}
+          size="xl"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-            {/* Header Badge */}
+            
+            {/* ── Event Summary Section ── */}
+            <div style={{
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+              color: '#fff',
+              padding: 'var(--space-6)',
+              borderRadius: 'var(--radius-xl)',
+              position: 'relative'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-4)' }}>
+                  <div style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 'var(--radius-xl)',
+                    background: 'rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <CalendarDays size={28} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 4, flexWrap: 'wrap' }}>
+                      <StatusBadge status={selectedMela.status || 'UPCOMING'} />
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        ID: {selectedMela.id}
+                      </span>
+                    </div>
+                    <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, margin: 0, color: '#fff' }}>
+                      {selectedMela.event || selectedMela.title}
+                    </h2>
+                    <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '4px 0 0 0' }}>
+                      📍 {selectedMela.venue || selectedMela.location} • {selectedMela.city || selectedMela.location}, {selectedMela.state || ''}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Link to={`/job-melas/${selectedMela.id}`} target="_blank" style={{ textDecoration: 'none' }}>
+                    <Button size="xs" variant="secondary" leftIcon={<ExternalLink size={12} />}>
+                      Public Page
+                    </Button>
+                  </Link>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    leftIcon={<Share2 size={12} />}
+                    style={{ color: '#fff', background: 'rgba(255,255,255,0.1)' }}
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(`${window.location.origin}/job-melas/${selectedMela.id}`);
+                        addToast('Job Mela public link copied to clipboard!', 'info');
+                      }
+                    }}
+                  >
+                    Share Link
+                  </Button>
+                </div>
+              </div>
+
+              {/* Event Metadata Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: 'var(--space-3)',
+                marginTop: 'var(--space-5)',
+                paddingTop: 'var(--space-4)',
+                borderTop: '1px solid rgba(255,255,255,0.12)',
+                fontSize: 'var(--text-xs)'
+              }}>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Event Schedule</span>
+                  <strong style={{ color: '#f8fafc' }}>
+                    📅 {selectedMela.date ? new Date(selectedMela.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept 2026'}
+                  </strong>
+                  <div style={{ color: '#cbd5e1', fontSize: '11px' }}>⏰ {selectedMela.time || '09:00 AM - 05:00 PM'}</div>
+                </div>
+
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Registration Window</span>
+                  <strong style={{ color: '#f8fafc' }}>
+                    {selectedMela.regStartDate ? new Date(selectedMela.regStartDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '01 Aug'} – {selectedMela.regEndDate ? new Date(selectedMela.regEndDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : (selectedMela.registrationDeadline || '15 Sept 2026')}
+                  </strong>
+                  <div style={{ color: '#cbd5e1', fontSize: '11px' }}>Capacity: {selectedMela.maxCapacity || selectedMela.seats || 5000} Candidates</div>
+                </div>
+
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Turnout & Scale</span>
+                  <strong style={{ color: '#38bdf8' }}>
+                    👥 {selectedMela.registeredCandidatesCount || selectedMela.registeredCandidates || 1420} Registered Passes
+                  </strong>
+                  <div style={{ color: '#cbd5e1', fontSize: '11px' }}>
+                    🏢 {selectedMela.participatingCompanies ? selectedMela.participatingCompanies.length : (selectedMela.companiesCount || 0)} Participating Companies
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Organizing Authority</span>
+                  <strong style={{ color: '#f8fafc' }}>{selectedMela.organizer || 'NTR Vikasa State Employment Authority'}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Participating Companies Section ── */}
+            <div className="card" style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
+              
+              {/* Header with Title and Counts */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: 'var(--space-4) var(--space-5)',
+                background: 'var(--color-surface)',
+                borderBottom: '1px solid var(--color-border)',
+                flexWrap: 'wrap',
+                gap: 'var(--space-3)'
+              }}>
+                <div>
+                  <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <Building2 size={18} style={{ color: 'var(--color-primary-600)' }} />
+                    Participating Companies — {getScopedMelaCompanies(selectedMela).length}
+                  </h3>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
+                    Corporate recruiters, hiring positions, vacancy quotas, and booth allocations for this Job Mela.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    leftIcon={<Plus size={14} />}
+                    onClick={handleOpenAddCompany}
+                  >
+                    + Add Company
+                  </Button>
+                </div>
+              </div>
+
+              {/* Search & Filter Toolbar */}
+              <div style={{
+                padding: 'var(--space-3) var(--space-5)',
+                background: 'var(--color-gray-50)',
+                borderBottom: '1px solid var(--color-border)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 'var(--space-3)'
+              }}>
+                {/* Search Bar */}
+                <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: 380 }}>
+                  <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search company, recruiter, position, qualification..."
+                    value={companySearch}
+                    onChange={(e) => {
+                      setCompanySearch(e.target.value);
+                      setCompanyPage(1);
+                    }}
+                    className="form-control"
+                    style={{ width: '100%', paddingLeft: 32, paddingRight: companySearch ? 28 : 10, height: 34, fontSize: 'var(--text-xs)', borderRadius: 'var(--radius-md)' }}
+                  />
+                  {companySearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCompanySearch('');
+                        setCompanyPage(1);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: 8,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                        padding: 2
+                      }}
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Tabs & Page Size */}
+                <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-1)', alignItems: 'center' }}>
+                    {[
+                      { key: 'ALL', label: `All (${getScopedMelaCompanies(selectedMela).length})` },
+                      { key: 'ACTIVE', label: `Active (${getScopedMelaCompanies(selectedMela).length})` },
+                      { key: 'HIGH_VACANCIES', label: `50+ Vacancies (${getScopedMelaCompanies(selectedMela).filter(c => (Number(c.vacancies) || 0) >= 50).length})` }
+                    ].map(tab => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => {
+                          setCompanyFilter(tab.key);
+                          setCompanyPage(1);
+                        }}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: companyFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                          background: companyFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                          color: companyFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
+                          transition: 'all 120ms ease'
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Page Size Selector */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                    <span>Show:</span>
+                    <select
+                      value={companyPageSize}
+                      onChange={(e) => {
+                        setCompanyPageSize(Number(e.target.value));
+                        setCompanyPage(1);
+                      }}
+                      className="form-control"
+                      style={{ height: 30, padding: '2px 8px', fontSize: '11px', borderRadius: 'var(--radius-md)', fontWeight: 600 }}
+                    >
+                      <option value={10}>10 / page</option>
+                      <option value={25}>25 / page</option>
+                      <option value={50}>50 / page</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Companies Table / List */}
+              <div style={{ padding: 0 }}>
+                {(() => {
+                  const currentMelaCompanies = getScopedMelaCompanies(selectedMela);
+                  const filteredMelaCompanies = currentMelaCompanies.filter(c => {
+                    if (companySearch.trim()) {
+                      const q = companySearch.toLowerCase();
+                      const matchComp = (c.company || '').toLowerCase().includes(q);
+                      const matchRec = (c.recruiter || '').toLowerCase().includes(q);
+                      const matchPos = (c.position || '').toLowerCase().includes(q);
+                      const matchQual = (c.qualification || '').toLowerCase().includes(q);
+                      const matchLoc = (c.location || '').toLowerCase().includes(q);
+                      const matchNotes = (c.notes || '').toLowerCase().includes(q);
+                      if (!matchComp && !matchRec && !matchPos && !matchQual && !matchLoc && !matchNotes) return false;
+                    }
+                    if (companyFilter === 'HIGH_VACANCIES') {
+                      const v = Number(c.vacancies) || 0;
+                      return v >= 50;
+                    }
+                    return true;
+                  });
+
+                  const totalFiltered = filteredMelaCompanies.length;
+                  const totalPages = Math.max(1, Math.ceil(totalFiltered / companyPageSize));
+                  const safePage = Math.min(Math.max(1, companyPage), totalPages);
+                  const startIdx = (safePage - 1) * companyPageSize;
+                  const paginatedRows = filteredMelaCompanies.slice(startIdx, startIdx + companyPageSize);
+
+                  if (totalFiltered === 0) {
+                    return (
+                      <div style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
+                        <EmptyState
+                          icon={<Building2 size={36} style={{ color: 'var(--color-primary-500)' }} />}
+                          title="No Participating Companies Found"
+                          description={companySearch ? `No companies match your search "${companySearch}". Try a different keyword.` : "No participating companies added yet."}
+                        />
+                        <div style={{ marginTop: 'var(--space-4)', display: 'flex', gap: 'var(--space-2)', justifyContent: 'center' }}>
+                          {companySearch && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setCompanySearch('');
+                                setCompanyFilter('ALL');
+                                setCompanyPage(1);
+                              }}
+                            >
+                              Clear Search Filter
+                            </Button>
+                          )}
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            leftIcon={<Plus size={14} />}
+                            onClick={handleOpenAddCompany}
+                          >
+                            + Add Company
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: 'var(--color-gray-50)', borderBottom: '1px solid var(--color-border)', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                              <th style={{ padding: '10px 12px', width: 44 }}>#</th>
+                              <th style={{ padding: '10px 14px' }}>Company</th>
+                              <th style={{ padding: '10px 14px' }}>Recruiter</th>
+                              <th style={{ padding: '10px 14px' }}>Position(s)</th>
+                              <th style={{ padding: '10px 14px' }}>Qualification</th>
+                              <th style={{ padding: '10px 14px' }}>Experience</th>
+                              <th style={{ padding: '10px 14px' }}>Salary</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'center' }}>Vacancies</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'center' }}>Applications</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'right' }}>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedRows.map((c, idx) => {
+                              const rowIndex = startIdx + idx + 1;
+                              const companyInitial = (c.company || 'C').charAt(0).toUpperCase();
+                              return (
+                                <tr key={c.id || idx} style={{ borderBottom: '1px solid var(--color-border)', fontSize: 'var(--text-xs)' }}>
+                                  <td style={{ padding: '10px 12px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                                    {rowIndex}
+                                  </td>
+                                  <td style={{ padding: '10px 14px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                                      <div style={{
+                                        width: 30,
+                                        height: 30,
+                                        borderRadius: 'var(--radius-md)',
+                                        background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-800))',
+                                        color: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 800,
+                                        fontSize: '13px',
+                                        flexShrink: 0
+                                      }}>
+                                        {companyInitial}
+                                      </div>
+                                      <div>
+                                        <strong style={{ display: 'block', color: 'var(--color-text)' }}>{c.company}</strong>
+                                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>📍 {c.location || 'On-site Pavilion'}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '10px 14px', color: 'var(--color-text)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                                      <User size={13} style={{ color: 'var(--color-primary-600)' }} />
+                                      {c.recruiter || 'Talent Acquisition Lead'}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '10px 14px', color: 'var(--color-primary-700)', fontWeight: 700 }}>
+                                    {c.position}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', color: 'var(--color-text-muted)' }}>
+                                    {c.qualification || 'Any Degree'}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', color: 'var(--color-text-muted)' }}>
+                                    {c.experience || '0-2 Years'}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--color-text)' }}>
+                                    {c.salary || 'Best in Industry'}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                    <span className="badge badge-success" style={{ fontSize: '11px', fontWeight: 700 }}>
+                                      {c.vacancies || 10} Slots
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                    <span style={{ fontWeight: 800, color: 'var(--color-primary-600)', fontSize: '12px' }}>
+                                      {c.applications || 0}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                                    <div style={{ display: 'inline-flex', gap: 'var(--space-1)', alignItems: 'center' }}>
+                                      <Button
+                                        size="xs"
+                                        variant="primary"
+                                        leftIcon={<Eye size={12} />}
+                                        onClick={() => handleOpenViewCompany(c)}
+                                        title="View Company & Role Details"
+                                      >
+                                        View
+                                      </Button>
+                                      <Button
+                                        size="xs"
+                                        variant="outline"
+                                        iconOnly
+                                        leftIcon={<Pencil size={12} />}
+                                        onClick={() => handleOpenEditCompany(c)}
+                                        title="Edit Company Details"
+                                      />
+                                      <Button
+                                        size="xs"
+                                        variant="danger"
+                                        iconOnly
+                                        leftIcon={<Trash2 size={12} />}
+                                        onClick={() => handleRemoveCompany(c)}
+                                        title="Remove Company from Job Mela"
+                                      />
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination Bar */}
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: 'var(--space-3) var(--space-5)',
+                        background: 'var(--color-gray-50)',
+                        borderTop: '1px solid var(--color-border)',
+                        flexWrap: 'wrap',
+                        gap: 'var(--space-3)',
+                        fontSize: 'var(--text-xs)'
+                      }}>
+                        <div style={{ color: 'var(--color-text-muted)' }}>
+                          Showing <strong>{startIdx + 1}–{Math.min(startIdx + companyPageSize, totalFiltered)}</strong> of <strong>{totalFiltered}</strong> participating companies
+                        </div>
+
+                        {totalPages > 1 && (
+                          <div style={{ display: 'flex', gap: 'var(--space-1)', alignItems: 'center' }}>
+                            <Button
+                              size="xs"
+                              variant="outline"
+                              disabled={safePage <= 1}
+                              onClick={() => setCompanyPage(p => Math.max(1, p - 1))}
+                              leftIcon={<ChevronLeft size={13} />}
+                            >
+                              Previous
+                            </Button>
+
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                              .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                              .map((p, idx, arr) => {
+                                const prev = arr[idx - 1];
+                                const showEllipsis = prev && p - prev > 1;
+                                return (
+                                  <span key={p} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                    {showEllipsis && <span style={{ padding: '0 4px', color: 'var(--color-text-muted)' }}>...</span>}
+                                    <button
+                                      type="button"
+                                      onClick={() => setCompanyPage(p)}
+                                      style={{
+                                        minWidth: 28,
+                                        height: 28,
+                                        padding: '0 6px',
+                                        borderRadius: 'var(--radius-md)',
+                                        border: safePage === p ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                                        background: safePage === p ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                                        color: safePage === p ? '#fff' : 'var(--color-text)',
+                                        fontWeight: 700,
+                                        fontSize: '11px',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      {p}
+                                    </button>
+                                  </span>
+                                );
+                              })}
+
+                            <Button
+                              size="xs"
+                              variant="outline"
+                              disabled={safePage >= totalPages}
+                              onClick={() => setCompanyPage(p => Math.min(totalPages, p + 1))}
+                              rightIcon={<ChevronRight size={13} />}
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Modal Bottom Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)', flexWrap: 'wrap' }}>
+
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                <Button variant="outline" onClick={() => setViewModalOpen(false)}>
+                  Close
+                </Button>
+                <Button
+                  variant="secondary"
+                  leftIcon={<Users size={13} />}
+                  onClick={() => {
+                    setViewModalOpen(false);
+                    handleOpenMelaRegistrations(selectedMela);
+                  }}
+                >
+                  Candidate Registrations
+                </Button>
+                {selectedMela.status !== 'APPROVED' && selectedMela.status !== 'UPCOMING' && (
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      handleApprove(selectedMela);
+                      setSelectedMela({ ...selectedMela, status: 'APPROVED' });
+                    }}
+                  >
+                    Approve Event
+                  </Button>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </Modal>
+      )}
+
+      {/* ── 2. View Participating Company Details Modal ── */}
+      {companyDetailsModalOpen && viewingCompany && (
+        <Modal
+          isOpen={companyDetailsModalOpen}
+          onClose={() => setCompanyDetailsModalOpen(false)}
+          title={`Company Details: ${viewingCompany.company}`}
+          size="lg"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+            
+            {/* Header Banner */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: 'var(--space-4)',
-              background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+              background: 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)',
               color: '#fff',
               padding: 'var(--space-5)',
               borderRadius: 'var(--radius-xl)'
             }}>
               <div style={{
-                width: 56,
-                height: 56,
+                width: 54,
+                height: 54,
                 borderRadius: 'var(--radius-xl)',
-                background: 'rgba(255,255,255,0.2)',
+                background: 'linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700))',
                 color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 'var(--text-xl)',
-                fontWeight: 800
+                fontSize: '20px',
+                fontWeight: 800,
+                flexShrink: 0
               }}>
-                <CalendarDays size={28} />
+                {(viewingCompany.company || 'C').charAt(0).toUpperCase()}
               </div>
+
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>
-                  {selectedMela.event || selectedMela.title}
-                </h3>
-                <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '2px 0 0 0' }}>
-                  {selectedMela.venue || selectedMela.location} • 📍 {selectedMela.location}
-                </p>
-                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#cbd5e1' }}>
-                  <span>📅 Date: {selectedMela.date ? new Date(selectedMela.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept 2026'}</span>
-                  <span>⏰ Time: {selectedMela.time || '09:00 AM - 05:00 PM'}</span>
-                  <span>🛡️ Status: {selectedMela.status}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                  <div>
+                    <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>
+                      {viewingCompany.company}
+                    </h3>
+                    <p style={{ fontSize: 'var(--text-xs)', color: '#93c5fd', margin: '2px 0 0 0' }}>
+                      📍 {viewingCompany.location || 'On-site Mela Booth'} • {selectedMela?.event || selectedMela?.title}
+                    </p>
+                  </div>
+                  <span className="badge badge-success" style={{ fontSize: '11px', padding: '4px 10px' }}>
+                    Verified Participant
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Event Metadata Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                  Organizing Authority
+            {/* Structured 2-Column Info Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 'var(--space-4)' }}>
+              
+              {/* Job Specification Card */}
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-primary-700)', marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Briefcase size={14} /> Role & Eligibility
                 </h4>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Lead Organizer:</strong> {selectedMela.organizer || 'APSSDC & NTR Vikasa'}</p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Venue:</strong> {selectedMela.venue || selectedMela.location}</p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>City/District:</strong> {selectedMela.location}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+                  <div>
+                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase' }}>Hiring Position</span>
+                    <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{viewingCompany.position}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase' }}>Eligibility / Qualification</span>
+                    <strong style={{ color: 'var(--color-text)' }}>{viewingCompany.qualification || 'Any Degree / Diploma'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase' }}>Experience Required</span>
+                    <strong style={{ color: 'var(--color-text)' }}>{viewingCompany.experience || 'Fresher / 0-2 Years'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase' }}>Offered Compensation</span>
+                    <strong style={{ color: 'var(--color-success-700)', fontSize: 'var(--text-sm)' }}>{viewingCompany.salary || 'Best in Industry'}</strong>
+                  </div>
+                </div>
               </div>
 
-              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                  Scale & Participation
+              {/* Recruiter & Turnout Card */}
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-primary-700)', marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <User size={14} /> Recruiter & Booth Details
                 </h4>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Participating Employers:</strong> {selectedMela.companiesCount || 35}+ Companies</p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Candidate Passes:</strong> {selectedMela.registeredCandidatesCount || selectedMela.registeredCandidates || 2400}+ Issued</p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Status:</strong> {selectedMela.status}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+                  <div>
+                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase' }}>Assigned Recruiter</span>
+                    <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{viewingCompany.recruiter || 'Talent Acquisition Lead'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase' }}>Booth / Stall Allocation</span>
+                    <strong style={{ color: 'var(--color-primary-700)' }}>{viewingCompany.location || 'Stall A-1 (Main Pavilion)'}</strong>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)', marginTop: 4 }}>
+                    <div style={{ background: 'var(--color-surface)', padding: '8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>Open Vacancies</span>
+                      <strong style={{ fontSize: 'var(--text-base)', color: 'var(--color-success-600)' }}>{viewingCompany.vacancies || 10}</strong>
+                    </div>
+                    <div style={{ background: 'var(--color-surface)', padding: '8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>Applications</span>
+                      <strong style={{ fontSize: 'var(--text-base)', color: 'var(--color-primary-600)' }}>{viewingCompany.applications || 0}</strong>
+                    </div>
+                  </div>
+                </div>
               </div>
+
             </div>
+
+            {/* Notes & Instructions Card */}
+            {viewingCompany.notes && (
+              <div style={{ background: '#f8fafc', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
+                  Walk-in Instructions & Candidate Notes
+                </h4>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', margin: 0, lineHeight: 1.6 }}>
+                  {viewingCompany.notes}
+                </p>
+              </div>
+            )}
 
             {/* Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)', flexWrap: 'wrap' }}>
-              <ExportDropdown items={individualMelaExportItems} label="Export" />
-              <Button variant="outline" onClick={() => setViewModalOpen(false)}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+              <Button
+                variant="outline"
+                onClick={() => setCompanyDetailsModalOpen(false)}
+              >
                 Close
               </Button>
-              <Link to="/admin/registrations" style={{ textDecoration: 'none' }}>
-                <Button variant="secondary">
-                  Manage Candidate Passes
-                </Button>
-              </Link>
-              {selectedMela.status !== 'APPROVED' && selectedMela.status !== 'UPCOMING' && (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    handleApprove(selectedMela);
-                    setSelectedMela({ ...selectedMela, status: 'APPROVED' });
-                  }}
-                >
-                  Approve Event
-                </Button>
-              )}
+              <Button
+                variant="primary"
+                leftIcon={<Pencil size={13} />}
+                onClick={() => {
+                  setCompanyDetailsModalOpen(false);
+                  handleOpenEditCompany(viewingCompany);
+                }}
+              >
+                Edit Company Details
+              </Button>
             </div>
+
           </div>
+        </Modal>
+      )}
+
+      {/* ── 3. Add / Edit Participating Company Modal ── */}
+      {companyModalOpen && (
+        <Modal
+          isOpen={companyModalOpen}
+          onClose={() => setCompanyModalOpen(false)}
+          title={editingCompany ? `Edit Company: ${editingCompany.company}` : `Add Participating Company`}
+          size="md"
+        >
+          <form onSubmit={handleSaveCompany} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            
+            {/* Select or Enter Company */}
+            <FormField label="Company Name" required hint="Choose from registered companies or enter custom name">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                <select
+                  value={companyFormData.companyId || (companies.some(c => c.name === companyFormData.company) ? companies.find(c => c.name === companyFormData.company)?.id : 'CUSTOM')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'CUSTOM') {
+                      setCompanyFormData({ ...companyFormData, companyId: '', company: '' });
+                    } else {
+                      const matched = companies.find(c => c.id === val);
+                      if (matched) {
+                        setCompanyFormData({
+                          ...companyFormData,
+                          companyId: matched.id,
+                          company: matched.name,
+                          recruiter: matched.recruiter || companyFormData.recruiter,
+                          location: companyFormData.location || `${matched.location || 'Stall A-1'}`
+                        });
+                      }
+                    }
+                  }}
+                  className="form-control"
+                  style={{ height: 38, borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-xs)', fontWeight: 600 }}
+                >
+                  <option value="">-- Select from Registered Companies --</option>
+                  {companies.map(c => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.industry || 'Corporate'})</option>
+                  ))}
+                  <option value="CUSTOM">+ Other / Custom Employer Name</option>
+                </select>
+
+                <Input
+                  placeholder="Or enter company / organization name..."
+                  value={companyFormData.company}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, company: e.target.value })}
+                  required
+                />
+              </div>
+            </FormField>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+              <FormField label="Recruiter / Contact Person">
+                <Input
+                  placeholder="e.g. Arjun Reddy (Talent Lead)"
+                  value={companyFormData.recruiter}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, recruiter: e.target.value })}
+                />
+              </FormField>
+
+              <FormField label="Hiring Position / Role" required>
+                <Input
+                  placeholder="e.g. Senior Frontend Engineer"
+                  value={companyFormData.position}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, position: e.target.value })}
+                  required
+                />
+              </FormField>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+              <FormField label="Number of Vacancies" required>
+                <Input
+                  type="number"
+                  placeholder="e.g. 25"
+                  value={companyFormData.vacancies}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, vacancies: e.target.value })}
+                  required
+                />
+              </FormField>
+
+              <FormField label="Offered Salary Package" required>
+                <Input
+                  placeholder="e.g. ₹4,50,000 - ₹7,00,000 / year"
+                  value={companyFormData.salary}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, salary: e.target.value })}
+                  required
+                />
+              </FormField>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+              <FormField label="Eligibility / Qualification" required>
+                <Input
+                  placeholder="e.g. B.Tech / MCA / Any Degree"
+                  value={companyFormData.qualification}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, qualification: e.target.value })}
+                  required
+                />
+              </FormField>
+
+              <FormField label="Experience Required" required>
+                <Input
+                  placeholder="e.g. 0-2 Years / Fresher"
+                  value={companyFormData.experience}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, experience: e.target.value })}
+                  required
+                />
+              </FormField>
+            </div>
+
+            <FormField label="Stall / Booth Allocation">
+              <Input
+                placeholder="e.g. Stall B-14 (Hall 3)"
+                value={companyFormData.location}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, location: e.target.value })}
+              />
+            </FormField>
+
+            <FormField label="Notes & Walk-in Instructions">
+              <Textarea
+                rows={2}
+                placeholder="e.g. Carry 3 printed resume copies and government photo ID..."
+                value={companyFormData.notes}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, notes: e.target.value })}
+              />
+            </FormField>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+              <Button type="button" variant="outline" onClick={() => setCompanyModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary">
+                {editingCompany ? 'Save Changes' : 'Add Company to Job Mela'}
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
 
@@ -970,6 +1721,569 @@ export default function AdminJobMelasPage() {
                 </>
               )}
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── 4. Registered Candidates View Modal for Selected Job Mela ── */}
+      {melaRegistrationsOpen && selectedMelaForRegs && (
+        <Modal
+          isOpen={melaRegistrationsOpen}
+          onClose={() => setMelaRegistrationsOpen(false)}
+          title={`Registered Candidates: ${selectedMelaForRegs.event || selectedMelaForRegs.title}`}
+          size="xl"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            
+            {/* ── Event Summary Section ── */}
+            <div style={{
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+              color: '#fff',
+              padding: 'var(--space-6)',
+              borderRadius: 'var(--radius-xl)',
+              position: 'relative'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-4)' }}>
+                  <div style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 'var(--radius-xl)',
+                    background: 'rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <Ticket size={28} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 4, flexWrap: 'wrap' }}>
+                      <StatusBadge status={selectedMelaForRegs.status || 'UPCOMING'} />
+                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        Event ID: {selectedMelaForRegs.id}
+                      </span>
+                    </div>
+                    <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, margin: 0, color: '#fff' }}>
+                      {selectedMelaForRegs.event || selectedMelaForRegs.title}
+                    </h2>
+                    <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '4px 0 0 0' }}>
+                      📍 {selectedMelaForRegs.venue || selectedMelaForRegs.location} • {selectedMelaForRegs.city || selectedMelaForRegs.location}, {selectedMelaForRegs.state || ''}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Link to="/admin/registrations" style={{ textDecoration: 'none' }}>
+                    <Button size="xs" variant="secondary" leftIcon={<ExternalLink size={12} />}>
+                      All Platform Passes
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Event Metadata Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: 'var(--space-3)',
+                marginTop: 'var(--space-5)',
+                paddingTop: 'var(--space-4)',
+                borderTop: '1px solid rgba(255,255,255,0.12)',
+                fontSize: 'var(--text-xs)'
+              }}>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Event Schedule</span>
+                  <strong style={{ color: '#f8fafc' }}>
+                    📅 {selectedMelaForRegs.date ? new Date(selectedMelaForRegs.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept 2026'}
+                  </strong>
+                  <div style={{ color: '#cbd5e1', fontSize: '11px' }}>⏰ {selectedMelaForRegs.time || '09:00 AM - 05:00 PM'}</div>
+                </div>
+
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Total Registered Passes</span>
+                  <strong style={{ color: '#38bdf8' }}>
+                    👥 {getScopedMelaCandidates(selectedMelaForRegs).length} Verified Candidate Passes
+                  </strong>
+                  <div style={{ color: '#cbd5e1', fontSize: '11px' }}>Max Capacity: {selectedMelaForRegs.maxCapacity || selectedMelaForRegs.seats || 5000} Candidates</div>
+                </div>
+
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Participating Employers</span>
+                  <strong style={{ color: '#f8fafc' }}>
+                    🏢 {getScopedMelaCompanies(selectedMelaForRegs).length} Participating Companies
+                  </strong>
+                  <div style={{ color: '#cbd5e1', fontSize: '11px' }}>On-site Hiring Booths</div>
+                </div>
+
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Organizing Authority</span>
+                  <strong style={{ color: '#f8fafc' }}>{selectedMelaForRegs.organizer || 'NTR Vikasa State Employment Authority'}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Candidate Registrations List Card ── */}
+            <div className="card" style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
+              
+              {/* Header with Title and Export */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: 'var(--space-4) var(--space-5)',
+                background: 'var(--color-surface)',
+                borderBottom: '1px solid var(--color-border)',
+                flexWrap: 'wrap',
+                gap: 'var(--space-3)'
+              }}>
+                <div>
+                  <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                    <Users size={18} style={{ color: 'var(--color-primary-600)' }} />
+                    Registered Candidates — {getScopedMelaCandidates(selectedMelaForRegs).length}
+                  </h3>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
+                    Candidate registrations, digital entry passes, contact details, and entry gate allocations for this Job Mela.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                </div>
+              </div>
+
+              {/* Search & Status Filters */}
+              <div style={{
+                padding: 'var(--space-3) var(--space-5)',
+                background: 'var(--color-gray-50)',
+                borderBottom: '1px solid var(--color-border)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 'var(--space-3)'
+              }}>
+                {/* Search Bar */}
+                <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: 380 }}>
+                  <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search candidate name, email, pass ID, token..."
+                    value={candidateSearch}
+                    onChange={(e) => {
+                      setCandidateSearch(e.target.value);
+                      setCandidatePage(1);
+                    }}
+                    className="form-control"
+                    style={{ width: '100%', paddingLeft: 32, paddingRight: candidateSearch ? 28 : 10, height: 34, fontSize: 'var(--text-xs)', borderRadius: 'var(--radius-md)' }}
+                  />
+                  {candidateSearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCandidateSearch('');
+                        setCandidatePage(1);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: 8,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                        padding: 2
+                      }}
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Tabs & Page Size */}
+                <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-1)', alignItems: 'center' }}>
+                    {[
+                      { key: 'ALL', label: `All (${getScopedMelaCandidates(selectedMelaForRegs).length})` },
+                      { key: 'CONFIRMED', label: `Confirmed (${getScopedMelaCandidates(selectedMelaForRegs).filter(c => c.status === 'CONFIRMED').length})` },
+                      { key: 'WAITLISTED', label: `Waitlisted (${getScopedMelaCandidates(selectedMelaForRegs).filter(c => c.status === 'WAITLISTED').length})` }
+                    ].map(tab => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => {
+                          setCandidateStatusFilter(tab.key);
+                          setCandidatePage(1);
+                        }}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: candidateStatusFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                          background: candidateStatusFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                          color: candidateStatusFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
+                          transition: 'all 120ms ease'
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Page Size Selector */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                    <span>Show:</span>
+                    <select
+                      value={candidatePageSize}
+                      onChange={(e) => {
+                        setCandidatePageSize(Number(e.target.value));
+                        setCandidatePage(1);
+                      }}
+                      className="form-control"
+                      style={{ height: 30, padding: '2px 8px', fontSize: '11px', borderRadius: 'var(--radius-md)', fontWeight: 600 }}
+                    >
+                      <option value={10}>10 / page</option>
+                      <option value={25}>25 / page</option>
+                      <option value={50}>50 / page</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Candidates Table */}
+              <div style={{ padding: 0 }}>
+                {(() => {
+                  const allCandidates = getScopedMelaCandidates(selectedMelaForRegs);
+                  const filteredCandidates = allCandidates.filter(c => {
+                    if (candidateSearch.trim()) {
+                      const q = candidateSearch.toLowerCase();
+                      const matchName = (c.candidate || c.candidateName || '').toLowerCase().includes(q);
+                      const matchEmail = (c.candidateEmail || c.email || '').toLowerCase().includes(q);
+                      const matchPhone = (c.phone || '').toLowerCase().includes(q);
+                      const matchId = (c.id || '').toLowerCase().includes(q);
+                      const matchToken = (c.entryToken || '').toLowerCase().includes(q);
+                      if (!matchName && !matchEmail && !matchPhone && !matchId && !matchToken) return false;
+                    }
+                    if (candidateStatusFilter !== 'ALL' && c.status !== candidateStatusFilter) return false;
+                    return true;
+                  });
+
+                  const totalFiltered = filteredCandidates.length;
+                  const totalPages = Math.max(1, Math.ceil(totalFiltered / candidatePageSize));
+                  const safePage = Math.min(Math.max(1, candidatePage), totalPages);
+                  const startIdx = (safePage - 1) * candidatePageSize;
+                  const paginatedRows = filteredCandidates.slice(startIdx, startIdx + candidatePageSize);
+
+                  if (totalFiltered === 0) {
+                    return (
+                      <div style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
+                        <EmptyState
+                          icon={<Users size={36} style={{ color: 'var(--color-primary-500)' }} />}
+                          title="No Registered Candidates Found"
+                          description={candidateSearch ? `No registered candidates match "${candidateSearch}".` : "No candidate registrations found for this Job Mela."}
+                        />
+                        {candidateSearch && (
+                          <div style={{ marginTop: 'var(--space-4)' }}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setCandidateSearch('');
+                                setCandidateStatusFilter('ALL');
+                                setCandidatePage(1);
+                              }}
+                            >
+                              Clear Search Filter
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: 'var(--color-gray-50)', borderBottom: '1px solid var(--color-border)', textAlign: 'left', fontSize: '11px', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
+                              <th style={{ padding: '10px 12px', width: 44 }}>#</th>
+                              <th style={{ padding: '10px 14px' }}>Pass ID / Token</th>
+                              <th style={{ padding: '10px 14px' }}>Candidate Name</th>
+                              <th style={{ padding: '10px 14px' }}>Contact Info</th>
+                              <th style={{ padding: '10px 14px' }}>Gate / Entry</th>
+                              <th style={{ padding: '10px 14px' }}>Registration Date</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'center' }}>Status</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'right' }}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedRows.map((c, idx) => {
+                              const rowIndex = startIdx + idx + 1;
+                              const candidateName = c.candidate || c.candidateName || 'Candidate';
+                              const candidateEmail = c.candidateEmail || c.email || 'candidate@example.com';
+                              const initial = candidateName.charAt(0).toUpperCase();
+
+                              return (
+                                <tr key={c.id || idx} style={{ borderBottom: '1px solid var(--color-border)', fontSize: 'var(--text-xs)' }}>
+                                  <td style={{ padding: '10px 12px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                                    {rowIndex}
+                                  </td>
+                                  <td style={{ padding: '10px 14px' }}>
+                                    <div>
+                                      <span style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        fontSize: '11px',
+                                        fontWeight: 800,
+                                        color: 'var(--color-primary-700)',
+                                        background: '#eff6ff',
+                                        padding: '2px 8px',
+                                        borderRadius: 'var(--radius-md)',
+                                        border: '1px solid #bfdbfe'
+                                      }}>
+                                        <Ticket size={12} /> {c.entryToken || c.id}
+                                      </span>
+                                      <span style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                                        ID: {c.id}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '10px 14px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                                      <div style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 'var(--radius-full)',
+                                        background: 'linear-gradient(135deg, #1e1b4b, #3b82f6)',
+                                        color: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 800,
+                                        fontSize: '12px',
+                                        flexShrink: 0
+                                      }}>
+                                        {initial}
+                                      </div>
+                                      <div>
+                                        <strong style={{ display: 'block', color: 'var(--color-text)' }}>{candidateName}</strong>
+                                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{candidateEmail}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '10px 14px', color: 'var(--color-text)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <Phone size={12} style={{ color: 'var(--color-primary-600)' }} />
+                                      <span>{c.phone || '+91 98765 43210'}</span>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '10px 14px' }}>
+                                    <span style={{
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                      color: 'var(--color-text)',
+                                      background: 'var(--color-gray-100)',
+                                      padding: '2px 8px',
+                                      borderRadius: 'var(--radius-sm)'
+                                    }}>
+                                      🚪 {c.gateNumber || 'Gate 1 (Main Hall)'}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '10px 14px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                                    {c.registrationDate ? new Date(c.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026'}
+                                  </td>
+                                  <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                    <StatusBadge status={c.status || 'CONFIRMED'} />
+                                  </td>
+                                  <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                                    <Button
+                                      size="xs"
+                                      variant="outline"
+                                      leftIcon={<Eye size={12} />}
+                                      onClick={() => {
+                                        setSelectedPass({
+                                          ...c,
+                                          candidate: candidateName,
+                                          email: candidateEmail,
+                                          event: selectedMelaForRegs.event || selectedMelaForRegs.title
+                                        });
+                                        setPassModalOpen(true);
+                                      }}
+                                      title="View Candidate Digital Pass"
+                                    >
+                                      View Pass
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination Bar */}
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: 'var(--space-3) var(--space-5)',
+                        background: 'var(--color-gray-50)',
+                        borderTop: '1px solid var(--color-border)',
+                        flexWrap: 'wrap',
+                        gap: 'var(--space-3)',
+                        fontSize: 'var(--text-xs)'
+                      }}>
+                        <div style={{ color: 'var(--color-text-muted)' }}>
+                          Showing <strong>{startIdx + 1}–{Math.min(startIdx + candidatePageSize, totalFiltered)}</strong> of <strong>{totalFiltered}</strong> registered candidates
+                        </div>
+
+                        {totalPages > 1 && (
+                          <div style={{ display: 'flex', gap: 'var(--space-1)', alignItems: 'center' }}>
+                            <Button
+                              size="xs"
+                              variant="outline"
+                              disabled={safePage <= 1}
+                              onClick={() => setCandidatePage(p => Math.max(1, p - 1))}
+                              leftIcon={<ChevronLeft size={13} />}
+                            >
+                              Previous
+                            </Button>
+
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                              .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                              .map((p, idx, arr) => {
+                                const prev = arr[idx - 1];
+                                const showEllipsis = prev && p - prev > 1;
+                                return (
+                                  <span key={p} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                    {showEllipsis && <span style={{ padding: '0 4px', color: 'var(--color-text-muted)' }}>...</span>}
+                                    <button
+                                      type="button"
+                                      onClick={() => setCandidatePage(p)}
+                                      style={{
+                                        minWidth: 28,
+                                        height: 28,
+                                        padding: '0 6px',
+                                        borderRadius: 'var(--radius-md)',
+                                        border: safePage === p ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                                        background: safePage === p ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                                        color: safePage === p ? '#fff' : 'var(--color-text)',
+                                        fontWeight: 700,
+                                        fontSize: '11px',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      {p}
+                                    </button>
+                                  </span>
+                                );
+                              })}
+
+                            <Button
+                              size="xs"
+                              variant="outline"
+                              disabled={safePage >= totalPages}
+                              onClick={() => setCandidatePage(p => Math.min(totalPages, p + 1))}
+                              rightIcon={<ChevronRight size={13} />}
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Modal Bottom Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                <Button
+                  variant="outline"
+                  leftIcon={<Building2 size={14} />}
+                  onClick={() => {
+                    setMelaRegistrationsOpen(false);
+                    handleOpenMelaManagement(selectedMelaForRegs);
+                  }}
+                >
+                  View Participating Companies ({getScopedMelaCompanies(selectedMelaForRegs).length})
+                </Button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                <Button variant="outline" onClick={() => setMelaRegistrationsOpen(false)}>
+                  Close
+                </Button>
+                <Link to="/admin/registrations" style={{ textDecoration: 'none' }}>
+                  <Button variant="secondary" leftIcon={<ExternalLink size={13} />}>
+                    Open All Platform Passes
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+          </div>
+        </Modal>
+      )}
+
+      {/* ── 5. Candidate Digital Pass Modal ── */}
+      {passModalOpen && selectedPass && (
+        <Modal
+          isOpen={passModalOpen}
+          onClose={() => setPassModalOpen(false)}
+          title="Digital Mela Pass Verification"
+          size="sm"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', textAlign: 'center' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+              color: '#fff',
+              padding: 'var(--space-5)',
+              borderRadius: 'var(--radius-xl)'
+            }}>
+              <Ticket size={32} style={{ margin: '0 auto var(--space-2)' }} />
+              <span style={{ fontSize: '10px', color: '#c7d2fe', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                NTR VIKASA VERIFIED ENTRY PASS
+              </span>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: '4px 0 0 0', color: '#fff' }}>
+                {selectedPass.entryToken || selectedPass.id}
+              </h3>
+              <p style={{ fontSize: 'var(--text-xs)', color: '#e0e7ff', margin: '4px 0 0 0' }}>
+                {selectedPass.candidate || selectedPass.candidateName}
+              </p>
+            </div>
+
+            <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', textAlign: 'left' }}>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                <strong>Event:</strong> {selectedPass.event || selectedPass.eventName}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                <strong>Registration ID:</strong> {selectedPass.id}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                <strong>Candidate Email:</strong> {selectedPass.email || selectedPass.candidateEmail}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                <strong>Phone:</strong> {selectedPass.phone || '+91 98765 43210'}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                <strong>Entry Gate:</strong> {selectedPass.gateNumber || 'Gate 1 (Main Hall)'}
+              </p>
+              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}>
+                <strong>Pass Status:</strong> <StatusBadge status={selectedPass.status || 'CONFIRMED'} />
+              </p>
+            </div>
+
+            <Button variant="outline" fullWidth onClick={() => setPassModalOpen(false)}>
+              Close Pass
+            </Button>
           </div>
         </Modal>
       )}

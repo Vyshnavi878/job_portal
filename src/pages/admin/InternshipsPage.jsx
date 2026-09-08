@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   GraduationCap, Search, Filter, Eye, CheckCircle2, XCircle,
   Building2, MapPin, DollarSign, Clock, ShieldAlert, AlertTriangle
@@ -10,17 +10,22 @@ import Table from '../../components/ui/Table';
 import FormField from '../../components/ui/FormField';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
-import ExportDropdown from '../../components/ui/ExportDropdown';
+import Pagination from '../../components/ui/Pagination';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
-import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminInternshipsPage() {
   const { addToast } = useToast();
   const { internships, approveInternship, rejectInternship } = useAdmin();
 
+  const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   // View modal
   const [selectedInternship, setSelectedInternship] = useState(null);
@@ -60,62 +65,11 @@ export default function AdminInternshipsPage() {
     });
   }, [internships, search, statusFilter]);
 
-  const handleExportExcel = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting internships list to Excel...', 'info');
-    const headers = ['Internship Title', 'Company', 'Duration', 'Stipend', 'Location', 'Submitted Date', 'Status'];
-    const rows = filtered.map(i => [
-      i.title || 'Internship Title',
-      i.company || 'N/A',
-      i.duration || '3 Months',
-      i.stipend || 'Unpaid',
-      i.location || 'India',
-      i.submittedDate || '01 Aug 2026',
-      i.status || 'ACTIVE'
-    ]);
-    exportToExcel({
-      filename: getExportFilename('internships', statusFilter.toLowerCase(), 'xlsx'),
-      sheetName: 'Internships',
-      headers,
-      rows
-    });
-    addToast('Excel export downloaded successfully!', 'success');
-  };
-
-  const handleExportPdf = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting internships list to PDF...', 'info');
-    const headers = ['Internship Title', 'Company', 'Duration', 'Stipend', 'Location', 'Status'];
-    const rows = filtered.map(i => [
-      i.title || 'Internship Title',
-      i.company || 'N/A',
-      i.duration || '3 Months',
-      i.stipend || 'Unpaid',
-      i.location || 'India',
-      i.status || 'ACTIVE'
-    ]);
-    const currentTabObj = filterTabs.find(t => t.key === statusFilter);
-    const statusTitle = currentTabObj ? currentTabObj.label : statusFilter;
-    exportToPDF({
-      filename: getExportFilename('internships', statusFilter.toLowerCase(), 'pdf'),
-      title: 'Platform Internships Directory',
-      subtitle: `Status: ${statusTitle}`,
-      metadata: {
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Status Filter': statusTitle,
-        'Total Records': filtered.length
-      },
-      headers,
-      rows
-    });
-    addToast('PDF export downloaded successfully!', 'success');
-  };
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedInternships = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const handleApprove = (item) => {
     approveInternship(item.id);
@@ -323,12 +277,6 @@ export default function AdminInternshipsPage() {
                 </button>
               ))}
             </div>
-
-            <ExportDropdown
-              onExportExcel={handleExportExcel}
-              onExportPdf={handleExportPdf}
-              disabled={filtered.length === 0}
-            />
           </div>
         </div>
       </div>
@@ -342,7 +290,16 @@ export default function AdminInternshipsPage() {
             description="No internship postings match your current search and filter criteria."
           />
         ) : (
-          <Table columns={columns} data={filtered} />
+          <>
+            <Table columns={columns} data={paginatedInternships} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
 

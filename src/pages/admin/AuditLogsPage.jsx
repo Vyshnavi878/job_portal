@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   History, Search, Filter, ShieldCheck, ShieldAlert,
   User, Download, Clock, ArrowUpDown, CheckCircle2, XCircle
@@ -14,9 +14,13 @@ export default function AdminAuditLogsPage() {
   const { addToast } = useToast();
   const { auditLogs } = useAdmin();
 
+  const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 8;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   const filtered = useMemo(() => {
     return auditLogs.filter((l) => {
@@ -35,8 +39,11 @@ export default function AdminAuditLogsPage() {
     });
   }, [auditLogs, search]);
 
-  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
-  const paginatedLogs = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedLogs = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const handleExport = () => {
     addToast('Audit log records exported as CSV successfully.', 'success');
@@ -173,15 +180,13 @@ export default function AdminAuditLogsPage() {
         ) : (
           <>
             <Table columns={columns} data={paginatedLogs} />
-            {totalPages > 1 && (
-              <div style={{ padding: 'var(--space-4)', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'center' }}>
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
           </>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle2, Search, Filter, CalendarCheck, FileText, Download,
@@ -14,6 +14,9 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 export default function ShortlistedPage() {
   const { recruiter, scheduleInterview, rejectCandidate } = useRecruiter();
@@ -21,6 +24,12 @@ export default function ShortlistedPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedJobFilter, setSelectedJobFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedJobFilter]);
 
   // Modals state
   const [interviewTarget, setInterviewTarget] = useState(null);
@@ -35,7 +44,7 @@ export default function ShortlistedPage() {
     notes: 'Shortlisted technical interview round.'
   });
 
-  const allApplicants = recruiter?.applicants || [];
+  const allApplicants = recruiter?.applicants || recruiter?.applications || [];
   const allJobs = recruiter?.jobs || [];
 
   // Filter shortlisted applicants
@@ -58,6 +67,13 @@ export default function ShortlistedPage() {
       return true;
     });
   }, [allApplicants, selectedJobFilter, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(shortlistedApplicants.length / PAGE_SIZE));
+
+  const paginatedShortlisted = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return shortlistedApplicants.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [shortlistedApplicants, currentPage]);
 
   const handleOpenInterviewModal = (cand) => {
     setInterviewTarget(cand);
@@ -108,33 +124,35 @@ export default function ShortlistedPage() {
 
       {/* Filter Bar */}
       <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ flex: '1 1 280px', position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search shortlisted candidates by name or skill..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
-            />
-          </div>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', flex: '1 1 auto' }}>
+            <div style={{ flex: '1 1 300px', maxWidth: '420px', minWidth: '240px', position: 'relative' }}>
+              <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search shortlisted candidates by name or skill..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
+              />
+            </div>
 
-          <div style={{ width: '280px' }}>
-            <select
-              className="form-control"
-              value={selectedJobFilter}
-              onChange={(e) => setSelectedJobFilter(e.target.value)}
-              style={{ height: '42px', borderRadius: '8px' }}
-            >
-              <option value="ALL">All Job Openings ({shortlistedApplicants.length})</option>
-              {allJobs.map(job => (
-                <option key={job.id} value={job.id}>
-                  {job.title}
-                </option>
-              ))}
-            </select>
+            <div style={{ width: '260px', minWidth: '200px' }}>
+              <select
+                className="form-control"
+                value={selectedJobFilter}
+                onChange={(e) => setSelectedJobFilter(e.target.value)}
+                style={{ height: '42px', borderRadius: '8px', width: '100%' }}
+              >
+                <option value="ALL">All Job Openings ({shortlistedApplicants.length})</option>
+                {allJobs.map(job => (
+                  <option key={job.id} value={job.id}>
+                    {job.title}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -152,141 +170,157 @@ export default function ShortlistedPage() {
           }
         />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
-          {shortlistedApplicants.map((cand) => (
-            <div
-              key={cand.id}
-              className="card"
-              style={{
-                padding: '1.25rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                border: '1px solid #c7d2fe',
-                background: 'linear-gradient(180deg, #ffffff 0%, #f8faff 100%)'
-              }}
-            >
-              <div>
-                {/* Top row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                    <div style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '50%',
-                      background: 'var(--color-primary-600)',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: '1.1rem'
-                    }}>
-                      {cand.candidateName?.[0]?.toUpperCase() || 'C'}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
+            {paginatedShortlisted.map((cand) => (
+              <div
+                key={cand.id}
+                className="card"
+                style={{
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  border: '1px solid #c7d2fe',
+                  background: 'linear-gradient(180deg, #ffffff 0%, #f8faff 100%)'
+                }}
+              >
+                <div>
+                  {/* Top row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '50%',
+                        background: 'var(--color-primary-600)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '1.1rem'
+                      }}>
+                        {cand.candidateName?.[0]?.toUpperCase() || 'C'}
+                      </div>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
+                          {cand.candidateName}
+                        </h3>
+                        <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>
+                          {cand.candidateEmail}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
-                        {cand.candidateName}
-                      </h3>
-                      <p style={{ margin: '0.1rem 0 0 0', fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>
-                        {cand.candidateEmail}
-                      </p>
-                    </div>
-                  </div>
 
-                  {cand.matchScore && (
-                    <span style={{
-                      background: '#ecfdf5',
-                      color: '#059669',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '12px',
-                      border: '1px solid #a7f3d0',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.2rem'
-                    }}>
-                      <Sparkles size={12} />
-                      {cand.matchScore}%
-                    </span>
-                  )}
-                </div>
-
-                {/* Job Position */}
-                <div style={{ background: 'var(--color-primary-50)', padding: '0.5rem 0.75rem', borderRadius: '6px', marginBottom: '0.85rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>Shortlisted for role:</div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-primary-800)' }}>{cand.jobTitle}</div>
-                </div>
-
-                {/* Experience & Notice */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--color-gray-600)', marginBottom: '0.85rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <Briefcase size={14} color="var(--color-gray-400)" />
-                    <span>{cand.experience || '3+ Years'} Exp</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <MapPin size={14} color="var(--color-gray-400)" />
-                    <span>{cand.location || 'India'}</span>
-                  </div>
-                </div>
-
-                {/* Skills */}
-                {cand.skills && (
-                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                    {cand.skills.slice(0, 4).map((sk, idx) => (
-                      <span
-                        key={idx}
-                        style={{
-                          background: 'var(--color-gray-100)',
-                          color: 'var(--color-gray-700)',
-                          fontSize: '0.7rem',
-                          padding: '0.15rem 0.4rem',
-                          borderRadius: '4px',
-                          fontWeight: 500
-                        }}
-                      >
-                        {sk}
-                      </span>
-                    ))}
-                    {cand.skills.length > 4 && (
-                      <span style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)', alignSelf: 'center' }}>
-                        +{cand.skills.length - 4} more
+                    {cand.matchScore && (
+                      <span style={{
+                        background: '#ecfdf5',
+                        color: '#059669',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '12px',
+                        border: '1px solid #a7f3d0',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.2rem'
+                      }}>
+                        <Sparkles size={12} />
+                        {cand.matchScore}%
                       </span>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--color-gray-200)', paddingTop: '0.85rem', marginTop: '0.5rem' }}>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  style={{ flex: 1 }}
-                  icon={<CalendarCheck size={14} />}
-                  onClick={() => handleOpenInterviewModal(cand)}
-                >
-                  Schedule Interview
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon={<Download size={14} />}
-                  onClick={() => addToast(`Downloading resume for ${cand.candidateName}...`, 'info')}
-                  aria-label="Download Resume"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  style={{ color: 'var(--color-danger-600)' }}
-                  icon={<X size={14} />}
-                  onClick={() => handleRemoveFromShortlist(cand)}
-                  aria-label="Remove from shortlist"
-                />
+                  {/* Job Position */}
+                  <div style={{ background: 'var(--color-primary-50)', padding: '0.5rem 0.75rem', borderRadius: '6px', marginBottom: '0.85rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>Shortlisted for role:</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-primary-800)' }}>{cand.jobTitle}</div>
+                  </div>
+
+                  {/* Experience & Notice */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--color-gray-600)', marginBottom: '0.85rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Briefcase size={14} color="var(--color-gray-400)" />
+                      <span>{cand.experience || '3+ Years'} Exp</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <MapPin size={14} color="var(--color-gray-400)" />
+                      <span>{cand.location || 'India'}</span>
+                    </div>
+                  </div>
+
+                  {/* Skills */}
+                  {cand.skills && (
+                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                      {cand.skills.slice(0, 4).map((sk, idx) => (
+                        <span
+                          key={idx}
+                          style={{
+                            background: 'var(--color-gray-100)',
+                            color: 'var(--color-gray-700)',
+                            fontSize: '0.7rem',
+                            padding: '0.15rem 0.4rem',
+                            borderRadius: '4px',
+                            fontWeight: 500
+                          }}
+                        >
+                          {sk}
+                        </span>
+                      ))}
+                      {cand.skills.length > 4 && (
+                        <span style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)', alignSelf: 'center' }}>
+                          +{cand.skills.length - 4} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid var(--color-gray-200)', paddingTop: '0.85rem', marginTop: '0.5rem' }}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    style={{ flex: 1 }}
+                    icon={<CalendarCheck size={14} />}
+                    onClick={() => handleOpenInterviewModal(cand)}
+                  >
+                    Schedule Interview
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={<Download size={14} />}
+                    onClick={() => addToast(`Downloading resume for ${cand.candidateName}...`, 'info')}
+                    aria-label="Download Resume"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    style={{ color: 'var(--color-danger-600)' }}
+                    icon={<X size={14} />}
+                    onClick={() => handleRemoveFromShortlist(cand)}
+                    aria-label="Remove from shortlist"
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          {/* Pagination */}
+          <div style={{ marginTop: 'var(--space-6)' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={shortlistedApplicants.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={(p) => {
+                setCurrentPage(p);
+                window.scrollTo({ top: 120, behavior: 'smooth' });
+              }}
+            />
+          </div>
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Ticket, Search, Filter, CalendarDays, User, Mail, Phone,
   CheckCircle2, Clock, Users, ArrowRight, Eye
@@ -8,17 +8,23 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
-import ExportDropdown from '../../components/ui/ExportDropdown';
+import Pagination from '../../components/ui/Pagination';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
-import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminRegistrationsPage() {
   const { addToast } = useToast();
   const { registrations } = useAdmin();
 
+  const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [eventFilter, setEventFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, eventFilter]);
+
   const [selectedPass, setSelectedPass] = useState(null);
   const [passModalOpen, setPassModalOpen] = useState(false);
 
@@ -45,61 +51,11 @@ export default function AdminRegistrationsPage() {
     });
   }, [registrations, search, eventFilter]);
 
-  const handleExportExcel = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting registrations list to Excel...', 'info');
-    const headers = ['Registration ID', 'Candidate Name', 'Email', 'Phone', 'Job Mela', 'Registration Date', 'Registration Status'];
-    const rows = filtered.map(r => [
-      r.id || 'REG-N/A',
-      r.candidate || r.candidateName || 'Candidate',
-      r.email || r.candidateEmail || 'N/A',
-      r.phone || '+91 98765 43210',
-      r.event || r.eventName || 'Job Mela',
-      r.registrationDate || r.registeredDate || 'Aug 2026',
-      r.status || 'CONFIRMED'
-    ]);
-    exportToExcel({
-      filename: getExportFilename('job_mela_registrations', eventFilter !== 'ALL' ? eventFilter : 'all', 'xlsx'),
-      sheetName: 'Registrations',
-      headers,
-      rows
-    });
-    addToast('Excel export downloaded successfully!', 'success');
-  };
-
-  const handleExportPdf = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting registrations list to PDF...', 'info');
-    const headers = ['Reg ID', 'Candidate Name', 'Email', 'Phone', 'Job Mela', 'Date', 'Status'];
-    const rows = filtered.map(r => [
-      r.id || 'REG-N/A',
-      r.candidate || r.candidateName || 'Candidate',
-      r.email || r.candidateEmail || 'N/A',
-      r.phone || '+91 98765 43210',
-      r.event || r.eventName || 'Job Mela',
-      r.registrationDate || r.registeredDate || 'Aug 2026',
-      r.status || 'CONFIRMED'
-    ]);
-    exportToPDF({
-      filename: getExportFilename('job_mela_registrations', eventFilter !== 'ALL' ? eventFilter : 'all', 'pdf'),
-      title: 'Job Mela Candidate Registrations',
-      subtitle: eventFilter !== 'ALL' ? `Event: ${eventFilter}` : 'All Job Mela Events',
-      metadata: {
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Event Filter': eventFilter !== 'ALL' ? eventFilter : 'All Events',
-        'Total Records': filtered.length
-      },
-      headers,
-      rows
-    });
-    addToast('PDF export downloaded successfully!', 'success');
-  };
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedRegistrations = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const columns = [
     {
@@ -249,12 +205,6 @@ export default function AdminRegistrationsPage() {
                 </select>
               </div>
             )}
-
-            <ExportDropdown
-              onExportExcel={handleExportExcel}
-              onExportPdf={handleExportPdf}
-              disabled={filtered.length === 0}
-            />
           </div>
         </div>
       </div>
@@ -268,7 +218,16 @@ export default function AdminRegistrationsPage() {
             description="No candidate registrations match your current search criteria."
           />
         ) : (
-          <Table columns={columns} data={filtered} />
+          <>
+            <Table columns={columns} data={paginatedRegistrations} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
 

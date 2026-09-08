@@ -240,6 +240,7 @@ export default function JobsPage() {
   const [selectedSkill, setSelectedSkill] = useState(searchParams.get('skill') || '');
   const [datePosted, setDatePosted] = useState('');
   const [sortBy, setSortBy] = useState('Relevance');
+  const [page, setPage] = useState(1);
 
   const [savedJobIds, setSavedJobIds] = useState(['1', '3']);
   const [selectedJobToApply, setSelectedJobToApply] = useState(null);
@@ -253,6 +254,11 @@ export default function JobsPage() {
     if (q !== null) setSearch(q);
     if (loc !== null) setLocation(loc);
   }, [searchParams]);
+
+  // Reset pagination to page 1 whenever search, filters, or sort change
+  useEffect(() => {
+    setPage(1);
+  }, [search, location, experience, salaryRange, jobType, workMode, industry, selectedSkill, datePosted, sortBy]);
 
   const handleToggleSave = (jobId, title) => {
     if (savedJobIds.includes(jobId)) {
@@ -280,6 +286,7 @@ export default function JobsPage() {
     setSelectedSkill('');
     setDatePosted('');
     setSortBy('Relevance');
+    setPage(1);
     setSearchParams({});
   };
 
@@ -355,6 +362,10 @@ export default function JobsPage() {
 
     return result;
   }, [search, location, experience, salaryRange, jobType, workMode, industry, selectedSkill, sortBy]);
+
+  const PER_PAGE = 6;
+  const totalPages = Math.ceil(filteredJobs.length / PER_PAGE);
+  const paginatedJobs = filteredJobs.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const activeFilterCount = [
     experience, salaryRange, jobType, workMode, industry, selectedSkill, datePosted
@@ -724,7 +735,7 @@ export default function JobsPage() {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                {filteredJobs.map((job) => {
+                {paginatedJobs.map((job) => {
                   const isSaved = savedJobIds.includes(job.id);
                   return (
                     <div
@@ -876,6 +887,21 @@ export default function JobsPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div style={{ marginTop: 'var(--space-10)' }}>
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  totalItems={filteredJobs.length}
+                  pageSize={PER_PAGE}
+                  onPageChange={(p) => {
+                    setPage(p);
+                    window.scrollTo({ top: 180, behavior: 'smooth' });
+                  }}
+                />
               </div>
             )}
           </main>

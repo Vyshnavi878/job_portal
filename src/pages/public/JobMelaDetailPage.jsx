@@ -13,11 +13,13 @@ import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
 import FileUpload from '../../components/ui/FileUpload';
 import { useToast } from '../../context/ToastContext';
+import { useAdmin } from '../../context/AdminContext';
 import { MOCK_JOB_MELAS } from '../../data/mockData';
 
 export default function JobMelaDetailPage() {
   const { id } = useParams();
   const { toast } = useToast();
+  const { jobMelas } = useAdmin();
 
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,8 +33,27 @@ export default function JobMelaDetailPage() {
   const [experience, setExperience] = useState('Fresher (0-1 yr)');
 
   const mela = useMemo(() => {
+    const fromAdmin = (jobMelas || []).find((m) => m.id === id);
+    if (fromAdmin) {
+      return {
+        ...fromAdmin,
+        title: fromAdmin.title || fromAdmin.event,
+        venue: fromAdmin.venue || fromAdmin.location,
+        city: fromAdmin.city || (fromAdmin.location ? fromAdmin.location.split(',')[0] : 'City'),
+        state: fromAdmin.state || (fromAdmin.location && fromAdmin.location.includes(',') ? fromAdmin.location.split(',')[1] : 'State'),
+        time: fromAdmin.time || `${fromAdmin.startTime || '09:00 AM'} - ${fromAdmin.endTime || '06:00 PM'}`,
+        registrationDeadline: fromAdmin.regEndDate || fromAdmin.registrationDeadline || '2026-11-10',
+        participatingCompanies: fromAdmin.participatingCompanies || [],
+        availableJobs: (fromAdmin.participatingCompanies || []).map(c => ({
+          title: c.position,
+          company: c.company,
+          salary: c.salary,
+          vacancies: c.vacancies,
+        }))
+      };
+    }
     return MOCK_JOB_MELAS.find((m) => m.id === id) || MOCK_JOB_MELAS[0];
-  }, [id]);
+  }, [id, jobMelas]);
 
   const handleRegisterSubmit = (e) => {
     e.preventDefault();
@@ -209,42 +230,89 @@ export default function JobMelaDetailPage() {
             {/* Participating Companies */}
             {mela.participatingCompanies && mela.participatingCompanies.length > 0 && (
               <div className="card" style={{ marginBottom: 'var(--space-6)', borderRadius: 'var(--radius-2xl)' }}>
-                <div className="card-header">
-                  <h2 className="card-title">Featured Participating Employers</h2>
+                <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                  <h2 className="card-title">Participating Companies ({mela.participatingCompanies.length})</h2>
+                  <span className="badge badge-primary">
+                    {mela.totalOpportunities || `${mela.participatingCompanies.reduce((acc, c) => acc + (Number(c.vacancies) || 10), 0)}+ Vacancies`}
+                  </span>
                 </div>
-                <div className="card-body">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
-                    {mela.participatingCompanies.map((c, idx) => (
-                      <div key={idx} style={{
-                        padding: 'var(--space-4)',
-                        background: 'var(--color-gray-50)',
+                <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                  {mela.participatingCompanies.map((c, idx) => {
+                    const companyName = c.company || c.name || 'Participating Employer';
+                    const positionTitle = c.position || (c.roles ? c.roles.join(', ') : 'Various Roles');
+                    return (
+                      <div key={c.id || idx} style={{
+                        padding: 'var(--space-4) var(--space-5)',
+                        background: 'var(--color-surface)',
                         border: '1px solid var(--color-border)',
                         borderRadius: 'var(--radius-xl)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 'var(--space-2)'
+                        gap: 'var(--space-3)'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                          <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-md)', background: 'var(--color-primary-500)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
-                            {c.name?.[0]}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-primary-800))', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 'var(--text-lg)' }}>
+                              {companyName[0]}
+                            </div>
+                            <div>
+                              <h3 style={{ fontWeight: 800, fontSize: 'var(--text-base)', margin: 0 }}>{companyName}</h3>
+                              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 600, margin: '2px 0 0 0' }}>
+                                {positionTitle}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>{c.name}</p>
-                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-success-700)', fontWeight: 600 }}>{c.openJobs}</span>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                            <span className="badge badge-success" style={{ fontSize: '11px' }}>
+                              {c.vacancies ? `${c.vacancies} Vacancies` : (c.openJobs || 'Walk-in Hiring')}
+                            </span>
+                            {isRegistrationOpen && (
+                              <Button size="xs" variant="primary" onClick={() => setRegisterModalOpen(true)}>
+                                Apply / Attend
+                              </Button>
+                            )}
                           </div>
                         </div>
-                        {c.roles && (
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-                            {c.roles.map((r) => (
-                              <span key={r} style={{ fontSize: '10px', background: 'var(--color-gray-200)', padding: '2px 6px', borderRadius: 4 }}>
-                                {r}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+
+                        {/* Details grid: Qualification, Experience, Salary, Location */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                          gap: 'var(--space-2)',
+                          background: 'var(--color-gray-50)',
+                          padding: 'var(--space-3) var(--space-4)',
+                          borderRadius: 'var(--radius-lg)',
+                          fontSize: 'var(--text-xs)'
+                        }}>
+                          {c.qualification && (
+                            <div>
+                              <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Qualification</span>
+                              <strong>{c.qualification}</strong>
+                            </div>
+                          )}
+                          {c.experience && (
+                            <div>
+                              <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Experience</span>
+                              <strong>{c.experience}</strong>
+                            </div>
+                          )}
+                          {c.salary && (
+                            <div>
+                              <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Salary Package</span>
+                              <strong style={{ color: 'var(--color-primary-700)' }}>{c.salary}</strong>
+                            </div>
+                          )}
+                          {(c.location || c.notes) && (
+                            <div>
+                              <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700 }}>Stall / Notes</span>
+                              <span>{c.location || c.notes}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

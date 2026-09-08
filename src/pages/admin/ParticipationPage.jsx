@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Building2, Search, Filter, Eye, CheckCircle2, XCircle,
   CalendarDays, MapPin, Users, Briefcase, AlertCircle
@@ -11,9 +11,8 @@ import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
 import { useToast } from '../../context/ToastContext';
-import ExportDropdown from '../../components/ui/ExportDropdown';
-import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 const INITIAL_PARTICIPATION_REQUESTS = [
   {
@@ -60,8 +59,14 @@ const INITIAL_PARTICIPATION_REQUESTS = [
 export default function AdminParticipationPage() {
   const { toast } = useToast();
 
+  const PAGE_SIZE = 10;
   const [requests, setRequests] = useState(INITIAL_PARTICIPATION_REQUESTS);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   const [selectedReq, setSelectedReq] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -94,78 +99,19 @@ export default function AdminParticipationPage() {
     });
   };
 
-  const filtered = requests.filter(r => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return r.companyName.toLowerCase().includes(q) || r.eventName.toLowerCase().includes(q) || r.recruiterName.toLowerCase().includes(q);
-  });
-
-  const handleExportExcel = () => {
-    if (filtered.length === 0) {
-      toast({ type: 'info', title: 'No Records', message: 'No records available to export for the selected filters.' });
-      return;
-    }
-    toast({ type: 'info', title: 'Exporting', message: 'Exporting participation requests to Excel...' });
-    const headers = [
-      'Company Name',
-      'Event Name',
-      'Recruiter SPOC',
-      'Recruiter Phone',
-      'Stall Tier',
-      'Allocated Booth',
-      'Target Hires',
-      'Requested Date',
-      'Status'
-    ];
-    const rows = filtered.map(r => [
-      r.companyName,
-      r.eventName,
-      r.recruiterName,
-      r.recruiterPhone,
-      r.boothPreference,
-      r.allocatedBooth,
-      r.expectedHires,
-      r.requestedDate,
-      r.status
-    ]);
-    exportToExcel({
-      filename: getExportFilename('job_mela_participation', '', 'xlsx'),
-      sheetName: 'Participation Requests',
-      headers,
-      rows
+  const filtered = useMemo(() => {
+    return requests.filter(r => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return r.companyName.toLowerCase().includes(q) || r.eventName.toLowerCase().includes(q) || r.recruiterName.toLowerCase().includes(q);
     });
-    toast({ type: 'success', title: 'Export Complete', message: 'Participation requests Excel downloaded!' });
-  };
+  }, [requests, search]);
 
-  const handleExportPdf = () => {
-    if (filtered.length === 0) {
-      toast({ type: 'info', title: 'No Records', message: 'No records available to export for the selected filters.' });
-      return;
-    }
-    toast({ type: 'info', title: 'Exporting', message: 'Exporting participation requests to PDF...' });
-    const headers = ['Company', 'Event', 'Recruiter SPOC', 'Stall Tier', 'Allocated Booth', 'Target Hires', 'Status'];
-    const rows = filtered.map(r => [
-      r.companyName,
-      r.eventName,
-      `${r.recruiterName} (${r.recruiterPhone})`,
-      r.boothPreference,
-      r.allocatedBooth,
-      `${r.expectedHires} Positions`,
-      r.status
-    ]);
-    exportToPDF({
-      filename: getExportFilename('job_mela_participation', '', 'pdf'),
-      title: 'Employer Job Mela Participation Requests',
-      metadata: {
-        'Search Query': search || 'All',
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Total Records': filtered.length
-      },
-      headers,
-      rows
-    });
-    toast({ type: 'success', title: 'Export Complete', message: 'Participation requests PDF downloaded!' });
-  };
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const columns = [
     {
@@ -260,11 +206,6 @@ export default function AdminParticipationPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <ExportDropdown
-              onExportExcel={handleExportExcel}
-              onExportPdf={handleExportPdf}
-              disabled={filtered.length === 0}
-            />
           </div>
 
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
@@ -278,11 +219,20 @@ export default function AdminParticipationPage() {
               <EmptyState icon="companies" title="No participation requests" description="No requests match your search criteria." />
             </div>
           ) : (
-            <Table
-              columns={columns}
-              data={filtered}
-              rowKey="id"
-            />
+            <>
+              <Table
+                columns={columns}
+                data={paginatedRequests}
+                rowKey="id"
+              />
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filtered.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={setCurrentPage}
+              />
+            </>
           )}
         </div>
       </div>

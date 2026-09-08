@@ -10,10 +10,9 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
-import ExportDropdown from '../../components/ui/ExportDropdown';
+import Pagination from '../../components/ui/Pagination';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
-import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 // Consolidated Sub-Pages
 import AdminJobsPage from './JobsPage';
@@ -51,8 +50,14 @@ export default function AdminRecruitersPage() {
     }
   };
 
+  const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   // View modal
   const [selectedRecruiter, setSelectedRecruiter] = useState(null);
@@ -80,63 +85,11 @@ export default function AdminRecruitersPage() {
     });
   }, [recruiters, search, statusFilter]);
 
-  const handleExportExcel = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting recruiters list to Excel...', 'info');
-    const headers = ['Recruiter Name', 'Email', 'Company', 'Designation', 'Industry', 'Location', 'Registration Date', 'Verification Status', 'Account Status'];
-    const rows = filtered.map(r => [
-      r.name || 'Recruiter',
-      r.email || 'N/A',
-      r.company || 'N/A',
-      r.designation || 'Talent Acquisition',
-      r.industry || 'IT & Services',
-      r.location || 'India',
-      r.registrationDate || '01 Aug 2026',
-      r.verificationStatus || 'PENDING',
-      r.accountStatus || 'ACTIVE'
-    ]);
-    exportToExcel({
-      filename: getExportFilename('recruiters', statusFilter.toLowerCase(), 'xlsx'),
-      sheetName: 'Recruiters',
-      headers,
-      rows
-    });
-    addToast('Excel export downloaded successfully!', 'success');
-  };
-
-  const handleExportPdf = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting recruiters list to PDF...', 'info');
-    const headers = ['Recruiter Name', 'Email', 'Company', 'Designation', 'Industry', 'Verification', 'Account'];
-    const rows = filtered.map(r => [
-      r.name || 'Recruiter',
-      r.email || 'N/A',
-      r.company || 'N/A',
-      r.designation || 'Talent Acquisition',
-      r.industry || 'IT & Services',
-      r.verificationStatus || 'PENDING',
-      r.accountStatus || 'ACTIVE'
-    ]);
-    exportToPDF({
-      filename: getExportFilename('recruiters', statusFilter.toLowerCase(), 'pdf'),
-      title: 'Registered Recruiters Directory',
-      subtitle: `Status: ${statusFilter === 'ALL' ? 'All Recruiters' : statusFilter}`,
-      metadata: {
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Status Filter': statusFilter === 'ALL' ? 'All Recruiters' : statusFilter,
-        'Total Records': filtered.length
-      },
-      headers,
-      rows
-    });
-    addToast('PDF export downloaded successfully!', 'success');
-  };
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedRecruiters = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const handleVerify = (r) => {
     verifyRecruiter(r.id);
@@ -462,12 +415,6 @@ export default function AdminRecruitersPage() {
                     </button>
                   ))}
                 </div>
-
-                <ExportDropdown
-                  onExportExcel={handleExportExcel}
-                  onExportPdf={handleExportPdf}
-                  disabled={filtered.length === 0}
-                />
               </div>
             </div>
           </div>
@@ -481,7 +428,19 @@ export default function AdminRecruitersPage() {
                 description="No recruiter records match your current search and filter criteria."
               />
             ) : (
-              <Table columns={columns} data={filtered} />
+              <>
+                <Table columns={columns} data={paginatedRecruiters} />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filtered.length}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={(p) => {
+                    setCurrentPage(p);
+                    window.scrollTo({ top: 120, behavior: 'smooth' });
+                  }}
+                />
+              </>
             )}
           </div>
 

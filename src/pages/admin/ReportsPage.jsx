@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   AlertTriangle, Search, Filter, Eye, CheckCircle2, XCircle,
   ShieldAlert, ShieldCheck, FileText, User, Building2, Download
@@ -10,17 +10,22 @@ import Table from '../../components/ui/Table';
 import FormField from '../../components/ui/FormField';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
-import ExportDropdown from '../../components/ui/ExportDropdown';
-import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminReportsPage() {
   const { addToast } = useToast();
   const { reports, resolveReport, rejectReport } = useAdmin();
 
+  const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   // Review Modal
   const [selectedReport, setSelectedReport] = useState(null);
@@ -55,70 +60,11 @@ export default function AdminReportsPage() {
     });
   }, [reports, search, statusFilter]);
 
-  const handleExportExcel = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting reports to Excel...', 'info');
-    const headers = [
-      'Report ID',
-      'Reporter',
-      'Reported User/Entity',
-      'Report Type',
-      'Subject / Reason',
-      'Created Date',
-      'Status',
-      'Resolution / Action'
-    ];
-    const rows = filtered.map(r => [
-      r.id,
-      r.reporter || 'Anonymous',
-      r.reportedEntity || 'N/A',
-      r.reportType || r.type || 'Flagged Content',
-      r.reason || r.subject || 'Violation Report',
-      r.date || 'Aug 2026',
-      r.status || 'PENDING',
-      r.actionTaken || (r.status === 'RESOLVED' ? 'Action enforced' : (r.status === 'DISMISSED' ? 'Dismissed' : 'Under Investigation'))
-    ]);
-    exportToExcel({
-      filename: getExportFilename('reports_complaints', statusFilter !== 'ALL' ? statusFilter.toLowerCase() : '', 'xlsx'),
-      sheetName: 'Reports & Complaints',
-      headers,
-      rows
-    });
-    addToast('Reports & complaints Excel downloaded!', 'success');
-  };
-
-  const handleExportPdf = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting reports to PDF...', 'info');
-    const headers = ['Report ID', 'Reporter', 'Reported Entity', 'Type', 'Date', 'Status'];
-    const rows = filtered.map(r => [
-      `#${r.id}`,
-      r.reporter || 'Candidate',
-      r.reportedEntity || 'N/A',
-      r.reportType || r.type || 'Violation',
-      r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
-      r.status || 'PENDING'
-    ]);
-    exportToPDF({
-      filename: getExportFilename('reports_complaints', statusFilter !== 'ALL' ? statusFilter.toLowerCase() : '', 'pdf'),
-      title: 'Reports & Complaints Moderation List',
-      metadata: {
-        'Status Filter': statusFilter === 'ALL' ? 'All Reports' : statusFilter,
-        'Search Query': search || 'All',
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Total Records': filtered.length
-      },
-      headers,
-      rows
-    });
-    addToast('Reports & complaints PDF downloaded!', 'success');
-  };
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedReports = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const handleOpenResolve = (rep) => {
     setResolveTarget(rep);
@@ -336,12 +282,6 @@ export default function AdminReportsPage() {
                 </button>
               ))}
             </div>
-
-            <ExportDropdown
-              onExportExcel={handleExportExcel}
-              onExportPdf={handleExportPdf}
-              disabled={filtered.length === 0}
-            />
           </div>
         </div>
       </div>
@@ -355,7 +295,16 @@ export default function AdminReportsPage() {
             description="No reports or complaints match your current search and filter criteria."
           />
         ) : (
-          <Table columns={columns} data={filtered} />
+          <>
+            <Table columns={columns} data={paginatedReports} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Building2, Search, Filter, Eye, ShieldCheck, ShieldAlert,
   Users, Briefcase, Globe, Mail, Phone, MapPin, CheckCircle2,
@@ -11,18 +11,23 @@ import Table from '../../components/ui/Table';
 import FormField from '../../components/ui/FormField';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
-import ExportDropdown from '../../components/ui/ExportDropdown';
+import Pagination from '../../components/ui/Pagination';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
-import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 export default function AdminCompaniesPage() {
   const { addToast } = useToast();
   const { companies, approveCompany, rejectCompany } = useAdmin();
 
+  const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [industryFilter, setIndustryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, industryFilter, statusFilter]);
 
   // View modal
   const [selectedComp, setSelectedComp] = useState(null);
@@ -49,60 +54,11 @@ export default function AdminCompaniesPage() {
     });
   }, [companies, search, industryFilter, statusFilter]);
 
-  const handleExportExcel = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting companies list to Excel...', 'info');
-    const headers = ['Company Name', 'Recruiter Lead', 'Industry', 'Employee Count', 'Location', 'Registration Date', 'Verification Status'];
-    const rows = filtered.map(c => [
-      c.name || 'Company Name',
-      c.recruiter || 'N/A',
-      c.industry || 'IT & Services',
-      c.size || '100-500 emp',
-      c.location || 'India',
-      c.registrationDate || '01 Aug 2026',
-      c.verificationStatus || 'PENDING'
-    ]);
-    exportToExcel({
-      filename: getExportFilename('companies', statusFilter.toLowerCase(), 'xlsx'),
-      sheetName: 'Companies',
-      headers,
-      rows
-    });
-    addToast('Excel export downloaded successfully!', 'success');
-  };
-
-  const handleExportPdf = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting companies list to PDF...', 'info');
-    const headers = ['Company Name', 'Recruiter Lead', 'Industry', 'Size', 'Location', 'Verification Status'];
-    const rows = filtered.map(c => [
-      c.name || 'Company Name',
-      c.recruiter || 'N/A',
-      c.industry || 'IT & Services',
-      c.size || '100-500 emp',
-      c.location || 'India',
-      c.verificationStatus || 'PENDING'
-    ]);
-    exportToPDF({
-      filename: getExportFilename('companies', statusFilter.toLowerCase(), 'pdf'),
-      title: 'Registered Companies Directory',
-      subtitle: `Status: ${statusFilter === 'ALL' ? 'All Companies' : statusFilter}`,
-      metadata: {
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Status Filter': statusFilter === 'ALL' ? 'All Status' : statusFilter,
-        'Total Records': filtered.length
-      },
-      headers,
-      rows
-    });
-    addToast('PDF export downloaded successfully!', 'success');
-  };
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedCompanies = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const handleApprove = (c) => {
     approveCompany(c.id);
@@ -329,12 +285,6 @@ export default function AdminCompaniesPage() {
                     </button>
                   ))}
                 </div>
-
-                <ExportDropdown
-                  onExportExcel={handleExportExcel}
-                  onExportPdf={handleExportPdf}
-                  disabled={filtered.length === 0}
-                />
               </div>
             </div>
           </div>
@@ -348,7 +298,19 @@ export default function AdminCompaniesPage() {
                 description="No company records match your current search and filter criteria."
               />
             ) : (
-              <Table columns={columns} data={filtered} />
+              <>
+                <Table columns={columns} data={paginatedCompanies} />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filtered.length}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={(p) => {
+                    setCurrentPage(p);
+                    window.scrollTo({ top: 120, behavior: 'smooth' });
+                  }}
+                />
+              </>
             )}
           </div>
 

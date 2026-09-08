@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, Search, Filter, Eye, CheckCircle2, XCircle, CalendarCheck,
@@ -15,6 +15,9 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 export default function ApplicationsPage() {
   const {
@@ -29,6 +32,12 @@ export default function ApplicationsPage() {
   const [selectedJobFilter, setSelectedJobFilter] = useState('ALL');
   const [selectedStatusTab, setSelectedStatusTab] = useState('ALL');
   const [sortBy, setSortBy] = useState('newest');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedJobFilter, selectedStatusTab, sortBy]);
 
   // Modals state
   const [selectedApplicant, setSelectedApplicant] = useState(null);
@@ -45,7 +54,7 @@ export default function ApplicationsPage() {
     notes: 'Technical discussion and architecture deep-dive.'
   });
 
-  const allApplicants = recruiter?.applicants || [];
+  const allApplicants = recruiter?.applicants || recruiter?.applications || [];
   const allJobs = recruiter?.jobs || [];
 
   // Filtered applicants
@@ -92,6 +101,13 @@ export default function ApplicationsPage() {
       return new Date(b.appliedDate) - new Date(a.appliedDate);
     });
   }, [allApplicants, selectedJobFilter, selectedStatusTab, searchQuery, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredApplicants.length / PAGE_SIZE));
+
+  const paginatedApplicants = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredApplicants.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredApplicants, currentPage]);
 
   // Counts for tabs
   const tabCounts = useMemo(() => {
@@ -206,49 +222,51 @@ export default function ApplicationsPage() {
 
       {/* Filter & Search Bar */}
       <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
-          {/* Search box */}
-          <div style={{ flex: '1 1 260px', position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search by candidate name, email, or skill..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
-            />
-          </div>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', flex: '1 1 auto' }}>
+            {/* Search box */}
+            <div style={{ flex: '1 1 240px', minWidth: '200px', position: 'relative' }}>
+              <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search by candidate name, email, or skill..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
+              />
+            </div>
 
-          {/* Job Filter Dropdown */}
-          <div style={{ width: '260px' }}>
-            <select
-              className="form-control"
-              value={selectedJobFilter}
-              onChange={(e) => setSelectedJobFilter(e.target.value)}
-              style={{ height: '42px', borderRadius: '8px' }}
-            >
-              <option value="ALL">All Job Postings ({allApplicants.length})</option>
-              {allJobs.map(job => (
-                <option key={job.id} value={job.id}>
-                  {job.title} ({allApplicants.filter(a => a.jobId === job.id).length})
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Job Filter Dropdown */}
+            <div style={{ width: '240px' }}>
+              <select
+                className="form-control"
+                value={selectedJobFilter}
+                onChange={(e) => setSelectedJobFilter(e.target.value)}
+                style={{ height: '42px', borderRadius: '8px' }}
+              >
+                <option value="ALL">All Job Postings ({allApplicants.length})</option>
+                {allJobs.map(job => (
+                  <option key={job.id} value={job.id}>
+                    {job.title} ({allApplicants.filter(a => a.jobId === job.id).length})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Sort By */}
-          <div style={{ width: '180px' }}>
-            <select
-              className="form-control"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              style={{ height: '42px', borderRadius: '8px' }}
-            >
-              <option value="newest">Sort: Newest First</option>
-              <option value="oldest">Sort: Oldest First</option>
-              <option value="match">Sort: Match Score</option>
-            </select>
+            {/* Sort By */}
+            <div style={{ width: '170px' }}>
+              <select
+                className="form-control"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{ height: '42px', borderRadius: '8px' }}
+              >
+                <option value="newest">Sort: Newest First</option>
+                <option value="oldest">Sort: Oldest First</option>
+                <option value="match">Sort: Match Score</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -323,7 +341,7 @@ export default function ApplicationsPage() {
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {filteredApplicants.map((app) => {
+          {paginatedApplicants.map((app) => {
             const isShortlisted = app.status === 'SHORTLISTED';
             const isInterview = app.status === 'INTERVIEW';
             const isRejected = app.status === 'REJECTED';
@@ -484,6 +502,20 @@ export default function ApplicationsPage() {
               </div>
             );
           })}
+
+          {/* Pagination */}
+          <div style={{ marginTop: 'var(--space-6)' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredApplicants.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={(p) => {
+                setCurrentPage(p);
+                window.scrollTo({ top: 120, behavior: 'smooth' });
+              }}
+            />
+          </div>
         </div>
       )}
 

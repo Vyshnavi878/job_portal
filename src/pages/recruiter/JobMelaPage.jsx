@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   CalendarDays, MapPin, Clock, Building2, Users, CheckCircle2,
-  XCircle, Clock3, Plus, ArrowRight, UserCheck, Briefcase, Sparkles
+  XCircle, Clock3, Plus, ArrowRight, UserCheck, Briefcase, Sparkles, Search
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -10,14 +10,26 @@ import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
+import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
+
+const PAGE_SIZE = 10;
 
 export default function RecruiterJobMelaPage() {
   const { recruiter, registerJobMela } = useRecruiter();
   const { addToast } = useToast();
 
   const events = recruiter?.jobMelas || [];
+  const [search, setSearch] = useState('');
+  const [selectedStatusTab, setSelectedStatusTab] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStatusTab, search]);
 
   // Request Participation Modal
   const [requestModalOpen, setRequestModalOpen] = useState(false);
@@ -28,6 +40,44 @@ export default function RecruiterJobMelaPage() {
     positions: 'React Engineers, Cloud Specialists, Python Devs',
     expectedHires: '20',
   });
+
+  const tabCounts = useMemo(() => {
+    return {
+      all: events.length,
+      approved: events.filter(e => (e.status || e.participationStatus) === 'APPROVED').length,
+      pending: events.filter(e => (e.status || e.participationStatus) === 'PENDING').length,
+    };
+  }, [events]);
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      const status = event.status || event.participationStatus || 'APPROVED';
+      if (selectedStatusTab === 'APPROVED' && status !== 'APPROVED') return false;
+      if (selectedStatusTab === 'PENDING' && status !== 'PENDING') return false;
+
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchTitle = event.title?.toLowerCase().includes(q);
+        const matchVenue = event.venue?.toLowerCase().includes(q);
+        const matchCity = event.city?.toLowerCase().includes(q);
+        const matchBooth = event.boothNumber?.toLowerCase().includes(q);
+        const matchPositions = Array.isArray(event.showcasedPositions)
+          ? event.showcasedPositions.some(p => p.toLowerCase().includes(q))
+          : event.positions?.toLowerCase().includes(q);
+
+        if (!matchTitle && !matchVenue && !matchCity && !matchBooth && !matchPositions) return false;
+      }
+
+      return true;
+    });
+  }, [events, selectedStatusTab, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
+
+  const paginatedEvents = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredEvents.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredEvents, currentPage]);
 
   const handleRequestSubmit = (e) => {
     e.preventDefault();
@@ -61,82 +111,180 @@ export default function RecruiterJobMelaPage() {
         </Button>
       </div>
 
-      {/* Events List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {events.map((event) => (
-          <div
-            key={event.id}
-            className="card"
-            style={{
-              padding: '1.5rem',
-              borderRadius: 'var(--radius-2xl)',
-              border: event.status === 'APPROVED' ? '1px solid #c7d2fe' : '1px solid var(--color-gray-200)'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
-                    {event.title}
-                  </h2>
-                  <span style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '12px',
-                    background: event.status === 'APPROVED' ? '#ecfdf5' : '#fffbeb',
-                    color: event.status === 'APPROVED' ? '#059669' : '#d97706',
-                    border: `1px solid ${event.status === 'APPROVED' ? '#a7f3d0' : '#fde68a'}`
-                  }}>
-                    {event.status === 'APPROVED' ? '✓ Registered & Approved' : '⏳ Registration Pending Approval'}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-gray-600)' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <CalendarDays size={16} color="var(--color-primary-600)" />
-                    {event.date}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <MapPin size={16} color="var(--color-gray-400)" />
-                    {event.venue}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, color: 'var(--color-primary-800)' }}>
-                    <Building2 size={16} color="var(--color-primary-600)" />
-                    {event.boothNumber}
-                  </span>
-                </div>
-              </div>
-
-              {/* Event Metrics Box */}
-              <div style={{ display: 'flex', gap: '1rem', background: '#f8fafc', padding: '0.75rem 1.25rem', borderRadius: '8px', border: '1px solid var(--color-gray-200)' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>{event.candidatesCount || 0}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Registered</div>
-                </div>
-                <div style={{ width: '1px', height: '28px', background: 'var(--color-gray-200)', alignSelf: 'center' }} />
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary-600)' }}>{event.interviewsCount || 0}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Spot Interviews</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Live Queue Preview */}
-            <div style={{ background: 'var(--color-gray-50)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--color-gray-200)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-gray-700)' }}>
-                  Live Booth Queue & Screening
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>Updated live during event</span>
-              </div>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-gray-600)' }}>
-                Candidates walking up to <strong>{event.boothNumber}</strong> will scan QR codes to enter your digital screening pipeline directly.
-              </p>
-            </div>
+      {/* Filter Bar & Status Tabs */}
+      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem', justifyContent: 'space-between' }}>
+          <div style={{ flex: '1 1 300px', maxWidth: '450px', position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search by event title, venue, city, or booth..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
+            />
           </div>
-        ))}
+        </div>
+
+        {/* Status Tabs */}
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          borderTop: '1px solid var(--color-gray-100)',
+          paddingTop: '0.85rem',
+          overflowX: 'auto'
+        }}>
+          {[
+            { id: 'ALL', label: 'All Events', count: tabCounts.all },
+            { id: 'APPROVED', label: 'Registered & Approved', count: tabCounts.approved },
+            { id: 'PENDING', label: 'Pending Approval', count: tabCounts.pending },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedStatusTab(tab.id)}
+              style={{
+                background: selectedStatusTab === tab.id ? 'var(--color-primary-50)' : 'transparent',
+                color: selectedStatusTab === tab.id ? 'var(--color-primary-700)' : 'var(--color-gray-600)',
+                fontWeight: selectedStatusTab === tab.id ? 600 : 500,
+                border: selectedStatusTab === tab.id ? '1px solid var(--color-primary-200)' : '1px solid transparent',
+                borderRadius: '6px',
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>{tab.label}</span>
+              <span style={{
+                background: selectedStatusTab === tab.id ? 'var(--color-primary-600)' : 'var(--color-gray-200)',
+                color: selectedStatusTab === tab.id ? '#fff' : 'var(--color-gray-700)',
+                fontSize: '0.75rem',
+                padding: '0.1rem 0.45rem',
+                borderRadius: '10px',
+                fontWeight: 600
+              }}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Events List */}
+      {filteredEvents.length === 0 ? (
+        <EmptyState
+          icon={<Building2 size={48} />}
+          title="No Job Mela events found"
+          description="No participating Job Mela events match your active search and filter criteria."
+          action={
+            <Button variant="primary" icon={<Plus size={16} />} onClick={() => setRequestModalOpen(true)}>
+              Register for Job Mela
+            </Button>
+          }
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {paginatedEvents.map((event) => {
+            const isApproved = (event.status || event.participationStatus) === 'APPROVED';
+            return (
+              <div
+                key={event.id}
+                className="card"
+                style={{
+                  padding: '1.5rem',
+                  borderRadius: 'var(--radius-2xl)',
+                  border: isApproved ? '1px solid #c7d2fe' : '1px solid var(--color-gray-200)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                      <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
+                        {event.title}
+                      </h2>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: '12px',
+                        background: isApproved ? '#ecfdf5' : '#fffbeb',
+                        color: isApproved ? '#059669' : '#d97706',
+                        border: `1px solid ${isApproved ? '#a7f3d0' : '#fde68a'}`
+                      }}>
+                        {isApproved ? '✓ Registered & Approved' : '⏳ Registration Pending Approval'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-gray-600)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <CalendarDays size={16} color="var(--color-primary-600)" />
+                        {event.date}
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <MapPin size={16} color="var(--color-gray-400)" />
+                        {event.venue}
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, color: 'var(--color-primary-800)' }}>
+                        <Building2 size={16} color="var(--color-primary-600)" />
+                        {event.boothNumber}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Event Metrics Box */}
+                  <div style={{ display: 'flex', gap: '1rem', background: '#f8fafc', padding: '0.75rem 1.25rem', borderRadius: '8px', border: '1px solid var(--color-gray-200)' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
+                        {event.registeredCandidatesAtBooth || event.candidatesCount || 0}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Registered</div>
+                    </div>
+                    <div style={{ width: '1px', height: '28px', background: 'var(--color-gray-200)', alignSelf: 'center' }} />
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary-600)' }}>
+                        {event.spotInterviewsConducted || event.interviewsCount || 0}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Spot Interviews</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Queue Preview */}
+                <div style={{ background: 'var(--color-gray-50)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--color-gray-200)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-gray-700)' }}>
+                      Live Booth Queue & Screening
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>Updated live during event</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-gray-600)' }}>
+                    Candidates walking up to <strong>{event.boothNumber}</strong> will scan QR codes to enter your digital screening pipeline directly.
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Pagination */}
+          <div style={{ marginTop: 'var(--space-6)' }}>
+             <Pagination
+               currentPage={currentPage}
+               totalPages={totalPages}
+               totalItems={filteredEvents.length}
+               pageSize={PAGE_SIZE}
+               onPageChange={(p) => {
+                 setCurrentPage(p);
+                 window.scrollTo({ top: 120, behavior: 'smooth' });
+               }}
+             />
+          </div>
+        </div>
+      )}
 
       {/* Register Modal */}
       {requestModalOpen && (

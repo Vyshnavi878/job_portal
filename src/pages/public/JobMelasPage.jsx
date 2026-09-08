@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CalendarDays, MapPin, Building2, Users, Search,
@@ -8,6 +8,7 @@ import { Tabs, TabsList, Tab, TabPanel } from '../../components/ui/Tabs';
 import { StatusBadge } from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
 import { MOCK_JOB_MELAS } from '../../data/mockData';
 import { useAdmin, DEFAULT_JOB_MELA_CONTENT } from '../../context/AdminContext';
 
@@ -19,6 +20,12 @@ export default function JobMelasPage() {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [cityFilter, setCityFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+
+  // Reset pagination to page 1 whenever tab, search, or city filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, search, cityFilter]);
 
   const upcomingMelas = useMemo(() => {
     return MOCK_JOB_MELAS.filter(m => m.status === 'UPCOMING' || m.status === 'REGISTRATION_OPEN');
@@ -51,6 +58,10 @@ export default function JobMelasPage() {
     if (activeTab === 'completed') return getFilteredList(completedMelas);
     return getFilteredList(upcomingMelas);
   }, [activeTab, search, cityFilter, upcomingMelas, ongoingMelas, completedMelas]);
+
+  const PER_PAGE = 6;
+  const totalPages = Math.ceil(currentList.length / PER_PAGE);
+  const paginatedList = currentList.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   return (
     <div className="job-melas-page" style={{ minHeight: '100vh', background: 'var(--color-bg)', paddingBottom: 'var(--space-16)' }}>
@@ -86,7 +97,7 @@ export default function JobMelasPage() {
                 className="input has-icon-left"
                 placeholder="Search job mela by title, city, or venue..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
 
@@ -94,7 +105,7 @@ export default function JobMelasPage() {
               className="select"
               style={{ width: 170 }}
               value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
+              onChange={(e) => { setCityFilter(e.target.value); setPage(1); }}
             >
               <option value="">All Cities</option>
               <option value="Bengaluru">Bengaluru</option>
@@ -106,7 +117,7 @@ export default function JobMelasPage() {
         </div>
 
         {/* Status Tabs: Upcoming, Ongoing, Completed */}
-        <Tabs defaultTab="upcoming" value={activeTab} onChange={setActiveTab}>
+        <Tabs defaultTab="upcoming" value={activeTab} onChange={(tab) => { setActiveTab(tab); setPage(1); }}>
           <div style={{ marginBottom: 'var(--space-8)' }}>
             <TabsList>
               <Tab value="upcoming" badge={upcomingMelas.length}>
@@ -127,119 +138,136 @@ export default function JobMelasPage() {
               title={`No ${activeTab} job melas found`}
               description="Check back soon for new announcements or try clearing your search and city filters."
               action={
-                <Button variant="primary" onClick={() => { setSearch(''); setCityFilter(''); }}>
+                <Button variant="primary" onClick={() => { setSearch(''); setCityFilter(''); setPage(1); }}>
                   Reset Filters
                 </Button>
               }
             />
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 'var(--space-6)' }}>
-              {currentList.map((mela) => (
-                <div
-                  key={mela.id}
-                  className="card card-hoverable"
-                  style={{
-                    borderRadius: 'var(--radius-2xl)',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    border: '1px solid var(--color-border)'
-                  }}
-                >
-                  {/* Top color header */}
-                  <div style={{
-                    background: mela.status === 'ONGOING'
-                      ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)'
-                      : mela.status === 'COMPLETED'
-                      ? 'linear-gradient(135deg, #475569 0%, #64748b 100%)'
-                      : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-                    padding: 'var(--space-4) var(--space-6)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    color: '#fff'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <CalendarDays size={16} />
-                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>
-                        {new Date(mela.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </span>
-                    </div>
-                    <StatusBadge status={mela.status} size="sm" />
-                  </div>
-
-                  {/* Body Content */}
-                  <div style={{ padding: 'var(--space-6)', flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                    <Link to={`/job-melas/${mela.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, lineHeight: 1.3 }}>
-                        {mela.title}
-                      </h2>
-                    </Link>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <MapPin size={14} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
-                        <span>{mela.venue}, <strong>{mela.city}</strong></span>
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Clock size={14} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
-                        <span>{mela.time}</span>
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Building2 size={14} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
-                        <span><strong>{mela.companiesCount}+ Companies</strong> Participating</span>
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Sparkles size={14} style={{ color: 'var(--color-accent-600)', flexShrink: 0 }} />
-                        <span><strong>{mela.totalOpportunities}</strong> Available</span>
-                      </span>
-                    </div>
-
-                    <p style={{
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--color-text-muted)',
-                      lineHeight: 'var(--leading-relaxed)',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 'var(--space-6)' }}>
+                {paginatedList.map((mela) => (
+                  <div
+                    key={mela.id}
+                    className="card card-hoverable"
+                    style={{
+                      borderRadius: 'var(--radius-2xl)',
                       overflow: 'hidden',
-                      marginTop: 'var(--space-1)'
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      border: '1px solid var(--color-border)'
+                    }}
+                  >
+                    {/* Top color header */}
+                    <div style={{
+                      background: mela.status === 'ONGOING'
+                        ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)'
+                        : mela.status === 'COMPLETED'
+                        ? 'linear-gradient(135deg, #475569 0%, #64748b 100%)'
+                        : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                      padding: 'var(--space-4) var(--space-6)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      color: '#fff'
                     }}>
-                      {mela.description}
-                    </p>
-                  </div>
-
-                  {/* Footer CTA & Seats Status */}
-                  <div style={{
-                    padding: 'var(--space-4) var(--space-6)',
-                    background: 'var(--color-gray-50)',
-                    borderTop: '1px solid var(--color-gray-100)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <div>
-                      {mela.seats && (
-                        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                          <strong>{mela.seats - (mela.registeredCount || 0)}</strong> seats remaining
-                        </p>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                        <CalendarDays size={16} />
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>
+                          {new Date(mela.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <StatusBadge status={mela.status} size="sm" />
                     </div>
 
-                    <Link to={`/job-melas/${mela.id}`}>
-                      <Button
-                        size="sm"
-                        variant={mela.status === 'COMPLETED' ? 'secondary' : 'primary'}
-                        rightIcon={<ArrowRight size={14} />}
-                      >
-                        {mela.status === 'COMPLETED' ? 'View Summary' : 'View Details & Register'}
-                      </Button>
-                    </Link>
+                    {/* Body Content */}
+                    <div style={{ padding: 'var(--space-6)', flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                      <Link to={`/job-melas/${mela.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, lineHeight: 1.3 }}>
+                          {mela.title}
+                        </h2>
+                      </Link>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <MapPin size={14} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                          <span>{mela.venue}, <strong>{mela.city}</strong></span>
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Clock size={14} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                          <span>{mela.time}</span>
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Building2 size={14} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                          <span><strong>{mela.companiesCount}+ Companies</strong> Participating</span>
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Sparkles size={14} style={{ color: 'var(--color-accent-600)', flexShrink: 0 }} />
+                          <span><strong>{mela.totalOpportunities}</strong> Available</span>
+                        </span>
+                      </div>
+
+                      <p style={{
+                        fontSize: 'var(--text-xs)',
+                        color: 'var(--color-text-muted)',
+                        lineHeight: 'var(--leading-relaxed)',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        marginTop: 'var(--space-1)'
+                      }}>
+                        {mela.description}
+                      </p>
+                    </div>
+
+                    {/* Footer CTA & Seats Status */}
+                    <div style={{
+                      padding: 'var(--space-4) var(--space-6)',
+                      background: 'var(--color-gray-50)',
+                      borderTop: '1px solid var(--color-gray-100)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        {mela.seats && (
+                          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                            <strong>{mela.seats - (mela.registeredCount || 0)}</strong> seats remaining
+                          </p>
+                        )}
+                      </div>
+
+                      <Link to={`/job-melas/${mela.id}`}>
+                        <Button
+                          size="sm"
+                          variant={mela.status === 'COMPLETED' ? 'secondary' : 'primary'}
+                          rightIcon={<ArrowRight size={14} />}
+                        >
+                          {mela.status === 'COMPLETED' ? 'View Summary' : 'View Details & Register'}
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div style={{ marginTop: 'var(--space-10)' }}>
+                  <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalItems={currentList.length}
+                    pageSize={PER_PAGE}
+                    onPageChange={(p) => {
+                      setPage(p);
+                      window.scrollTo({ top: 180, behavior: 'smooth' });
+                    }}
+                  />
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </Tabs>
       </div>

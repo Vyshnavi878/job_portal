@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CalendarCheck, Clock, Video, Phone, Building2, User,
@@ -13,8 +13,11 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
+
+const PAGE_SIZE = 10;
 
 export default function RecruiterInterviewsPage() {
   const {
@@ -28,6 +31,12 @@ export default function RecruiterInterviewsPage() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   // Reschedule Modal
   const [rescheduleTarget, setRescheduleTarget] = useState(null);
@@ -74,6 +83,13 @@ export default function RecruiterInterviewsPage() {
       return true;
     });
   }, [interviews, statusFilter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInterviews.length / PAGE_SIZE));
+
+  const paginatedInterviews = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredInterviews.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredInterviews, currentPage]);
 
   const handleOpenReschedule = (item) => {
     setRescheduleTarget(item);
@@ -150,7 +166,7 @@ export default function RecruiterInterviewsPage() {
 
       {/* Filter & Search Bar */}
       <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem', justifyContent: 'space-between' }}>
           <div style={{ flex: '1 1 300px', position: 'relative' }}>
             <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
             <input
@@ -227,7 +243,7 @@ export default function RecruiterInterviewsPage() {
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {filteredInterviews.map((item) => {
+          {paginatedInterviews.map((item) => {
             const isUpcoming = item.status === 'SCHEDULED' || item.status === 'RESCHEDULED';
             return (
               <div
@@ -350,6 +366,20 @@ export default function RecruiterInterviewsPage() {
               </div>
             );
           })}
+
+          {/* Pagination */}
+          <div style={{ marginTop: 'var(--space-6)' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredInterviews.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={(p) => {
+                setCurrentPage(p);
+                window.scrollTo({ top: 120, behavior: 'smooth' });
+              }}
+            />
+          </div>
         </div>
       )}
 

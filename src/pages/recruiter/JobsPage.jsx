@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Briefcase, Plus, Search, Filter, Users, Eye, Edit2,
@@ -11,6 +11,9 @@ import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/States';
 import { ConfirmDialog } from '../../components/ui/Modal';
+import Pagination from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 10;
 
 export default function JobsPage() {
   const navigate = useNavigate();
@@ -20,9 +23,15 @@ export default function JobsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusTab, setSelectedStatusTab] = useState('ALL');
   const [departmentFilter, setDepartmentFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
   const [closingJobId, setClosingJobId] = useState(null);
 
   const jobs = recruiter?.jobs || [];
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedStatusTab, departmentFilter]);
 
   // Extract unique departments
   const departments = useMemo(() => {
@@ -67,6 +76,13 @@ export default function JobsPage() {
     });
   }, [jobs, selectedStatusTab, departmentFilter, searchQuery]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / PAGE_SIZE));
+
+  const paginatedJobs = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredJobs.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredJobs, currentPage]);
+
   const handleConfirmClose = () => {
     if (closingJobId) {
       closeJob(closingJobId);
@@ -108,31 +124,33 @@ export default function JobsPage() {
 
       {/* Filter Bar & Tabs */}
       <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
-          <div style={{ flex: '1 1 300px', position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search by job title, department, location, or skill..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
-            />
-          </div>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', flex: '1 1 auto' }}>
+            <div style={{ flex: '1 1 260px', minWidth: '220px', position: 'relative' }}>
+              <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search by job title, department, location, or skill..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
+              />
+            </div>
 
-          <div style={{ width: '220px' }}>
-            <select
-              className="form-control"
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              style={{ height: '42px', borderRadius: '8px' }}
-            >
-              <option value="ALL">All Departments</option>
-              {departments.map(dept => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-            </select>
+            <div style={{ width: '200px' }}>
+              <select
+                className="form-control"
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                style={{ height: '42px', borderRadius: '8px' }}
+              >
+                <option value="ALL">All Departments</option>
+                {departments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -200,7 +218,7 @@ export default function JobsPage() {
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {filteredJobs.map((job) => (
+          {paginatedJobs.map((job) => (
             <div
               key={job.id}
               className="card"
@@ -336,6 +354,20 @@ export default function JobsPage() {
               </div>
             </div>
           ))}
+
+          {/* Pagination */}
+          <div style={{ marginTop: 'var(--space-6)' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredJobs.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={(p) => {
+                setCurrentPage(p);
+                window.scrollTo({ top: 120, behavior: 'smooth' });
+              }}
+            />
+          </div>
         </div>
       )}
 

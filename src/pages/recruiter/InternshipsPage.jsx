@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   GraduationCap, Plus, Search, Users, Eye, Edit2,
@@ -12,8 +12,11 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
+
+const PAGE_SIZE = 10;
 
 export default function RecruiterInternshipsPage() {
   const { recruiter, createInternship } = useRecruiter();
@@ -21,7 +24,15 @@ export default function RecruiterInternshipsPage() {
 
   const internships = recruiter?.internships || [];
   const [search, setSearch] = useState('');
+  const [selectedStatusTab, setSelectedStatusTab] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStatusTab, search]);
+
   const [newInternship, setNewInternship] = useState({
     title: '',
     stipend: '₹25,000 / month',
@@ -31,6 +42,14 @@ export default function RecruiterInternshipsPage() {
     openings: '3',
     description: 'We are looking for passionate student developers and fresh graduates to join our hands-on engineering team.',
   });
+
+  const tabCounts = useMemo(() => ({
+    all: internships.length,
+    active: internships.filter(i => i.status === 'PUBLISHED').length,
+    pending: internships.filter(i => i.status === 'PENDING').length,
+    draft: internships.filter(i => i.status === 'DRAFT').length,
+    closed: internships.filter(i => i.status === 'CLOSED').length,
+  }), [internships]);
 
   const handleCreateSubmit = (e) => {
     e.preventDefault();
@@ -57,11 +76,33 @@ export default function RecruiterInternshipsPage() {
     });
   };
 
-  const filtered = internships.filter(i => {
-    if (!search.trim()) return true;
-    return i.title.toLowerCase().includes(search.toLowerCase()) ||
-           i.location?.toLowerCase().includes(search.toLowerCase());
-  });
+  const filtered = useMemo(() => {
+    return internships.filter((item) => {
+      // Status filter
+      if (selectedStatusTab === 'ACTIVE' && item.status !== 'PUBLISHED') return false;
+      if (selectedStatusTab === 'PENDING' && item.status !== 'PENDING') return false;
+      if (selectedStatusTab === 'DRAFT' && item.status !== 'DRAFT') return false;
+      if (selectedStatusTab === 'CLOSED' && item.status !== 'CLOSED') return false;
+
+      // Search query
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchTitle = item.title?.toLowerCase().includes(q);
+        const matchLoc = item.location?.toLowerCase().includes(q);
+        const matchDesc = item.description?.toLowerCase().includes(q);
+        if (!matchTitle && !matchLoc && !matchDesc) return false;
+      }
+
+      return true;
+    });
+  }, [internships, selectedStatusTab, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  const paginatedInternships = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   return (
     <div className="portal-page">
@@ -80,18 +121,69 @@ export default function RecruiterInternshipsPage() {
         </Button>
       </div>
 
-      {/* Search Bar */}
+      {/* Filter Bar & Tabs */}
       <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
-        <div style={{ position: 'relative', maxWidth: '400px' }}>
-          <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search internships by title or location..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
-          />
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem', justifyContent: 'space-between' }}>
+          <div style={{ flex: '1 1 300px', maxWidth: '450px', position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search internships by title, location, or description..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
+            />
+          </div>
+        </div>
+
+        {/* Status Tabs */}
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          borderTop: '1px solid var(--color-gray-100)',
+          paddingTop: '0.85rem',
+          overflowX: 'auto'
+        }}>
+          {[
+            { id: 'ALL', label: 'All Internships', count: tabCounts.all },
+            { id: 'ACTIVE', label: 'Active / Published', count: tabCounts.active },
+            { id: 'PENDING', label: 'Pending Approval', count: tabCounts.pending },
+            { id: 'DRAFT', label: 'Drafts', count: tabCounts.draft },
+            { id: 'CLOSED', label: 'Closed', count: tabCounts.closed },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedStatusTab(tab.id)}
+              style={{
+                background: selectedStatusTab === tab.id ? 'var(--color-primary-50)' : 'transparent',
+                color: selectedStatusTab === tab.id ? 'var(--color-primary-700)' : 'var(--color-gray-600)',
+                fontWeight: selectedStatusTab === tab.id ? 600 : 500,
+                border: selectedStatusTab === tab.id ? '1px solid var(--color-primary-200)' : '1px solid transparent',
+                borderRadius: '6px',
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <span>{tab.label}</span>
+              <span style={{
+                background: selectedStatusTab === tab.id ? 'var(--color-primary-600)' : 'var(--color-gray-200)',
+                color: selectedStatusTab === tab.id ? '#fff' : 'var(--color-gray-700)',
+                fontSize: '0.75rem',
+                padding: '0.1rem 0.45rem',
+                borderRadius: '10px',
+                fontWeight: 600
+              }}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -108,63 +200,79 @@ export default function RecruiterInternshipsPage() {
           }
         />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
-          {filtered.map((item) => (
-            <div
-              key={item.id}
-              className="card"
-              style={{
-                padding: '1.25rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                border: '1px solid var(--color-gray-200)'
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.25rem' }}>
+            {paginatedInternships.map((item) => (
+              <div
+                key={item.id}
+                className="card"
+                style={{
+                  padding: '1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  border: '1px solid var(--color-gray-200)'
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
+                      {item.title}
+                    </h3>
+                    <StatusBadge status={item.status} />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--color-gray-600)', marginBottom: '0.85rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <DollarSign size={14} color="var(--color-primary-600)" />
+                      <span style={{ fontWeight: 600, color: 'var(--color-gray-800)' }}>{item.stipend}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Clock size={14} color="var(--color-gray-400)" />
+                      <span>{item.duration}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <MapPin size={14} color="var(--color-gray-400)" />
+                      <span>{item.location || 'Bengaluru'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Users size={14} color="var(--color-gray-400)" />
+                      <span>{item.openings || 2} Openings</span>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-gray-700)', lineHeight: 1.5, margin: 0 }}>
+                    {item.description}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.75rem', marginTop: '1rem' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+                    {item.applicantsCount || 0} Candidates Applied
+                  </span>
+                  <Link to="/recruiter/applications">
+                    <Button variant="outline" size="sm">
+                      View Applicants
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          <div style={{ marginTop: 'var(--space-6)' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={(p) => {
+                setCurrentPage(p);
+                window.scrollTo({ top: 120, behavior: 'smooth' });
               }}
-            >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
-                    {item.title}
-                  </h3>
-                  <StatusBadge status={item.status} />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--color-gray-600)', marginBottom: '0.85rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <DollarSign size={14} color="var(--color-primary-600)" />
-                    <span style={{ fontWeight: 600, color: 'var(--color-gray-800)' }}>{item.stipend}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Clock size={14} color="var(--color-gray-400)" />
-                    <span>{item.duration}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <MapPin size={14} color="var(--color-gray-400)" />
-                    <span>{item.location || 'Bengaluru'}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Users size={14} color="var(--color-gray-400)" />
-                    <span>{item.openings || 2} Openings</span>
-                  </div>
-                </div>
-
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-gray-700)', lineHeight: 1.5, margin: 0 }}>
-                  {item.description}
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.75rem', marginTop: '1rem' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--color-primary-600)', fontWeight: 600 }}>
-                  {item.applicantsCount || 0} Candidates Applied
-                </span>
-                <Link to="/recruiter/applications">
-                  <Button variant="outline" size="sm">
-                    View Applicants
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          ))}
+            />
+          </div>
         </div>
       )}
 

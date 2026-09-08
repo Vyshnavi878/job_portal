@@ -40,7 +40,7 @@ export default function Pagination({
 
   const pages = getPages();
 
-  if (totalPages <= 1) return null;
+  if (totalItems === 0 || totalPages < 1) return null;
 
   return (
     <div className="pagination">

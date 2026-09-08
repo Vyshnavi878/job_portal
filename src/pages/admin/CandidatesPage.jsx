@@ -11,10 +11,9 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
-import ExportDropdown from '../../components/ui/ExportDropdown';
+import Pagination from '../../components/ui/Pagination';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
-import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 // Consolidated Pages
 import AdminApplicationsPage from './ApplicationsPage';
@@ -48,8 +47,14 @@ export default function AdminCandidatesPage() {
     }
   };
 
+  const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
 
   // Candidate Profile Modal
   const [selectedCand, setSelectedCand] = useState(null);
@@ -76,60 +81,11 @@ export default function AdminCandidatesPage() {
     });
   }, [candidates, search, statusFilter]);
 
-  const handleExportExcel = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting candidates list to Excel...', 'info');
-    const headers = ['Candidate Name', 'Email', 'Phone', 'Location', 'Registration Date', 'Profile Status', 'Account Status'];
-    const rows = filtered.map(c => [
-      c.name || 'Candidate',
-      c.email || 'N/A',
-      c.phone || 'N/A',
-      c.location || 'N/A',
-      c.registrationDate || '01 Aug 2026',
-      c.profileStatus || 'COMPLETE',
-      c.accountStatus || 'ACTIVE'
-    ]);
-    exportToExcel({
-      filename: getExportFilename('candidates', statusFilter, 'xlsx'),
-      sheetName: 'Candidates',
-      headers,
-      rows
-    });
-    addToast('Excel export downloaded successfully!', 'success');
-  };
-
-  const handleExportPdf = () => {
-    if (filtered.length === 0) {
-      addToast('No records available to export for the selected filters.', 'info');
-      return;
-    }
-    addToast('Exporting candidates list to PDF...', 'info');
-    const headers = ['Candidate Name', 'Email', 'Phone', 'Location', 'Reg Date', 'Account Status'];
-    const rows = filtered.map(c => [
-      c.name || 'Candidate',
-      c.email || 'N/A',
-      c.phone || 'N/A',
-      c.location || 'N/A',
-      c.registrationDate || '01 Aug 2026',
-      c.accountStatus || 'ACTIVE'
-    ]);
-    exportToPDF({
-      filename: getExportFilename('candidates', statusFilter, 'pdf'),
-      title: 'Platform Candidates Directory',
-      subtitle: 'Registered Job Seekers Management Report',
-      metadata: {
-        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        'Status Filter': statusFilter === 'ALL' ? 'All Accounts' : statusFilter,
-        'Total Records': filtered.length
-      },
-      headers,
-      rows
-    });
-    addToast('PDF export downloaded successfully!', 'success');
-  };
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedCandidates = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filtered.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filtered, currentPage]);
 
   const handleActivate = (c) => {
     activateCandidate(c.id);
@@ -445,12 +401,6 @@ export default function AdminCandidatesPage() {
                     </button>
                   ))}
                 </div>
-
-                <ExportDropdown
-                  onExportExcel={handleExportExcel}
-                  onExportPdf={handleExportPdf}
-                  disabled={filtered.length === 0}
-                />
               </div>
             </div>
           </div>
@@ -464,7 +414,19 @@ export default function AdminCandidatesPage() {
                 description="No candidate records match your current search and filter criteria."
               />
             ) : (
-              <Table columns={columns} data={filtered} />
+              <>
+                <Table columns={columns} data={paginatedCandidates} />
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filtered.length}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={(p) => {
+                    setCurrentPage(p);
+                    window.scrollTo({ top: 120, behavior: 'smooth' });
+                  }}
+                />
+              </>
             )}
           </div>
 

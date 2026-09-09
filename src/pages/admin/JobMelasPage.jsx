@@ -4,7 +4,8 @@ import {
   CalendarDays, Plus, Search, Filter, Eye, Building2, MapPin,
   Clock, CheckCircle2, Ticket, XCircle, Inbox, Check, X, AlertCircle,
   Pencil, Trash2, ExternalLink, Share2, Users, Briefcase,
-  ChevronLeft, ChevronRight, User, Phone, Mail, Award, DollarSign
+  ChevronLeft, ChevronRight, User, Phone, Mail, Award, DollarSign,
+  FileSpreadsheet, FileText, Download, Info, Calendar
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -15,6 +16,8 @@ import Input from '../../components/ui/Input';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, exportToCSV, generatePDFBlob, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
 
@@ -149,6 +152,20 @@ export default function AdminJobMelasPage() {
   const requestsList = jobMelas.filter((m) => !isAdminCreated(m) || m.status === 'PENDING');
   const pendingRequestsCount = jobMelas.filter((m) => m.status === 'PENDING').length;
 
+  const [requestCompanyFilter, setRequestCompanyFilter] = useState('ALL');
+
+  // Derive unique company / organization names from existing Job Mela Requests
+  const availableRequestOrganizations = useMemo(() => {
+    const set = new Set();
+    requestsList.forEach(r => {
+      const org = r.organizer || r.company || r.requestingOrganization;
+      if (org && typeof org === 'string' && org.trim()) {
+        set.add(org.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [requestsList]);
+
   // Filtered Admin Melas
   const filteredAdminMelas = adminMelas.filter((e) => {
     const eventTitle = e.event || e.title || '';
@@ -166,21 +183,35 @@ export default function AdminJobMelasPage() {
   });
 
   // Filtered Requests
-  const filteredRequests = requestsList.filter((r) => {
-    const title = r.event || r.title || '';
-    const organizer = r.organizer || '';
-    const location = r.location || r.venue || '';
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      if (!title.toLowerCase().includes(q) && !organizer.toLowerCase().includes(q) && !location.toLowerCase().includes(q)) {
+  const filteredRequests = useMemo(() => {
+    return requestsList.filter((r) => {
+      // 1. Company / Organization Filter
+      if (requestCompanyFilter !== 'ALL') {
+        const org = (r.organizer || r.company || r.requestingOrganization || '').trim().toLowerCase();
+        if (org !== requestCompanyFilter.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
+      // 2. Status Filter
+      if (requestStatusTab !== 'ALL' && r.status !== requestStatusTab) {
         return false;
       }
-    }
-    if (requestStatusTab !== 'ALL' && r.status !== requestStatusTab) {
-      return false;
-    }
-    return true;
-  });
+
+      // 3. Search Filter
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const title = (r.event || r.title || '').toLowerCase();
+        const organizer = (r.organizer || '').toLowerCase();
+        const location = (r.location || r.venue || '').toLowerCase();
+        if (!title.includes(q) && !organizer.includes(q) && !location.includes(q)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [requestsList, search, requestStatusTab, requestCompanyFilter]);
 
   const PAGE_SIZE = 10;
   const [adminMelasPage, setAdminMelasPage] = useState(1);
@@ -192,7 +223,7 @@ export default function AdminJobMelasPage() {
 
   useEffect(() => {
     setRequestsPage(1);
-  }, [search, requestStatusTab, activeAction]);
+  }, [search, requestStatusTab, requestCompanyFilter, activeAction]);
 
   const totalAdminMelasPages = Math.max(1, Math.ceil(filteredAdminMelas.length / PAGE_SIZE));
   const paginatedAdminMelas = useMemo(() => {
@@ -314,6 +345,236 @@ export default function AdminJobMelasPage() {
     if (!selectedMela) return;
     removeCompanyFromJobMela(selectedMela.id, companyRow.id);
     addToast(`Removed ${companyRow.company} from this Job Mela.`, 'info');
+  };
+
+  const handleExportAdminMelasExcel = () => {
+    if (filteredAdminMelas.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting Job Melas list to Excel...', 'info');
+    const headers = [
+      'Job Mela Name',
+      'Event Date',
+      'Start Time',
+      'End Time',
+      'Venue',
+      'Location / City',
+      'Organizing Authority',
+      'Status',
+      'Participating Companies Count',
+      'Registered Candidates Count'
+    ];
+    const rows = filteredAdminMelas.map(m => {
+      const times = (m.time || '09:00 AM - 05:00 PM').split('-');
+      const compCount = Array.isArray(m.participatingCompanies) ? m.participatingCompanies.length : (m.companiesCount || 0);
+      const regCount = m.registeredCandidatesCount || m.registeredCandidates || 0;
+      return [
+        m.event || m.title || 'Job Mela',
+        m.date ? new Date(m.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept 2026',
+        times[0]?.trim() || '09:00 AM',
+        times[1]?.trim() || '05:00 PM',
+        m.venue || m.location || 'Convention Center',
+        m.city || m.location || 'Vijayawada',
+        m.organizer || 'NTR Vikasa Authority',
+        m.status || 'UPCOMING',
+        compCount,
+        regCount
+      ];
+    });
+    exportToExcel({
+      filename: getExportFilename('job_melas', statusFilter.toLowerCase(), 'xlsx'),
+      sheetName: 'Job Melas',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportAdminMelasPdf = () => {
+    if (filteredAdminMelas.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting Job Melas list to PDF...', 'info');
+    const headers = ['Event Name', 'Date & Time', 'Venue & Location', 'Companies', 'Status'];
+    const rows = filteredAdminMelas.map(m => {
+      const compCount = Array.isArray(m.participatingCompanies) ? m.participatingCompanies.length : (m.companiesCount || 0);
+      return [
+        m.event || m.title || 'Job Mela',
+        `${m.date ? new Date(m.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept'} (${m.time || '09:00 - 17:00'})`,
+        `${m.venue || ''}, ${m.location || m.city || ''}`,
+        `${compCount} Companies`,
+        m.status || 'UPCOMING'
+      ];
+    });
+    const tabObj = filterTabs.find(t => t.key === statusFilter);
+    const statusLabel = tabObj ? tabObj.label : statusFilter;
+
+    exportToPDF({
+      filename: getExportFilename('job_melas', statusFilter.toLowerCase(), 'pdf'),
+      title: 'State Mega Career Summits & Job Melas Report',
+      subtitle: `NTR Vikasa State Employment Authority - Filter: ${statusLabel}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusLabel,
+        'Search Query': search || 'None',
+        'Total Records': filteredAdminMelas.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
+
+  const handleExportMelaCompaniesExcel = (mela) => {
+    if (!mela) return;
+    const comps = getScopedMelaCompanies(mela);
+    if (comps.length === 0) {
+      addToast('No participating companies found to export.', 'info');
+      return;
+    }
+    addToast('Exporting participating companies to Excel...', 'info');
+    const headers = [
+      'Company',
+      'Position / Role',
+      'Qualification',
+      'Experience',
+      'Salary',
+      'Vacancies',
+      'Applications',
+      'Location',
+      'Recruiter Lead',
+      'Notes'
+    ];
+    const rows = comps.map(c => [
+      c.company || 'N/A',
+      c.position || 'N/A',
+      c.qualification || 'Any Degree',
+      c.experience || '0-3 Years',
+      c.salary || 'Competitive',
+      c.vacancies || 0,
+      c.applications || 0,
+      c.location || mela.location || 'AP',
+      c.recruiter || 'HR Lead',
+      c.notes || 'N/A'
+    ]);
+    const eventName = (mela.event || mela.title || 'job_mela').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    exportToExcel({
+      filename: `${eventName}_companies_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: 'Companies',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportMelaCompaniesPdf = (mela) => {
+    if (!mela) return;
+    const comps = getScopedMelaCompanies(mela);
+    if (comps.length === 0) {
+      addToast('No participating companies found to export.', 'info');
+      return;
+    }
+    addToast('Exporting participating companies to PDF...', 'info');
+    const headers = ['Company', 'Role', 'Experience', 'Salary', 'Vacancies', 'Applications'];
+    const rows = comps.map(c => [
+      c.company || 'N/A',
+      c.position || 'Role',
+      c.experience || '0-3 Yrs',
+      c.salary || 'Competitive',
+      c.vacancies || 0,
+      c.applications || 0
+    ]);
+    const eventTitle = mela.event || mela.title || 'Job Mela';
+    const eventName = eventTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    exportToPDF({
+      filename: `${eventName}_companies_${new Date().toISOString().slice(0, 10)}.pdf`,
+      title: `${eventTitle} — Participating Companies`,
+      subtitle: `Venue: ${mela.venue || mela.location} • Date: ${mela.date || '15 Sept 2026'}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Total Companies': comps.length,
+        'Event Venue': mela.venue || mela.location || 'N/A'
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
+
+  const handleExportMelaCandidatesExcel = (mela) => {
+    if (!mela) return;
+    const cands = getScopedMelaCandidates(mela);
+    if (cands.length === 0) {
+      addToast('No registered candidates found to export.', 'info');
+      return;
+    }
+    addToast('Exporting registered candidates to Excel...', 'info');
+    const headers = [
+      'Registration ID',
+      'Candidate Name',
+      'Email',
+      'Phone',
+      'Job / Role',
+      'Gate Number',
+      'Entry Token',
+      'Registration Date',
+      'Registration Status'
+    ];
+    const rows = cands.map(c => [
+      c.id || 'N/A',
+      c.candidate || c.candidateName || 'N/A',
+      c.candidateEmail || c.email || 'N/A',
+      c.phone || 'N/A',
+      c.position || c.headline || 'Software Engineer',
+      c.gateNumber || 'Main Gate',
+      c.entryToken || 'N/A',
+      c.registrationDate || c.registeredDate ? new Date(c.registrationDate || c.registeredDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
+      c.status || 'CONFIRMED'
+    ]);
+    const eventName = (mela.event || mela.title || 'job_mela').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    exportToExcel({
+      filename: `${eventName}_candidates_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      sheetName: 'Candidates',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportMelaCandidatesPdf = (mela) => {
+    if (!mela) return;
+    const cands = getScopedMelaCandidates(mela);
+    if (cands.length === 0) {
+      addToast('No registered candidates found to export.', 'info');
+      return;
+    }
+    addToast('Exporting registered candidates to PDF...', 'info');
+    const headers = ['Reg ID', 'Candidate Name', 'Email', 'Phone', 'Gate / Token', 'Status'];
+    const rows = cands.map(c => [
+      c.id || 'N/A',
+      c.candidate || c.candidateName || 'N/A',
+      c.candidateEmail || c.email || 'N/A',
+      c.phone || 'N/A',
+      `${c.gateNumber?.substring(0, 6) || 'Gate 1'} (${c.entryToken || 'TKN'})`,
+      c.status || 'CONFIRMED'
+    ]);
+    const eventTitle = mela.event || mela.title || 'Job Mela';
+    const eventName = eventTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    exportToPDF({
+      filename: `${eventName}_candidates_${new Date().toISOString().slice(0, 10)}.pdf`,
+      title: `${eventTitle} — Registered Candidates`,
+      subtitle: `Venue: ${mela.venue || mela.location} • Total Registered: ${cands.length}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Total Candidates': cands.length,
+        'Event Venue': mela.venue || mela.location || 'N/A'
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
   };
 
   const handleSaveCompany = (e) => {
@@ -677,6 +938,12 @@ export default function AdminJobMelasPage() {
                     </button>
                   ))}
                 </div>
+
+                <ExportDropdown
+                  onExportExcel={handleExportAdminMelasExcel}
+                  onExportPdf={handleExportAdminMelasPdf}
+                  disabled={filteredAdminMelas.length === 0}
+                />
               </div>
             </div>
           </div>
@@ -709,9 +976,73 @@ export default function AdminJobMelasPage() {
       {activeAction === 'REQUESTS' && (
         <>
           {/* Search & Request Status Filters */}
-          <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
-            <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+          <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            {/* Row 1: Status Filter Tabs */}
+            <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+                {[
+                  { key: 'ALL', label: 'All Requests' },
+                  { key: 'PENDING', label: `Pending (${pendingRequestsCount})` },
+                  { key: 'APPROVED', label: 'Approved' },
+                  { key: 'REJECTED', label: 'Rejected' },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setRequestStatusTab(tab.key)}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: 'var(--radius-lg)',
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: requestStatusTab === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                      background: requestStatusTab === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                      color: requestStatusTab === tab.key ? '#fff' : 'var(--color-text-muted)',
+                      transition: 'all 150ms ease'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Row 2: Company / Organization Filter Dropdown & Search Bar */}
+            <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+              {/* Company / Organization Dropdown Filter */}
+              <div style={{ position: 'relative', minWidth: 260, flex: '0 1 300px' }}>
+                <Building2 size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
+                <select
+                  value={requestCompanyFilter}
+                  onChange={(e) => setRequestCompanyFilter(e.target.value)}
+                  className="form-control"
+                  style={{
+                    width: '100%',
+                    height: 38,
+                    paddingLeft: 36,
+                    paddingRight: 28,
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 600,
+                    color: 'var(--color-text)',
+                    cursor: 'pointer',
+                    background: requestCompanyFilter === 'ALL' ? 'var(--color-surface)' : 'var(--color-primary-50, #eff6ff)',
+                    borderColor: requestCompanyFilter === 'ALL' ? 'var(--color-border)' : 'var(--color-primary-500)'
+                  }}
+                >
+                  <option value="ALL">All Companies</option>
+                  {availableRequestOrganizations.map((orgName) => (
+                    <option key={orgName} value={orgName}>
+                      {orgName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search Input */}
+              <div style={{ position: 'relative', flex: '1 1 240px' }}>
                 <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                 <input
                   type="text"
@@ -719,40 +1050,25 @@ export default function AdminJobMelasPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="form-control"
-                  style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+                  style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-xs)' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-                  {[
-                    { key: 'ALL', label: 'All Requests' },
-                    { key: 'PENDING', label: `Pending (${pendingRequestsCount})` },
-                    { key: 'APPROVED', label: 'Approved' },
-                    { key: 'REJECTED', label: 'Rejected' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onClick={() => setRequestStatusTab(tab.key)}
-                      style={{
-                        padding: '5px 12px',
-                        borderRadius: 'var(--radius-lg)',
-                        fontSize: 'var(--text-xs)',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        border: requestStatusTab === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                        background: requestStatusTab === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                        color: requestStatusTab === tab.key ? '#fff' : 'var(--color-text-muted)',
-                        transition: 'all 150ms ease'
-                      }}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Active Filter Clear */}
+              {(requestCompanyFilter !== 'ALL' || requestStatusTab !== 'ALL' || search.trim() !== '') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRequestCompanyFilter('ALL');
+                    setRequestStatusTab('ALL');
+                    setSearch('');
+                  }}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 'var(--text-xs)', height: 38, padding: '0 12px', color: 'var(--color-text-muted)' }}
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           </div>
 
@@ -920,6 +1236,31 @@ export default function AdminJobMelasPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <ExportDropdown
+                    label="Export"
+                    items={[
+                      {
+                        label: 'Participating Companies - Excel',
+                        icon: <FileSpreadsheet size={15} style={{ color: '#16a34a' }} />,
+                        onClick: () => handleExportMelaCompaniesExcel(selectedMela)
+                      },
+                      {
+                        label: 'Participating Companies - PDF',
+                        icon: <FileText size={15} style={{ color: '#dc2626' }} />,
+                        onClick: () => handleExportMelaCompaniesPdf(selectedMela)
+                      },
+                      {
+                        label: 'Registered Candidates - Excel',
+                        icon: <FileSpreadsheet size={15} style={{ color: '#2563eb' }} />,
+                        onClick: () => handleExportMelaCandidatesExcel(selectedMela)
+                      },
+                      {
+                        label: 'Registered Candidates - PDF',
+                        icon: <FileText size={15} style={{ color: '#9333ea' }} />,
+                        onClick: () => handleExportMelaCandidatesPdf(selectedMela)
+                      }
+                    ]}
+                  />
                   <Button
                     variant="primary"
                     size="sm"
@@ -1615,7 +1956,7 @@ export default function AdminJobMelasPage() {
           size="lg"
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-            {/* Header Banner */}
+            {/* 1. REQUEST OVERVIEW - Header Banner */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -1626,19 +1967,20 @@ export default function AdminJobMelasPage() {
               borderRadius: 'var(--radius-xl)'
             }}>
               <div style={{
-                width: 50,
-                height: 50,
-                borderRadius: 'var(--radius-lg)',
+                width: 52,
+                height: 52,
+                borderRadius: 'var(--radius-xl)',
                 background: 'rgba(255,255,255,0.15)',
                 color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                flexShrink: 0
               }}>
                 <Inbox size={24} />
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                   <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, margin: 0, color: '#fff' }}>
                     {selectedRequest.event || selectedRequest.title}
                   </h3>
@@ -1650,46 +1992,105 @@ export default function AdminJobMelasPage() {
               </div>
             </div>
 
-            {/* Request Information Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
-                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                  Event Logistics & Location
+            {/* 2. EVENT LOGISTICS & LOCATION + 3. SCALE & REQUIREMENTS (2-Col Grid) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)' }}>
+              {/* 2. EVENT LOGISTICS & LOCATION */}
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-primary-700)', marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <MapPin size={13} /> Event Logistics & Location
                 </h4>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                  <strong>Proposed Date:</strong> {selectedRequest.date ? new Date(selectedRequest.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '20 Oct 2026'}
-                </p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                  <strong>Event Timings:</strong> {selectedRequest.time || '09:00 AM - 05:00 PM'}
-                </p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                  <strong>Venue / Ground:</strong> {selectedRequest.venue || selectedRequest.location}
-                </p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}>
-                  <strong>City / Region:</strong> {selectedRequest.location || 'Andhra Pradesh'}
-                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Proposed Date:</strong> <span>{selectedRequest.date ? new Date(selectedRequest.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '20 Oct 2026'}</span>
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Event Timings:</strong> <span>{selectedRequest.time || (selectedRequest.startTime && selectedRequest.endTime ? `${selectedRequest.startTime} - ${selectedRequest.endTime}` : '09:00 AM - 05:00 PM')}</span>
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Venue / Ground:</strong> <span>{selectedRequest.venue || selectedRequest.location || 'Proposed Venue'}</span>
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>City / Region:</strong> <span>{selectedRequest.city || selectedRequest.state ? `${selectedRequest.city || ''}${selectedRequest.city && selectedRequest.state ? ', ' : ''}${selectedRequest.state || ''}` : (selectedRequest.location || 'Andhra Pradesh')}</span>
+                  </p>
+                </div>
               </div>
 
-              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
-                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                  Scale & Request Timeline
+              {/* 3. SCALE & REQUIREMENTS */}
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-primary-700)', marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Briefcase size={13} /> Scale & Requirements
                 </h4>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                  <strong>Target Vacancies:</strong> {selectedRequest.vacanciesCount || 800}+ Positions
-                </p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                  <strong>Expected Companies:</strong> {selectedRequest.companiesCount || 40}+ Employers
-                </p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                  <strong>Submission Date:</strong> {new Date(selectedRequest.requestDate || selectedRequest.createdAt || '2026-09-01').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                </p>
-                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}>
-                  <strong>Current Status:</strong> {selectedRequest.status || 'PENDING'}
-                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Target Vacancies:</strong> <span>{selectedRequest.vacanciesCount ? `${selectedRequest.vacanciesCount}+ Positions` : (selectedRequest.vacancies || '800+ Positions')}</span>
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Expected Companies:</strong> <span>{selectedRequest.companiesCount ? `${selectedRequest.companiesCount}+ Employers` : (Array.isArray(selectedRequest.participatingCompanies) ? `${selectedRequest.participatingCompanies.length}+ Employers` : '40+ Employers')}</span>
+                  </p>
+                  {selectedRequest.maxCapacity && (
+                    <p style={{ margin: 0 }}>
+                      <strong>Max Candidate Capacity:</strong> <span>{selectedRequest.maxCapacity.toLocaleString()} Attendees</span>
+                    </p>
+                  )}
+                  {selectedRequest.description && (
+                    <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '11px', marginTop: 2, lineHeight: 1.5 }}>
+                      {selectedRequest.description}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Request Review Actions */}
+            {/* 4. REQUEST TIMELINE & 5. REQUESTER / ORGANIZATION DETAILS (2-Col Grid) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)' }}>
+              {/* 4. REQUEST TIMELINE */}
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-primary-700)', marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Clock size={13} /> Request Timeline & Status
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Submission Date:</strong> <span>{new Date(selectedRequest.requestDate || selectedRequest.createdAt || '2026-09-01').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  </p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <strong>Current Status:</strong> <StatusBadge status={selectedRequest.status || 'PENDING'} />
+                  </p>
+                  {selectedRequest.approvalDate && (
+                    <p style={{ margin: 0 }}>
+                      <strong>Decision Date:</strong> <span>{new Date(selectedRequest.approvalDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </p>
+                  )}
+                  {selectedRequest.regStartDate && selectedRequest.regEndDate && (
+                    <p style={{ margin: 0 }}>
+                      <strong>Registration Window:</strong> <span>{selectedRequest.regStartDate} to {selectedRequest.regEndDate}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* 5. REQUESTER / ORGANIZATION DETAILS */}
+              <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-primary-700)', marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Building2 size={13} /> Requester / Organization Details
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
+                  <p style={{ margin: 0 }}>
+                    <strong>Organization Name:</strong> <span>{selectedRequest.organizer || 'State Employment Body'}</span>
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Contact Person:</strong> <span>{selectedRequest.contactPerson || selectedRequest.contact || selectedRequest.leadPerson || 'Nodal Placement Officer'}</span>
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Official Email:</strong> <span style={{ color: 'var(--color-primary-600)' }}>{selectedRequest.email || selectedRequest.officialEmail || 'events@apssdc.in'}</span>
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Phone:</strong> <span>{selectedRequest.phone || selectedRequest.contactPhone || '+91 866 242 9999'}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 6. ADMIN ACTIONS (Status-Based: PENDING -> [Close][Reject][Approve]; APPROVED/REJECTED -> [Close]) */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
               <Button variant="outline" size="sm" onClick={() => setRequestDetailsOpen(false)}>
                 Close
@@ -1705,7 +2106,7 @@ export default function AdminJobMelasPage() {
                       setSelectedRequest({ ...selectedRequest, status: 'REJECTED' });
                     }}
                   >
-                    Reject Request
+                    Reject
                   </Button>
                   <Button
                     variant="primary"
@@ -1716,7 +2117,7 @@ export default function AdminJobMelasPage() {
                       setSelectedRequest({ ...selectedRequest, status: 'APPROVED' });
                     }}
                   >
-                    Approve & Publish Event
+                    Approve
                   </Button>
                 </>
               )}
@@ -1849,6 +2250,10 @@ export default function AdminJobMelasPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <ExportDropdown
+                    onExportExcel={() => handleExportMelaCandidatesExcel(selectedMelaForRegs)}
+                    onExportPdf={() => handleExportMelaCandidatesPdf(selectedMelaForRegs)}
+                  />
                 </div>
               </div>
 
@@ -2234,59 +2639,483 @@ export default function AdminJobMelasPage() {
       )}
 
       {/* ── 5. Candidate Digital Pass Modal ── */}
-      {passModalOpen && selectedPass && (
-        <Modal
-          isOpen={passModalOpen}
-          onClose={() => setPassModalOpen(false)}
-          title="Digital Mela Pass Verification"
-          size="sm"
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', textAlign: 'center' }}>
-            <div style={{
-              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
-              color: '#fff',
-              padding: 'var(--space-5)',
-              borderRadius: 'var(--radius-xl)'
-            }}>
-              <Ticket size={32} style={{ margin: '0 auto var(--space-2)' }} />
-              <span style={{ fontSize: '10px', color: '#c7d2fe', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                NTR VIKASA VERIFIED ENTRY PASS
-              </span>
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: '4px 0 0 0', color: '#fff' }}>
-                {selectedPass.entryToken || selectedPass.id}
-              </h3>
-              <p style={{ fontSize: 'var(--text-xs)', color: '#e0e7ff', margin: '4px 0 0 0' }}>
-                {selectedPass.candidate || selectedPass.candidateName}
-              </p>
-            </div>
+      {passModalOpen && selectedPass && (() => {
+        const matchedCandForPass = candidates?.find(c =>
+          (selectedPass.candidateId && c.id === selectedPass.candidateId) ||
+          (selectedPass.email && c.email?.toLowerCase() === selectedPass.email?.toLowerCase()) ||
+          (selectedPass.candidateEmail && c.email?.toLowerCase() === selectedPass.candidateEmail?.toLowerCase()) ||
+          (c.name?.toLowerCase() === (selectedPass.candidate || selectedPass.candidateName)?.toLowerCase())
+        );
 
-            <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', textAlign: 'left' }}>
-              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                <strong>Event:</strong> {selectedPass.event || selectedPass.eventName}
-              </p>
-              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                <strong>Registration ID:</strong> {selectedPass.id}
-              </p>
-              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                <strong>Candidate Email:</strong> {selectedPass.email || selectedPass.candidateEmail}
-              </p>
-              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                <strong>Phone:</strong> {selectedPass.phone || '+91 98765 43210'}
-              </p>
-              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
-                <strong>Entry Gate:</strong> {selectedPass.gateNumber || 'Gate 1 (Main Hall)'}
-              </p>
-              <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}>
-                <strong>Pass Status:</strong> <StatusBadge status={selectedPass.status || 'CONFIRMED'} />
-              </p>
-            </div>
+        const matchedMelaForPass = selectedMelaForRegs || jobMelas?.find(m =>
+          (selectedPass.melaId && m.id === selectedPass.melaId) ||
+          (selectedPass.event && (m.event?.toLowerCase() === selectedPass.event?.toLowerCase() || m.title?.toLowerCase() === selectedPass.event?.toLowerCase())) ||
+          (selectedPass.eventName && (m.event?.toLowerCase() === selectedPass.eventName?.toLowerCase() || m.title?.toLowerCase() === selectedPass.eventName?.toLowerCase()))
+        );
 
-            <Button variant="outline" fullWidth onClick={() => setPassModalOpen(false)}>
-              Close Pass
-            </Button>
-          </div>
-        </Modal>
-      )}
+        const candResumeName = selectedPass.resumeName || matchedCandForPass?.resumeName || (matchedCandForPass?.name ? `${matchedCandForPass.name.replace(/\s+/g, '_')}_Resume.pdf` : (selectedPass.candidate ? `${selectedPass.candidate.replace(/\s+/g, '_')}_Resume.pdf` : null));
+
+        const handleViewPassResume = () => {
+          if (selectedPass.resumeUrl || matchedCandForPass?.resumeUrl) {
+            window.open(selectedPass.resumeUrl || matchedCandForPass.resumeUrl, '_blank', 'noopener,noreferrer');
+            return;
+          }
+
+          const candName = selectedPass.candidate || selectedPass.candidateName || matchedCandForPass?.name || 'Registered Candidate';
+          const resumeFileName = candResumeName || `${candName.replace(/\s+/g, '_')}_Resume.pdf`;
+          const headers = ['Resume Section', 'Candidate Details'];
+          const rows = [
+            ['Candidate Name', candName],
+            ['Job Mela Registration ID', selectedPass.id || selectedPass.passId || 'N/A'],
+            ['Target Job Mela Event', selectedPass.event || selectedPass.eventName || matchedMelaForPass?.title || 'State Employment Mega Job Mela'],
+            ['Email Address', selectedPass.candidateEmail || selectedPass.email || matchedCandForPass?.email || 'N/A'],
+            ['Phone Number', selectedPass.candidatePhone || selectedPass.phone || matchedCandForPass?.phone || '+91 98765 43210'],
+            ['Location / District', selectedPass.location || selectedPass.district || matchedCandForPass?.location || 'Andhra Pradesh'],
+            ['Total Experience', selectedPass.experience || matchedCandForPass?.experience || 'N/A'],
+            ['Education Qualification', selectedPass.education || selectedPass.qualification || matchedCandForPass?.education || 'Graduate'],
+            ['Key Skills', Array.isArray(selectedPass.skills || matchedCandForPass?.skills) ? (selectedPass.skills || matchedCandForPass?.skills).join(', ') : (selectedPass.skills || matchedCandForPass?.skills || 'N/A')],
+            ['Pass / Gate Status', selectedPass.status || 'CONFIRMED']
+          ];
+
+          const blob = generatePDFBlob({
+            filename: resumeFileName,
+            title: `Candidate Resume: ${candName}`,
+            subtitle: `Job Mela Registration Record — Pass: ${selectedPass.id || 'N/A'} at ${selectedPass.event || matchedMelaForPass?.title || 'Job Mela'}`,
+            metadata: {
+              'Candidate Name': candName,
+              'Pass ID': selectedPass.id || 'N/A',
+              'Event': selectedPass.event || matchedMelaForPass?.title || 'Job Mela',
+              'Status': selectedPass.status || 'CONFIRMED'
+            },
+            headers,
+            rows
+          });
+
+          const blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, '_blank', 'noopener,noreferrer');
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        };
+
+        const handleDownloadPassResume = () => {
+          const candName = selectedPass.candidate || selectedPass.candidateName || matchedCandForPass?.name || 'Registered Candidate';
+          const resumeFileName = candResumeName || `${candName.replace(/\s+/g, '_')}_Resume.pdf`;
+          if (selectedPass.resumeUrl || matchedCandForPass?.resumeUrl) {
+            const a = document.createElement('a');
+            a.href = selectedPass.resumeUrl || matchedCandForPass.resumeUrl;
+            a.download = resumeFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            return;
+          }
+
+          const headers = ['Resume Section', 'Candidate Details'];
+          const rows = [
+            ['Candidate Name', candName],
+            ['Job Mela Registration ID', selectedPass.id || selectedPass.passId || 'N/A'],
+            ['Target Job Mela Event', selectedPass.event || selectedPass.eventName || matchedMelaForPass?.title || 'State Employment Mega Job Mela'],
+            ['Email Address', selectedPass.candidateEmail || selectedPass.email || matchedCandForPass?.email || 'N/A'],
+            ['Phone Number', selectedPass.candidatePhone || selectedPass.phone || matchedCandForPass?.phone || '+91 98765 43210'],
+            ['Location / District', selectedPass.location || selectedPass.district || matchedCandForPass?.location || 'Andhra Pradesh'],
+            ['Total Experience', selectedPass.experience || matchedCandForPass?.experience || 'N/A'],
+            ['Education Qualification', selectedPass.education || selectedPass.qualification || matchedCandForPass?.education || 'Graduate'],
+            ['Key Skills', Array.isArray(selectedPass.skills || matchedCandForPass?.skills) ? (selectedPass.skills || matchedCandForPass?.skills).join(', ') : (selectedPass.skills || matchedCandForPass?.skills || 'N/A')],
+            ['Pass / Gate Status', selectedPass.status || 'CONFIRMED']
+          ];
+
+          exportToPDF({
+            filename: resumeFileName,
+            title: `Candidate Resume: ${candName}`,
+            subtitle: `Job Mela Registration Record — Pass: ${selectedPass.id || 'N/A'} at ${selectedPass.event || matchedMelaForPass?.title || 'Job Mela'}`,
+            metadata: {
+              'Candidate Name': candName,
+              'Pass ID': selectedPass.id || 'N/A',
+              'Event': selectedPass.event || matchedMelaForPass?.title || 'Job Mela',
+              'Status': selectedPass.status || 'CONFIRMED'
+            },
+            headers,
+            rows
+          });
+          addToast(`Downloading candidate resume: ${resumeFileName}`, 'success');
+        };
+
+        return (
+          <Modal
+            isOpen={passModalOpen}
+            onClose={() => setPassModalOpen(false)}
+            title="Digital Mela Pass Verification"
+            size="lg"
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+
+              {/* Header Banner */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+                color: '#fff',
+                padding: 'var(--space-5)',
+                borderRadius: 'var(--radius-xl)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-2)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                  <span style={{
+                    fontSize: '11px',
+                    color: '#c7d2fe',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    <Ticket size={14} /> NTR VIKASA VERIFIED ENTRY PASS
+                  </span>
+                  <span style={{
+                    fontSize: '11px',
+                    background: 'rgba(255,255,255,0.18)',
+                    color: '#fff',
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontWeight: 700
+                  }}>
+                    Registration ID: {selectedPass.id}
+                  </span>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, margin: '2px 0 0 0', color: '#fff' }}>
+                    {selectedPass.candidate || selectedPass.candidateName || matchedCandForPass?.name || 'Candidate'}
+                  </h3>
+                  <p style={{ fontSize: 'var(--text-sm)', color: '#c7d2fe', margin: '4px 0 0 0' }}>
+                    <strong>Event:</strong> {selectedPass.event || selectedPass.eventName || matchedMelaForPass?.event || matchedMelaForPass?.title || 'Job Mela Summit'}
+                  </p>
+                  <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', marginTop: 6, fontSize: '11px', color: '#e0e7ff' }}>
+                    <span>🚪 <strong>Gate:</strong> {selectedPass.gateNumber || selectedPass.entryGate || 'Gate 1 (Main Hall)'}</span>
+                    <span>🎫 <strong>Pass Status:</strong> {selectedPass.status || 'CONFIRMED'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2-Column Details Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)' }}>
+                {/* Registration Details */}
+                <div style={{
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: 'var(--space-4)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-3)'
+                }}>
+                  <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', margin: 0, letterSpacing: '0.05em' }}>
+                    Registration Details
+                  </h4>
+
+                  <div style={{ fontSize: 'var(--text-xs)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-gray-100)', paddingBottom: 4 }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Registration ID:</span>
+                      <strong>{selectedPass.id}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-gray-100)', paddingBottom: 4 }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Candidate Email:</span>
+                      <span>{selectedPass.email || selectedPass.candidateEmail || matchedCandForPass?.email || 'N/A'}</span>
+                    </div>
+
+                    {(selectedPass.phone || selectedPass.candidatePhone || matchedCandForPass?.phone) && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-gray-100)', paddingBottom: 4 }}>
+                        <span style={{ color: 'var(--color-text-muted)' }}>Phone:</span>
+                        <span>{selectedPass.phone || selectedPass.candidatePhone || matchedCandForPass?.phone}</span>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-gray-100)', paddingBottom: 4 }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Registration Date:</span>
+                      <span>
+                        {selectedPass.registeredDate || selectedPass.registrationDate
+                          ? new Date(selectedPass.registeredDate || selectedPass.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : '20 Aug 2026'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-gray-100)', paddingBottom: 4 }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Entry Gate:</span>
+                      <strong>{selectedPass.gateNumber || selectedPass.entryGate || 'Gate 1 – Main Hall'}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 2 }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Registration Status:</span>
+                      <StatusBadge status={selectedPass.status || 'CONFIRMED'} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Job Mela Details */}
+                <div style={{
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: 'var(--space-4)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-3)'
+                }}>
+                  <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', margin: 0, letterSpacing: '0.05em' }}>
+                    Job Mela Details
+                  </h4>
+
+                  <div style={{ fontSize: 'var(--text-xs)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div>
+                      <strong style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)', display: 'block' }}>
+                        {matchedMelaForPass?.event || matchedMelaForPass?.title || selectedPass.event || selectedPass.eventName || 'Job Mela Summit'}
+                      </strong>
+                      <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+                        {matchedMelaForPass?.city ? `📍 ${matchedMelaForPass.city}, ${matchedMelaForPass.state || 'AP'}` : '📍 State Exhibition Centre'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-muted)' }}>
+                      <Calendar size={13} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                      <span><strong>Event Date:</strong> {matchedMelaForPass?.date ? new Date(matchedMelaForPass.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '18 Sept 2026'}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-muted)' }}>
+                      <Clock size={13} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                      <span><strong>Event Time:</strong> {matchedMelaForPass?.time || (matchedMelaForPass?.startTime ? `${matchedMelaForPass.startTime} - ${matchedMelaForPass.endTime}` : '09:00 AM - 05:30 PM')}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-muted)' }}>
+                      <MapPin size={13} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                      <span><strong>Venue:</strong> {matchedMelaForPass?.venue || 'State Convention & Exhibition Centre'}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-muted)' }}>
+                      <Building2 size={13} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                      <span><strong>Organizing Authority:</strong> {matchedMelaForPass?.organizer || matchedMelaForPass?.authority || 'NTR Vikasa Authority'}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Event Status:</span>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        background: '#ecfdf5',
+                        color: '#047857',
+                        border: '1px solid #a7f3d0'
+                      }}>
+                        {matchedMelaForPass?.status || 'UPCOMING'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Entry Verification */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 'var(--radius-xl)',
+                padding: 'var(--space-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-2)'
+              }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', margin: 0 }}>
+                  Entry Verification
+                </h4>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gap: 'var(--space-3)',
+                  marginTop: 2
+                }}>
+                  <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                      REGISTRATION STATUS
+                    </span>
+                    <div style={{ marginTop: 3 }}>
+                      <StatusBadge status={selectedPass.status || 'CONFIRMED'} />
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                      PASS STATUS
+                    </span>
+                    <strong style={{ fontSize: 'var(--text-xs)', color: '#047857', display: 'block', marginTop: 3 }}>
+                      {selectedPass.passStatus || (selectedPass.status === 'CONFIRMED' ? 'Active Entry Pass' : 'Pending Verification')}
+                    </strong>
+                  </div>
+
+                  <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                      CHECK-IN STATUS
+                    </span>
+                    <strong style={{ fontSize: 'var(--text-xs)', color: selectedPass.checkedIn ? '#047857' : 'var(--color-text-muted)', display: 'block', marginTop: 3 }}>
+                      {selectedPass.checkInStatus || (selectedPass.checkedIn ? 'Checked In' : 'Not Checked In')}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Resume */}
+              <div style={{
+                background: 'var(--color-gray-50)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-xl)',
+                padding: 'var(--space-4)'
+              }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                  Resume
+                </h4>
+
+                {candResumeName ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 'var(--space-3)',
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: 'var(--space-3) var(--space-4)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 200 }}>
+                      <div style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 'var(--radius-md)',
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        border: '1px solid #bfdbfe',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <FileText size={18} />
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 700, fontSize: 'var(--text-xs)', color: 'var(--color-text)', display: 'block' }}>
+                          {candResumeName}
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                          PDF Document • Verified Candidate Resume
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        leftIcon={<Eye size={13} />}
+                        onClick={handleViewPassResume}
+                      >
+                        View Resume
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="secondary"
+                        leftIcon={<Download size={13} />}
+                        onClick={handleDownloadPassResume}
+                      >
+                        Download Resume
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: 'var(--space-3) var(--space-4)',
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
+                  }}>
+                    <Info size={14} />
+                    <span>No resume available</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Company Interactions (if present) */}
+              {(selectedPass.companyInteractions || selectedPass.appliedCompanies || selectedPass.interactedCompanies) && (
+                <div style={{
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: 'var(--space-4)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--space-3)'
+                }}>
+                  <h4 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', margin: 0 }}>
+                    Company Interactions
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {(selectedPass.companyInteractions || selectedPass.appliedCompanies || selectedPass.interactedCompanies).map((item, i) => (
+                      <div key={i} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: 'var(--color-gray-50)',
+                        padding: '6px 12px',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: 'var(--text-xs)'
+                      }}>
+                        <strong>{typeof item === 'string' ? item : item.company}</strong>
+                        <span style={{ color: 'var(--color-primary-600)', fontWeight: 600 }}>
+                          {typeof item === 'object' ? item.status || 'Applied' : 'Interacted'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: 'var(--space-3)',
+                borderTop: '1px solid var(--color-border)',
+                paddingTop: 'var(--space-4)',
+                marginTop: 'var(--space-2)'
+              }}>
+                <Link to="/admin/candidates" style={{ textDecoration: 'none' }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setPassModalOpen(false)}
+                  >
+                    View Candidate Profile
+                  </Button>
+                </Link>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPassModalOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+
+            </div>
+          </Modal>
+        );
+      })()}
     </div>
   );
 }

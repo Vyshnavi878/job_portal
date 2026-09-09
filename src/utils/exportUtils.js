@@ -303,7 +303,7 @@ function escapePdfText(str) {
  * @param {string[]} options.headers - Column titles
  * @param {Array<Array<string|number>>} options.rows - Matrix of cell values
  */
-export function exportToPDF({
+export function generatePDFBlob({
   filename = 'report.pdf',
   title = 'NTR VIKASA Platform Report',
   subtitle = 'Official Administration Management Report',
@@ -521,11 +521,47 @@ export function exportToPDF({
 
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info << /Title (${escapePdfText(title)}) /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}) >> >>\nstartxref\n${xrefOffset}\n%%EOF`;
 
-  const blob = new Blob([new TextEncoder().encode(pdf)], { type: 'application/pdf' });
+  return new Blob([new TextEncoder().encode(pdf)], { type: 'application/pdf' });
+}
+
+export function exportToPDF(options = {}) {
+  const safeFilename = options.filename ? (options.filename.endsWith('.pdf') ? options.filename : `${options.filename}.pdf`) : 'report.pdf';
+  const blob = generatePDFBlob(options);
   triggerFileDownload(blob, safeFilename);
 }
 
-// ─── 4. BROWSER DOWNLOAD HELPER ────────────────────────────────────────────
+// ─── 4. CSV (.CSV) EXPORTER ────────────────────────────────────────────────
+
+/**
+ * Exports data to standard UTF-8 CSV format
+ * @param {Object} options
+ * @param {string} options.filename - e.g. "candidate_priya_sharma.csv"
+ * @param {string[]} options.headers - Column names
+ * @param {Array<Array<string|number>>} options.rows - Matrix of cell values
+ */
+export function exportToCSV({ filename = 'export.csv', headers = [], rows = [] }) {
+  const safeFilename = filename.endsWith('.csv') ? filename : `${filename}.csv`;
+
+  const escapeCsvValue = (val) => {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  };
+
+  const csvLines = [];
+  if (headers && headers.length > 0) {
+    csvLines.push(headers.map(escapeCsvValue).join(','));
+  }
+  rows.forEach((row) => {
+    csvLines.push(row.map(escapeCsvValue).join(','));
+  });
+
+  const csvContent = '\uFEFF' + csvLines.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  triggerFileDownload(blob, safeFilename);
+}
+
+// ─── 5. BROWSER DOWNLOAD HELPER ────────────────────────────────────────────
 
 function triggerFileDownload(blob, filename) {
   const url = URL.createObjectURL(blob);

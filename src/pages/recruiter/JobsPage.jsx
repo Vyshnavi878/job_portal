@@ -12,6 +12,8 @@ import { StatusBadge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/States';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 const PAGE_SIZE = 10;
 
@@ -96,6 +98,91 @@ export default function JobsPage() {
     addToast('Job posting has been republished and is now active.', 'success');
   };
 
+  const handleExportExcel = () => {
+    if (filteredJobs.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting jobs list to Excel...', 'info');
+    const headers = [
+      'Job Title',
+      'Department',
+      'Employment Type',
+      'Location',
+      'Salary',
+      'Experience',
+      'Posted Date',
+      'Deadline',
+      'Status',
+      'Applicants Count',
+      'Shortlisted Count',
+      'Interview Count'
+    ];
+    const rows = filteredJobs.map(j => [
+      j.title || 'N/A',
+      j.department || 'General',
+      j.type || j.workMode || 'Full-time',
+      j.location || 'India',
+      j.salary || 'Competitive',
+      j.experience || '2-5 Years',
+      j.createdAt || j.postedDate || 'Aug 2026',
+      j.deadline || 'Ongoing',
+      j.status || 'PUBLISHED',
+      j.applicantsCount || 0,
+      j.shortlistedCount || 0,
+      j.interviewsCount || 0
+    ]);
+    exportToExcel({
+      filename: getExportFilename('my_jobs', selectedStatusTab.toLowerCase(), 'xlsx'),
+      sheetName: 'My Jobs',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filteredJobs.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting jobs list to PDF...', 'info');
+    const headers = ['Job Title', 'Department', 'Type', 'Location', 'Salary', 'Deadline', 'Status', 'Applicants'];
+    const rows = filteredJobs.map(j => [
+      j.title || 'N/A',
+      j.department || 'General',
+      j.type || j.workMode || 'Full-time',
+      j.location || 'India',
+      j.salary || 'Competitive',
+      j.deadline || 'Ongoing',
+      j.status || 'PUBLISHED',
+      j.applicantsCount || 0
+    ]);
+    const tabObj = [
+      { id: 'ALL', label: 'All Jobs' },
+      { id: 'ACTIVE', label: 'Active / Published' },
+      { id: 'PENDING', label: 'Pending Approval' },
+      { id: 'DRAFT', label: 'Drafts' },
+      { id: 'CLOSED', label: 'Closed' },
+    ].find(t => t.id === selectedStatusTab);
+    const statusLabel = tabObj ? tabObj.label : selectedStatusTab;
+
+    exportToPDF({
+      filename: getExportFilename('my_jobs', selectedStatusTab.toLowerCase(), 'pdf'),
+      title: 'Job Postings & Requisitions Report',
+      subtitle: `Employer: ${recruiter?.company?.name || recruiter?.name || 'Recruiter'}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusLabel,
+        'Department': departmentFilter === 'ALL' ? 'All Departments' : departmentFilter,
+        'Total Records': filteredJobs.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
+
   return (
     <div className="portal-page">
       {/* Page Header */}
@@ -152,6 +239,12 @@ export default function JobsPage() {
               </select>
             </div>
           </div>
+
+          <ExportDropdown
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+            disabled={filteredJobs.length === 0}
+          />
         </div>
 
         {/* Status Tabs */}

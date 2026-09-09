@@ -12,6 +12,8 @@ import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -79,6 +81,72 @@ export default function RecruiterJobMelaPage() {
     return filteredEvents.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredEvents, currentPage]);
 
+  const handleExportExcel = () => {
+    if (filteredEvents.length === 0) return;
+    const headers = [
+      'Job Mela Title',
+      'Event Date',
+      'Time',
+      'Venue',
+      'Location / City',
+      'Participating Company',
+      'Booth Allocation',
+      'Participation Status',
+      'Registered at Booth',
+      'Spot Interviews Conducted',
+      'Spot Offers Given',
+      'Showcased Positions',
+    ];
+    const rows = filteredEvents.map(event => [
+      event.title || '',
+      event.date || '',
+      event.time || '09:00 AM - 05:30 PM',
+      event.venue || '',
+      event.city ? `${event.city}${event.state ? `, ${event.state}` : ''}` : (event.venue || ''),
+      recruiter?.company?.name || recruiter?.name || 'Recruiter Company',
+      event.boothNumber || 'N/A',
+      event.participationStatus || event.status || 'PENDING',
+      event.registeredCandidatesAtBooth ?? event.candidatesCount ?? 0,
+      event.spotInterviewsConducted ?? event.interviewsCount ?? 0,
+      event.spotOffersGiven ?? event.spotOffers ?? 0,
+      Array.isArray(event.showcasedPositions) ? event.showcasedPositions.join(', ') : (event.positions || 'N/A'),
+    ]);
+    const filename = getExportFilename('job_mela_registrations', selectedStatusTab !== 'ALL' ? selectedStatusTab.toLowerCase() : null, 'xlsx');
+    exportToExcel({ filename, sheetName: 'Job Melas', headers, rows });
+    addToast(`Exported ${filteredEvents.length} Job Mela event(s) to Excel`, 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filteredEvents.length === 0) return;
+    const headers = ['Job Mela', 'Date', 'Venue', 'Booth', 'Status', 'Registered', 'Interviews', 'Offers'];
+    const rows = filteredEvents.map(event => [
+      event.title || '',
+      event.date || '',
+      event.venue ? (event.venue.length > 30 ? event.venue.substring(0, 27) + '...' : event.venue) : '',
+      event.boothNumber ? (event.boothNumber.length > 20 ? event.boothNumber.substring(0, 17) + '...' : event.boothNumber) : 'N/A',
+      event.participationStatus || event.status || 'PENDING',
+      event.registeredCandidatesAtBooth ?? event.candidatesCount ?? 0,
+      event.spotInterviewsConducted ?? event.interviewsCount ?? 0,
+      event.spotOffersGiven ?? event.spotOffers ?? 0,
+    ]);
+    const filename = getExportFilename('job_mela_registrations', selectedStatusTab !== 'ALL' ? selectedStatusTab.toLowerCase() : null, 'pdf');
+    exportToPDF({
+      filename,
+      title: 'Job Mela Participation & Booth Registrations',
+      subtitle: `${recruiter?.company?.name || 'Recruiter'} - Filter: ${selectedStatusTab === 'ALL' ? 'All Events' : selectedStatusTab}${search ? ` | Search: "${search}"` : ''}`,
+      metadata: {
+        'Company': recruiter?.company?.name || 'Recruiter Company',
+        'Total Events': filteredEvents.length,
+        'Status Filter': selectedStatusTab,
+        'Search': search || 'None',
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      },
+      headers,
+      rows,
+    });
+    addToast(`Exported ${filteredEvents.length} Job Mela event(s) to PDF`, 'success');
+  };
+
   const handleRequestSubmit = (e) => {
     e.preventDefault();
     registerJobMela({
@@ -125,6 +193,11 @@ export default function RecruiterJobMelaPage() {
               style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
             />
           </div>
+          <ExportDropdown
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+            disabled={filteredEvents.length === 0}
+          />
         </div>
 
         {/* Status Tabs */}

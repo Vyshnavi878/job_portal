@@ -15,6 +15,8 @@ import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 const PAGE_SIZE = 10;
 
@@ -108,6 +110,74 @@ export default function ShortlistedPage() {
     addToast(`${app.candidateName} removed from shortlisted pool.`, 'info');
   };
 
+  const handleExportExcel = () => {
+    if (shortlistedApplicants.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting shortlisted candidates to Excel...', 'info');
+    const headers = [
+      'Candidate Name',
+      'Email',
+      'Job Title',
+      'Experience',
+      'Location',
+      'Match Score',
+      'Applied Date',
+      'Status'
+    ];
+    const rows = shortlistedApplicants.map(c => [
+      c.candidateName || 'N/A',
+      c.candidateEmail || 'N/A',
+      c.jobTitle || 'Role',
+      c.experience || '3+ Years',
+      c.location || 'India',
+      c.matchScore ? `${c.matchScore}%` : 'N/A',
+      c.appliedDate || 'Aug 2026',
+      c.status || 'SHORTLISTED'
+    ]);
+    exportToExcel({
+      filename: getExportFilename('shortlisted_candidates', selectedJobFilter === 'ALL' ? 'all' : 'filtered', 'xlsx'),
+      sheetName: 'Shortlisted',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (shortlistedApplicants.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting shortlisted candidates to PDF...', 'info');
+    const headers = ['Candidate Name', 'Email', 'Job Title', 'Experience', 'Match Score', 'Applied Date', 'Status'];
+    const rows = shortlistedApplicants.map(c => [
+      c.candidateName || 'N/A',
+      c.candidateEmail || 'N/A',
+      c.jobTitle || 'Role',
+      c.experience || '3+ Years',
+      c.matchScore ? `${c.matchScore}%` : 'N/A',
+      c.appliedDate || 'Aug 2026',
+      c.status || 'SHORTLISTED'
+    ]);
+    const selectedJobTitle = selectedJobFilter === 'ALL' ? 'All Job Openings' : (allJobs.find(j => j.id === selectedJobFilter)?.title || selectedJobFilter);
+
+    exportToPDF({
+      filename: getExportFilename('shortlisted_candidates', selectedJobFilter === 'ALL' ? 'all' : 'filtered', 'pdf'),
+      title: 'Shortlisted Candidates Report',
+      subtitle: `Company: ${recruiter?.company?.name || recruiter?.name || 'Recruiter'}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Job Opening': selectedJobTitle,
+        'Total Records': shortlistedApplicants.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
+
   return (
     <div className="portal-page">
       {/* Header */}
@@ -154,6 +224,12 @@ export default function ShortlistedPage() {
               </select>
             </div>
           </div>
+
+          <ExportDropdown
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+            disabled={shortlistedApplicants.length === 0}
+          />
         </div>
       </div>
 

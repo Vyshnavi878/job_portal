@@ -11,8 +11,41 @@ import FormField from '../../components/ui/FormField';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+
+// Helper to determine whether a report is related to a Candidate or Recruiter
+export const getReportUserType = (r) => {
+  if (!r) return 'RECRUITER';
+  const explicit = (r.reportedUserType || r.userType || r.targetType || r.entityType || '').toUpperCase();
+  if (explicit === 'CANDIDATE' || explicit === 'CANDIDATES') return 'CANDIDATE';
+  if (explicit === 'RECRUITER' || explicit === 'RECRUITERS' || explicit === 'EMPLOYER' || explicit === 'COMPANY') return 'RECRUITER';
+
+  const entity = (r.reportedEntity || '').toLowerCase();
+  if (entity.includes('candidate')) return 'CANDIDATE';
+  if (entity.includes('recruiter') || entity.includes('company') || entity.includes('technologies') || entity.includes('enterprises') || entity.includes('pvt ltd') || entity.includes('techglobal')) return 'RECRUITER';
+
+  const reportType = (r.reportType || r.type || '').toLowerCase();
+  const reason = (r.details || r.reason || '').toLowerCase();
+  if (reportType.includes('job scam') || reportType.includes('job description') || reportType.includes('fee request') || reportType.includes('employer') || reason.includes('recruiter') || reason.includes('job')) {
+    return 'RECRUITER';
+  }
+  if (reportType.includes('harassment') || reportType.includes('candidate') || reason.includes('candidate') || reason.includes('application portal')) {
+    return 'CANDIDATE';
+  }
+
+  const reporter = (r.reporter || '').toLowerCase();
+  if (reporter.includes('hr') || reporter.includes('recruiter') || reporter.includes('technologies') || reporter.includes('company')) {
+    return 'CANDIDATE';
+  }
+  if (reporter.includes('candidate')) {
+    return 'RECRUITER';
+  }
+
+  return 'RECRUITER';
+};
 
 export default function AdminReportsPage() {
   const { addToast } = useToast();
@@ -21,11 +54,12 @@ export default function AdminReportsPage() {
   const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [userTypeFilter, setUserTypeFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, userTypeFilter]);
 
   // Review Modal
   const [selectedReport, setSelectedReport] = useState(null);
@@ -42,29 +76,125 @@ export default function AdminReportsPage() {
 
   const filtered = useMemo(() => {
     return reports.filter((r) => {
-      const type = r.reportType || r.type || '';
-      const entity = r.reportedEntity || '';
-      const reporter = r.reporter || '';
-      const reason = r.reason || '';
-
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (!type.toLowerCase().includes(q) && !entity.toLowerCase().includes(q) && !reporter.toLowerCase().includes(q) && !reason.toLowerCase().includes(q)) {
+      // 1. User Type Filter
+      if (userTypeFilter !== 'ALL') {
+        const uType = getReportUserType(r);
+        if (uType !== userTypeFilter) {
           return false;
         }
       }
+
+      // 2. Status Filter
       if (statusFilter !== 'ALL') {
         if (r.status !== statusFilter) return false;
       }
+
+      // 3. Search Filter
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const type = (r.reportType || r.type || '').toLowerCase();
+        const entity = (r.reportedEntity || '').toLowerCase();
+        const reporter = (r.reporter || '').toLowerCase();
+        const reason = (r.details || r.reason || '').toLowerCase();
+        if (!type.includes(q) && !entity.includes(q) && !reporter.includes(q) && !reason.includes(q)) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [reports, search, statusFilter]);
+  }, [reports, search, statusFilter, userTypeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginatedReports = useMemo(() => {
     const startIndex = (currentPage - 1) * PAGE_SIZE;
     return filtered.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filtered, currentPage]);
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting moderation complaints to Excel...', 'info');
+    const headers = [
+      'Report ID',
+      'Reported User Type',
+      'Reported Entity',
+      'Reporter',
+      'Report Type',
+      'Reason / Details',
+      'Created Date',
+      'Status',
+      'Action / Resolution'
+    ];
+    const rows = filtered.map(r => {
+      const uType = getReportUserType(r);
+      return [
+        r.id || 'N/A',
+        uType === 'CANDIDATE' ? 'Candidate' : 'Recruiter',
+        r.reportedEntity || 'Entity',
+        r.reporter || 'Candidate',
+        r.reportType || r.type || 'Flagged Content',
+        r.details || r.reason || 'N/A',
+        r.date || r.createdAt ? new Date(r.date || r.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
+        r.status || 'PENDING',
+        r.actionTaken || (r.status === 'RESOLVED' ? 'Corrective action taken' : 'Under Investigation')
+      ];
+    });
+    exportToExcel({
+      filename: getExportFilename('reports_complaints', statusFilter.toLowerCase(), 'xlsx'),
+      sheetName: 'Reports',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting moderation complaints to PDF...', 'info');
+    const headers = ['Report ID', 'User Type', 'Reported Entity', 'Reporter', 'Type', 'Date', 'Status'];
+    const rows = filtered.map(r => {
+      const uType = getReportUserType(r);
+      return [
+        r.id || 'N/A',
+        uType === 'CANDIDATE' ? 'Candidate' : 'Recruiter',
+        r.reportedEntity || 'Entity',
+        r.reporter || 'Candidate',
+        r.reportType || r.type || 'Flagged',
+        r.date || r.createdAt ? new Date(r.date || r.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
+        r.status || 'PENDING'
+      ];
+    });
+    const tabObj = [
+      { key: 'ALL', label: 'All Reports' },
+      { key: 'PENDING', label: 'Pending' },
+      { key: 'RESOLVED', label: 'Resolved' },
+      { key: 'DISMISSED', label: 'Dismissed' }
+    ].find(t => t.key === statusFilter);
+    const statusLabel = tabObj ? tabObj.label : statusFilter;
+    const userTypeLabel = userTypeFilter === 'ALL' ? 'All User Types' : (userTypeFilter === 'CANDIDATE' ? 'Candidates' : 'Recruiters');
+
+    exportToPDF({
+      filename: getExportFilename('reports_complaints', statusFilter.toLowerCase(), 'pdf'),
+      title: 'Platform Moderation & Complaints Audit Report',
+      subtitle: `NTR Vikasa Admin Trust & Safety - Status: ${statusLabel} • Target: ${userTypeLabel}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusLabel,
+        'User Type Filter': userTypeLabel,
+        'Search Query': search || 'None',
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
 
   const handleOpenResolve = (rep) => {
     setResolveTarget(rep);
@@ -119,22 +249,44 @@ export default function AdminReportsPage() {
       key: 'reportedEntity',
       label: 'Reported Entity',
       sortable: true,
-      render: (_, row) => (
-        <div>
-          <strong style={{ fontSize: 'var(--text-xs)', color: '#b91c1c' }}>{row.reportedEntity}</strong>
-          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>ID: {row.id}</span>
-        </div>
-      )
+      render: (_, row) => {
+        const uType = getReportUserType(row);
+        return (
+          <div>
+            <strong style={{ fontSize: 'var(--text-xs)', color: '#b91c1c' }}>{row.reportedEntity}</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>ID: {row.id}</span>
+              <span style={{
+                fontSize: '9px',
+                fontWeight: 700,
+                padding: '1px 5px',
+                borderRadius: 'var(--radius-sm)',
+                background: uType === 'CANDIDATE' ? '#f0fdf4' : '#eff6ff',
+                color: uType === 'CANDIDATE' ? '#166534' : '#1e40af',
+                border: uType === 'CANDIDATE' ? '1px solid #bbf7d0' : '1px solid #bfdbfe',
+                textTransform: 'uppercase'
+              }}>
+                {uType === 'CANDIDATE' ? 'Candidate' : 'Recruiter'}
+              </span>
+            </div>
+          </div>
+        );
+      }
     },
     {
       key: 'reporter',
       label: 'Reporter',
-      render: (_, row) => (
-        <div style={{ fontSize: 'var(--text-xs)' }}>
-          <strong>{row.reporter}</strong>
-          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>Verified Candidate</span>
-        </div>
-      )
+      render: (_, row) => {
+        const uType = getReportUserType(row);
+        return (
+          <div style={{ fontSize: 'var(--text-xs)' }}>
+            <strong>{row.reporter}</strong>
+            <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>
+              {uType === 'CANDIDATE' ? 'Employer / Recruiter' : 'Verified Candidate'}
+            </span>
+          </div>
+        );
+      }
     },
     {
       key: 'date',
@@ -244,9 +396,71 @@ export default function AdminReportsPage() {
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
+      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+        {/* Row 1: Status Filter Tabs & Export */}
         <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+            {['ALL', 'PENDING', 'RESOLVED', 'DISMISSED'].map((filterKey) => (
+              <button
+                key={filterKey}
+                type="button"
+                onClick={() => setStatusFilter(filterKey)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                  background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                  color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
+                  transition: 'all 150ms ease'
+                }}
+              >
+                {filterKey === 'ALL' ? 'All Reports' : filterKey}
+              </button>
+            ))}
+          </div>
+
+          <ExportDropdown
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+            disabled={filtered.length === 0}
+          />
+        </div>
+
+        {/* Row 2: Reported User Type Filter Dropdown & Search Bar */}
+        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+          {/* User Type Filter */}
+          <div style={{ position: 'relative', minWidth: 230, flex: '0 1 260px' }}>
+            <User size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
+            <select
+              value={userTypeFilter}
+              onChange={(e) => setUserTypeFilter(e.target.value)}
+              className="form-control"
+              style={{
+                width: '100%',
+                height: 38,
+                paddingLeft: 36,
+                paddingRight: 28,
+                borderRadius: 'var(--radius-lg)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 600,
+                color: 'var(--color-text)',
+                cursor: 'pointer',
+                background: userTypeFilter === 'ALL' ? 'var(--color-surface)' : 'var(--color-primary-50, #eff6ff)',
+                borderColor: userTypeFilter === 'ALL' ? 'var(--color-border)' : 'var(--color-primary-500)'
+              }}
+            >
+              <option value="ALL">Reported User Type: All</option>
+              <option value="CANDIDATE">Candidates</option>
+              <option value="RECRUITER">Recruiters</option>
+            </select>
+          </div>
+
+          {/* Search Input */}
+          <div style={{ position: 'relative', flex: '1 1 280px' }}>
             <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
             <input
               type="text"
@@ -254,35 +468,25 @@ export default function AdminReportsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="form-control"
-              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-xs)' }}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-              <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-              {['ALL', 'PENDING', 'RESOLVED', 'DISMISSED'].map((filterKey) => (
-                <button
-                  key={filterKey}
-                  type="button"
-                  onClick={() => setStatusFilter(filterKey)}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: 'var(--radius-lg)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                    background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                    color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
-                    transition: 'all 150ms ease'
-                  }}
-                >
-                  {filterKey === 'ALL' ? 'All Reports' : filterKey}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Active Filter Clear */}
+          {(userTypeFilter !== 'ALL' || statusFilter !== 'ALL' || search.trim() !== '') && (
+            <button
+              type="button"
+              onClick={() => {
+                setUserTypeFilter('ALL');
+                setStatusFilter('ALL');
+                setSearch('');
+              }}
+              className="btn btn-ghost btn-sm"
+              style={{ fontSize: 'var(--text-xs)', height: 38, padding: '0 12px', color: 'var(--color-text-muted)' }}
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -346,7 +550,7 @@ export default function AdminReportsPage() {
                   {selectedReport.reportType || selectedReport.type}
                 </h3>
                 <p style={{ fontSize: 'var(--text-sm)', color: '#fecaca', margin: '2px 0 0 0' }}>
-                  Reported Target: {selectedReport.reportedEntity}
+                  Reported Target: {selectedReport.reportedEntity} ({getReportUserType(selectedReport) === 'CANDIDATE' ? 'Candidate' : 'Recruiter'})
                 </p>
                 <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#fee2e2' }}>
                   <span>👤 Reporter: {selectedReport.reporter}</span>

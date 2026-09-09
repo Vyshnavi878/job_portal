@@ -16,6 +16,8 @@ import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
 const PAGE_SIZE = 10;
 
@@ -177,6 +179,89 @@ export default function ApplicationsPage() {
     }
   };
 
+  const handleExportExcel = () => {
+    if (filteredApplicants.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting applications list to Excel...', 'info');
+    const headers = [
+      'Candidate Name',
+      'Candidate Email',
+      'Job Title',
+      'Applied Date',
+      'Application Status',
+      'Experience',
+      'Match Score',
+      'Location',
+      'Expected CTC',
+      'Notice Period'
+    ];
+    const rows = filteredApplicants.map(app => [
+      app.candidateName || 'N/A',
+      app.candidateEmail || 'N/A',
+      app.jobTitle || 'Role',
+      app.appliedDate || 'Aug 2026',
+      app.status || 'UNDER_REVIEW',
+      app.experience || '3+ Years',
+      app.matchScore ? `${app.matchScore}%` : 'N/A',
+      app.location || 'India',
+      app.expectedSalary || 'N/A',
+      app.noticePeriod || 'N/A'
+    ]);
+    const statusLabel = selectedStatusTab === 'ALL' ? 'all' : selectedStatusTab.toLowerCase();
+    exportToExcel({
+      filename: getExportFilename('applications', statusLabel, 'xlsx'),
+      sheetName: 'Applications',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filteredApplicants.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting applications list to PDF...', 'info');
+    const headers = ['Candidate Name', 'Candidate Email', 'Job Title', 'Applied Date', 'Status', 'Match Score', 'Experience'];
+    const rows = filteredApplicants.map(app => [
+      app.candidateName || 'N/A',
+      app.candidateEmail || 'N/A',
+      app.jobTitle || 'Role',
+      app.appliedDate || 'Aug 2026',
+      app.status || 'UNDER_REVIEW',
+      app.matchScore ? `${app.matchScore}%` : 'N/A',
+      app.experience || '3+ Years'
+    ]);
+    const tabObj = [
+      { id: 'ALL', label: 'All Applications' },
+      { id: 'SCREENING', label: 'Screening' },
+      { id: 'SHORTLISTED', label: 'Shortlisted' },
+      { id: 'INTERVIEW', label: 'Interview Scheduled' },
+      { id: 'SELECTED', label: 'Selected / Hired' },
+      { id: 'REJECTED', label: 'Rejected' },
+    ].find(t => t.id === selectedStatusTab);
+    const statusLabel = tabObj ? tabObj.label : selectedStatusTab;
+    const selectedJobTitle = selectedJobFilter === 'ALL' ? 'All Job Openings' : (allJobs.find(j => j.id === selectedJobFilter)?.title || selectedJobFilter);
+
+    exportToPDF({
+      filename: getExportFilename('applications', selectedStatusTab.toLowerCase(), 'pdf'),
+      title: 'Job Applications Activity Report',
+      subtitle: `Company: ${recruiter?.company?.name || recruiter?.name || 'Recruiter'}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusLabel,
+        'Job Position': selectedJobTitle,
+        'Total Records': filteredApplicants.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
+
   return (
     <div className="portal-page">
       {/* Header Banner */}
@@ -268,6 +353,12 @@ export default function ApplicationsPage() {
               </select>
             </div>
           </div>
+
+          <ExportDropdown
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+            disabled={filteredApplicants.length === 0}
+          />
         </div>
 
         {/* Status Tabs */}

@@ -14,6 +14,8 @@ import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -147,6 +149,85 @@ export default function RecruiterInterviewsPage() {
     });
   };
 
+  const handleExportExcel = () => {
+    if (filteredInterviews.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting interview schedule to Excel...', 'info');
+    const headers = [
+      'Candidate Name',
+      'Candidate Email',
+      'Job Title',
+      'Interview Date',
+      'Interview Time',
+      'Interview Type',
+      'Interviewer',
+      'Interview Status',
+      'Meeting Link / Venue',
+      'Notes'
+    ];
+    const rows = filteredInterviews.map(i => [
+      i.candidateName || 'N/A',
+      i.candidateEmail || 'N/A',
+      i.jobTitle || 'Role',
+      i.date || 'N/A',
+      i.time || 'N/A',
+      i.type || i.mode || 'Video Call',
+      i.interviewer || 'Recruiter Lead',
+      i.status || 'SCHEDULED',
+      i.meetingLink || 'N/A',
+      i.notes || 'N/A'
+    ]);
+    exportToExcel({
+      filename: getExportFilename('interviews', statusFilter.toLowerCase(), 'xlsx'),
+      sheetName: 'Interviews',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filteredInterviews.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting interview schedule to PDF...', 'info');
+    const headers = ['Candidate Name', 'Job Title', 'Date', 'Time', 'Type', 'Interviewer', 'Status'];
+    const rows = filteredInterviews.map(i => [
+      i.candidateName || 'N/A',
+      i.jobTitle || 'Role',
+      i.date || 'N/A',
+      i.time || 'N/A',
+      i.type || i.mode || 'Video Call',
+      i.interviewer || 'Recruiter Lead',
+      i.status || 'SCHEDULED'
+    ]);
+    const tabObj = [
+      { id: 'ALL', label: 'All Interviews' },
+      { id: 'SCHEDULED', label: 'Upcoming / Scheduled' },
+      { id: 'COMPLETED', label: 'Completed' },
+      { id: 'RESCHEDULED', label: 'Rescheduled' },
+      { id: 'CANCELLED', label: 'Cancelled' },
+    ].find(t => t.id === statusFilter);
+    const statusLabel = tabObj ? tabObj.label : statusFilter;
+
+    exportToPDF({
+      filename: getExportFilename('interviews', statusFilter.toLowerCase(), 'pdf'),
+      title: 'Recruiter Interview Schedules & Logs',
+      subtitle: `Company: ${recruiter?.company?.name || recruiter?.name || 'Recruiter'}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusLabel,
+        'Total Records': filteredInterviews.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
+
   return (
     <div className="portal-page">
       {/* Header */}
@@ -178,6 +259,12 @@ export default function RecruiterInterviewsPage() {
               style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
             />
           </div>
+
+          <ExportDropdown
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+            disabled={filteredInterviews.length === 0}
+          />
         </div>
 
         {/* Status Tabs */}

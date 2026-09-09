@@ -4,7 +4,7 @@ import {
   Users, Search, Filter, Eye, ShieldAlert, ShieldCheck,
   Mail, Phone, MapPin, GraduationCap, Briefcase, FileText,
   CheckCircle2, XCircle, AlertTriangle, Sparkles, Calendar, Ticket,
-  Download
+  Download, FileSpreadsheet
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -12,6 +12,8 @@ import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, exportToCSV, generatePDFBlob, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
 
@@ -97,6 +99,280 @@ export default function AdminCandidatesPage() {
     suspendCandidate(suspendTarget.id);
     addToast(`Candidate account for ${suspendTarget.name} has been SUSPENDED.`, 'error');
     setSuspendTarget(null);
+  };
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting candidate list to Excel...', 'info');
+    const headers = [
+      'Candidate Name',
+      'Headline',
+      'Email',
+      'Phone',
+      'Location',
+      'Registration Date',
+      'Profile Status',
+      'Account Status'
+    ];
+    const rows = filtered.map(c => [
+      c.name || 'N/A',
+      c.headline || 'Job Seeker',
+      c.email || 'N/A',
+      c.phone || 'N/A',
+      c.location || 'India',
+      c.registrationDate ? new Date(c.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Aug 2026',
+      c.profileStatus || 'COMPLETE',
+      c.accountStatus || 'ACTIVE'
+    ]);
+    exportToExcel({
+      filename: getExportFilename('candidates', statusFilter.toLowerCase(), 'xlsx'),
+      sheetName: 'Candidates',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting candidate list to PDF...', 'info');
+    const headers = ['Candidate', 'Email', 'Phone', 'Registration Date', 'Profile Status', 'Account Status'];
+    const rows = filtered.map(c => [
+      c.name || 'N/A',
+      c.email || 'N/A',
+      c.phone || 'N/A',
+      c.registrationDate ? new Date(c.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Aug 2026',
+      c.profileStatus || 'COMPLETE',
+      c.accountStatus || 'ACTIVE'
+    ]);
+    exportToPDF({
+      filename: getExportFilename('candidates', statusFilter.toLowerCase(), 'pdf'),
+      title: 'Platform Candidates Directory Report',
+      subtitle: `NTR Vikasa Admin Report - Status: ${statusFilter === 'ALL' ? 'All Accounts' : statusFilter}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Status Filter': statusFilter === 'ALL' ? 'All Accounts' : statusFilter,
+        'Search Query': search || 'None',
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
+
+  // ── Single Candidate Actions (Resume & Export) ──
+  const handleViewResume = () => {
+    if (!selectedCand) return;
+    const resumeFileName = selectedCand.resumeName || selectedCand.resume?.fileName || (selectedCand.name ? `${selectedCand.name.replace(/\s+/g, '_')}_Resume.pdf` : 'Priya_Sharma_Resume.pdf');
+    if (selectedCand.resumeUrl) {
+      window.open(selectedCand.resumeUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // Generate candidate resume PDF for native browser viewing
+    const headers = ['Resume Section', 'Candidate Details'];
+    const rows = [
+      ['Candidate Name', selectedCand.name || 'N/A'],
+      ['Headline / Role', selectedCand.headline || 'Job Seeker'],
+      ['Email Address', selectedCand.email || 'N/A'],
+      ['Phone Number', selectedCand.phone || 'N/A'],
+      ['Current Location', selectedCand.location || 'India'],
+      ['Total Experience', selectedCand.experience || 'N/A'],
+      ['Education Background', selectedCand.education || 'N/A'],
+      ['Skills & Competencies', Array.isArray(selectedCand.skills) ? selectedCand.skills.join(', ') : (selectedCand.skills || 'N/A')],
+      ['Applications Submitted', `${selectedCand.applicationsCount || 0} applications submitted`],
+      ['Verification Status', selectedCand.profileStatus || 'COMPLETE']
+    ];
+
+    const blob = generatePDFBlob({
+      filename: resumeFileName,
+      title: `Curriculum Vitae: ${selectedCand.name}`,
+      subtitle: `Verified Candidate Resume Document — ${selectedCand.headline || 'Job Seeker'}`,
+      metadata: {
+        'Candidate Name': selectedCand.name || 'N/A',
+        'Document': resumeFileName,
+        'Experience': selectedCand.experience || 'N/A',
+        'Status': selectedCand.accountStatus || 'ACTIVE'
+      },
+      headers,
+      rows
+    });
+
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+  };
+
+  const handleDownloadResume = () => {
+    if (!selectedCand) return;
+    const resumeFileName = selectedCand.resumeName || selectedCand.resume?.fileName || (selectedCand.name ? `${selectedCand.name.replace(/\s+/g, '_')}_Resume.pdf` : 'Priya_Sharma_Resume.pdf');
+    if (selectedCand.resumeUrl) {
+      const a = document.createElement('a');
+      a.href = selectedCand.resumeUrl;
+      a.download = resumeFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    // Generate and download candidate resume PDF
+    const headers = ['Resume Section', 'Candidate Details'];
+    const rows = [
+      ['Candidate Name', selectedCand.name || 'N/A'],
+      ['Headline / Role', selectedCand.headline || 'Job Seeker'],
+      ['Email Address', selectedCand.email || 'N/A'],
+      ['Phone Number', selectedCand.phone || 'N/A'],
+      ['Current Location', selectedCand.location || 'India'],
+      ['Total Experience', selectedCand.experience || 'N/A'],
+      ['Education Background', selectedCand.education || 'N/A'],
+      ['Skills & Competencies', Array.isArray(selectedCand.skills) ? selectedCand.skills.join(', ') : (selectedCand.skills || 'N/A')],
+      ['Applications Submitted', `${selectedCand.applicationsCount || 0} applications submitted`],
+      ['Verification Status', selectedCand.profileStatus || 'COMPLETE']
+    ];
+
+    exportToPDF({
+      filename: resumeFileName,
+      title: `Curriculum Vitae: ${selectedCand.name}`,
+      subtitle: `Verified Candidate Resume Document — ${selectedCand.headline || 'Job Seeker'}`,
+      metadata: {
+        'Candidate Name': selectedCand.name || 'N/A',
+        'Document': resumeFileName,
+        'Experience': selectedCand.experience || 'N/A',
+        'Status': selectedCand.accountStatus || 'ACTIVE'
+      },
+      headers,
+      rows
+    });
+    addToast(`Downloading candidate resume: ${resumeFileName}`, 'success');
+  };
+
+  const handleExportSingleCandidateExcel = () => {
+    if (!selectedCand) return;
+    addToast(`Exporting ${selectedCand.name}'s profile to Excel...`, 'info');
+    const headers = [
+      'Candidate Name',
+      'Headline / Designation',
+      'Email',
+      'Phone',
+      'Location',
+      'Experience',
+      'Education',
+      'Skills',
+      'Applications Count',
+      'Registration Date',
+      'Profile Status',
+      'Account Status'
+    ];
+    const rows = [
+      [
+        selectedCand.name || 'N/A',
+        selectedCand.headline || 'Job Seeker',
+        selectedCand.email || 'N/A',
+        selectedCand.phone || 'N/A',
+        selectedCand.location || 'India',
+        selectedCand.experience || 'N/A',
+        selectedCand.education || 'N/A',
+        Array.isArray(selectedCand.skills) ? selectedCand.skills.join(', ') : (selectedCand.skills || 'N/A'),
+        selectedCand.applicationsCount !== undefined ? selectedCand.applicationsCount : 0,
+        selectedCand.registrationDate ? new Date(selectedCand.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Aug 2026',
+        selectedCand.profileStatus || 'COMPLETE',
+        selectedCand.accountStatus || 'ACTIVE'
+      ]
+    ];
+    const safeBaseName = selectedCand.name ? selectedCand.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_') : 'candidate';
+    exportToExcel({
+      filename: `candidate_${safeBaseName}_profile.xlsx`,
+      sheetName: 'Candidate Profile',
+      headers,
+      rows
+    });
+    addToast('Candidate Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportSingleCandidateCsv = () => {
+    if (!selectedCand) return;
+    addToast(`Exporting ${selectedCand.name}'s profile to CSV...`, 'info');
+    const headers = [
+      'Candidate Name',
+      'Headline / Designation',
+      'Email',
+      'Phone',
+      'Location',
+      'Experience',
+      'Education',
+      'Skills',
+      'Applications Count',
+      'Registration Date',
+      'Profile Status',
+      'Account Status'
+    ];
+    const rows = [
+      [
+        selectedCand.name || 'N/A',
+        selectedCand.headline || 'Job Seeker',
+        selectedCand.email || 'N/A',
+        selectedCand.phone || 'N/A',
+        selectedCand.location || 'India',
+        selectedCand.experience || 'N/A',
+        selectedCand.education || 'N/A',
+        Array.isArray(selectedCand.skills) ? selectedCand.skills.join(', ') : (selectedCand.skills || 'N/A'),
+        selectedCand.applicationsCount !== undefined ? selectedCand.applicationsCount : 0,
+        selectedCand.registrationDate ? new Date(selectedCand.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Aug 2026',
+        selectedCand.profileStatus || 'COMPLETE',
+        selectedCand.accountStatus || 'ACTIVE'
+      ]
+    ];
+    const safeBaseName = selectedCand.name ? selectedCand.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_') : 'candidate';
+    exportToCSV({
+      filename: `candidate_${safeBaseName}_profile.csv`,
+      headers,
+      rows
+    });
+    addToast('Candidate CSV export downloaded successfully!', 'success');
+  };
+
+  const handleExportSingleCandidatePdf = () => {
+    if (!selectedCand) return;
+    addToast(`Exporting ${selectedCand.name}'s profile to PDF...`, 'info');
+    const safeBaseName = selectedCand.name ? selectedCand.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_') : 'candidate';
+    const headers = ['Profile Field', 'Information'];
+    const rows = [
+      ['Candidate Name', selectedCand.name || 'N/A'],
+      ['Headline / Designation', selectedCand.headline || 'Job Seeker'],
+      ['Email Address', selectedCand.email || 'N/A'],
+      ['Phone Number', selectedCand.phone || 'N/A'],
+      ['Location', selectedCand.location || 'India'],
+      ['Total Experience', selectedCand.experience || 'N/A'],
+      ['Education Details', selectedCand.education || 'N/A'],
+      ['Skills & Competencies', Array.isArray(selectedCand.skills) ? selectedCand.skills.join(', ') : (selectedCand.skills || 'N/A')],
+      ['Applications Submitted', `${selectedCand.applicationsCount || 0} applications`],
+      ['Registration Date', selectedCand.registrationDate ? new Date(selectedCand.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Aug 2026'],
+      ['Profile Status', selectedCand.profileStatus || 'COMPLETE'],
+      ['Account Status', selectedCand.accountStatus || 'ACTIVE']
+    ];
+
+    exportToPDF({
+      filename: `candidate_${safeBaseName}_profile.pdf`,
+      title: `Candidate Profile: ${selectedCand.name}`,
+      subtitle: `NTR Vikasa Candidate Record - ${selectedCand.headline || 'Job Seeker'}`,
+      metadata: {
+        'Generated Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Candidate Name': selectedCand.name || 'N/A',
+        'Account Status': selectedCand.accountStatus || 'ACTIVE',
+        'Profile Status': selectedCand.profileStatus || 'COMPLETE'
+      },
+      headers,
+      rows
+    });
+    addToast('Candidate PDF export downloaded successfully!', 'success');
   };
 
   const columns = [
@@ -401,6 +677,12 @@ export default function AdminCandidatesPage() {
                     </button>
                   ))}
                 </div>
+
+                <ExportDropdown
+                  onExportExcel={handleExportExcel}
+                  onExportPdf={handleExportPdf}
+                  disabled={filtered.length === 0}
+                />
               </div>
             </div>
           </div>
@@ -495,6 +777,74 @@ export default function AdminCandidatesPage() {
                   </div>
                 </div>
 
+                {/* Resume Section */}
+                {(() => {
+                  const resumeFileName = selectedCand.resumeName || selectedCand.resume?.fileName || (selectedCand.name ? `${selectedCand.name.replace(/\s+/g, '_')}_Resume.pdf` : 'Priya_Sharma_Resume.pdf');
+
+                  return (
+                    <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                        Resume
+                      </h4>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 'var(--space-3)',
+                        background: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: 'var(--space-3) var(--space-4)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 200 }}>
+                          <div style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 'var(--radius-md)',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            border: '1px solid #bfdbfe',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <FileText size={18} />
+                          </div>
+                          <div>
+                            <span style={{ fontWeight: 700, fontSize: 'var(--text-xs)', color: 'var(--color-text)', display: 'block' }}>
+                              {resumeFileName}
+                            </span>
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                              Candidate Resume Document
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            leftIcon={<Eye size={13} />}
+                            onClick={handleViewResume}
+                          >
+                            View Resume
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="secondary"
+                            leftIcon={<Download size={13} />}
+                            onClick={handleDownloadResume}
+                          >
+                            Download Resume
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Skills */}
                 <div>
                   <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
@@ -518,31 +868,66 @@ export default function AdminCandidatesPage() {
                 </div>
 
                 {/* Modal Actions */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-                  <Button variant="outline" onClick={() => setProfileModalOpen(false)}>
-                    Close
-                  </Button>
-                  {selectedCand.accountStatus === 'ACTIVE' ? (
-                    <Button
-                      variant="danger"
-                      onClick={() => {
-                        setProfileModalOpen(false);
-                        setSuspendTarget(selectedCand);
-                      }}
-                    >
-                      Suspend Candidate Account
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 'var(--space-3)',
+                  borderTop: '1px solid var(--color-border)',
+                  paddingTop: 'var(--space-4)'
+                }}>
+                  <div>
+                    <ExportDropdown
+                      label="Export Candidate"
+                      size="sm"
+                      align="left"
+                      items={[
+                        {
+                          label: 'Export PDF',
+                          icon: <FileText size={15} style={{ color: '#dc2626' }} />,
+                          onClick: handleExportSingleCandidatePdf
+                        },
+                        {
+                          label: 'Export CSV',
+                          icon: <FileSpreadsheet size={15} style={{ color: '#0284c7' }} />,
+                          onClick: handleExportSingleCandidateCsv
+                        },
+                        {
+                          label: 'Export Excel',
+                          icon: <FileSpreadsheet size={15} style={{ color: '#16a34a' }} />,
+                          onClick: handleExportSingleCandidateExcel
+                        }
+                      ]}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+                    <Button variant="outline" onClick={() => setProfileModalOpen(false)}>
+                      Close
                     </Button>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      onClick={() => {
-                        handleActivate(selectedCand);
-                        setSelectedCand({ ...selectedCand, accountStatus: 'ACTIVE' });
-                      }}
-                    >
-                      Activate Account
-                    </Button>
-                  )}
+                    {selectedCand.accountStatus === 'ACTIVE' ? (
+                      <Button
+                        variant="danger"
+                        onClick={() => {
+                          setProfileModalOpen(false);
+                          setSuspendTarget(selectedCand);
+                        }}
+                      >
+                        Suspend Account
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        onClick={() => {
+                          handleActivate(selectedCand);
+                          setSelectedCand({ ...selectedCand, accountStatus: 'ACTIVE' });
+                        }}
+                      >
+                        Activate Account
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </Modal>

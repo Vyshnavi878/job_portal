@@ -11,21 +11,54 @@ import FormField from '../../components/ui/FormField';
 import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminInternshipsPage() {
   const { addToast } = useToast();
-  const { internships, approveInternship, rejectInternship } = useAdmin();
+  const {
+    internships = [],
+    companies = [],
+    recruiters = [],
+    approveInternship,
+    rejectInternship
+  } = useAdmin();
 
   const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [companyFilter, setCompanyFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, companyFilter]);
+
+  // Derive unique company names from existing internship, company, and recruiter data
+  const availableCompanies = useMemo(() => {
+    const set = new Set();
+    internships?.forEach(item => {
+      const c = item.company || item.companyName;
+      if (c && typeof c === 'string' && c.trim()) {
+        set.add(c.trim());
+      }
+    });
+    companies?.forEach(c => {
+      const name = typeof c === 'string' ? c : (c.name || c.companyName || c.company);
+      if (name && typeof name === 'string' && name.trim()) {
+        set.add(name.trim());
+      }
+    });
+    recruiters?.forEach(r => {
+      const c = r.company || r.companyName;
+      if (c && typeof c === 'string' && c.trim()) {
+        set.add(c.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [internships, companies, recruiters]);
 
   // View modal
   const [selectedInternship, setSelectedInternship] = useState(null);
@@ -46,14 +79,14 @@ export default function AdminInternshipsPage() {
   ];
 
   const filtered = useMemo(() => {
-    return internships.filter((item) => {
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        const matchesTitle = item.title?.toLowerCase().includes(q);
-        const matchesCompany = item.company?.toLowerCase().includes(q);
-        const matchesLocation = item.location?.toLowerCase().includes(q);
-        if (!matchesTitle && !matchesCompany && !matchesLocation) return false;
+    return (internships || []).filter((item) => {
+      // 1. Company Filter
+      if (companyFilter !== 'ALL') {
+        const itemCompany = (item.company || item.companyName || '').trim().toLowerCase();
+        if (itemCompany !== companyFilter.trim().toLowerCase()) return false;
       }
+
+      // 2. Status Filter
       if (statusFilter !== 'ALL') {
         if (statusFilter === 'APPROVED' && (item.status !== 'APPROVED' && item.status !== 'PUBLISHED')) return false;
         if (statusFilter === 'ACTIVE' && (item.status !== 'ACTIVE' && item.status !== 'PUBLISHED' && item.status !== 'APPROVED')) return false;
@@ -61,15 +94,101 @@ export default function AdminInternshipsPage() {
         if (statusFilter === 'REJECTED' && item.status !== 'REJECTED') return false;
         if (statusFilter === 'CLOSED' && item.status !== 'CLOSED') return false;
       }
+
+      // 3. Search Filter
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchesTitle = item.title?.toLowerCase().includes(q);
+        const matchesCompany = item.company?.toLowerCase().includes(q);
+        const matchesRecruiter = item.recruiter?.toLowerCase().includes(q);
+        const matchesLocation = item.location?.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesCompany && !matchesRecruiter && !matchesLocation) return false;
+      }
       return true;
     });
-  }, [internships, search, statusFilter]);
+  }, [internships, search, statusFilter, companyFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginatedInternships = useMemo(() => {
     const startIndex = (currentPage - 1) * PAGE_SIZE;
     return filtered.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filtered, currentPage]);
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting internships list to Excel...', 'info');
+    const headers = [
+      'Internship Title',
+      'Company',
+      'Duration',
+      'Stipend',
+      'Location',
+      'Submitted Date',
+      'Status'
+    ];
+    const rows = filtered.map(i => [
+      i.title || 'N/A',
+      i.company || 'N/A',
+      i.duration || '3 Months',
+      i.stipend || 'Competitive',
+      i.location || 'India',
+      i.submittedDate || i.createdAt ? new Date(i.submittedDate || i.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
+      i.status || 'ACTIVE'
+    ]);
+    const fileSuffix = companyFilter !== 'ALL'
+      ? `${companyFilter.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${statusFilter.toLowerCase()}`
+      : statusFilter.toLowerCase();
+    exportToExcel({
+      filename: getExportFilename('admin_internships', fileSuffix, 'xlsx'),
+      sheetName: 'Internships',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting internships list to PDF...', 'info');
+    const headers = ['Internship Title', 'Company', 'Duration', 'Stipend', 'Location', 'Status'];
+    const rows = filtered.map(i => [
+      i.title || 'N/A',
+      i.company || 'N/A',
+      i.duration || '3 Months',
+      i.stipend || 'Competitive',
+      i.location || 'India',
+      i.status || 'ACTIVE'
+    ]);
+    const tabObj = filterTabs.find(t => t.key === statusFilter);
+    const statusLabel = tabObj ? tabObj.label : statusFilter;
+    const companyLabel = companyFilter === 'ALL' ? 'All Companies' : companyFilter;
+
+    const fileSuffix = companyFilter !== 'ALL'
+      ? `${companyFilter.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${statusFilter.toLowerCase()}`
+      : statusFilter.toLowerCase();
+
+    exportToPDF({
+      filename: getExportFilename('admin_internships', fileSuffix, 'pdf'),
+      title: 'Platform Internship Programs Governance Report',
+      subtitle: `NTR Vikasa Admin Audit - Company: ${companyLabel} • Filter: ${statusLabel}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Company Filter': companyLabel,
+        'Status Filter': statusLabel,
+        'Search Query': search || 'None',
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
+  };
 
   const handleApprove = (item) => {
     approveInternship(item.id);
@@ -239,45 +358,114 @@ export default function AdminInternshipsPage() {
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
-        <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+      <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+        {/* Row 1: Status Filters & Export */}
+        <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+            {filterTabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setStatusFilter(tab.key)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: statusFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                  background: statusFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                  color: statusFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
+                  transition: 'all 150ms ease'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <ExportDropdown
+            onExportExcel={handleExportExcel}
+            onExportPdf={handleExportPdf}
+            disabled={filtered.length === 0}
+          />
+        </div>
+
+        {/* Row 2: Company Filter Dropdown & Search Bar */}
+        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+          {/* Company Filter */}
+          <div style={{ position: 'relative', minWidth: 260, flex: '0 1 300px' }}>
+            <Building2 size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
+            <select
+              value={companyFilter}
+              onChange={(e) => setCompanyFilter(e.target.value)}
+              className="form-control"
+              style={{
+                width: '100%',
+                height: 38,
+                paddingLeft: 36,
+                paddingRight: 28,
+                borderRadius: 'var(--radius-lg)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 600,
+                color: 'var(--color-text)',
+                cursor: 'pointer',
+                background: companyFilter === 'ALL' ? 'var(--color-surface)' : 'var(--color-primary-50, #eff6ff)',
+                borderColor: companyFilter === 'ALL' ? 'var(--color-border)' : 'var(--color-primary-500)'
+              }}
+            >
+              <option value="ALL">All Companies</option>
+              {availableCompanies.map((cName) => (
+                <option key={cName} value={cName}>
+                  {cName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search Input */}
+          <div style={{ position: 'relative', flex: '1 1 240px' }}>
             <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
             <input
               type="text"
-              placeholder="Search internship role, company, location..."
+              placeholder="Search internships, company, recruiter, location..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="form-control"
-              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+              style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-xs)' }}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-              <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-              {filterTabs.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setStatusFilter(tab.key)}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: 'var(--radius-lg)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    border: statusFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                    background: statusFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                    color: statusFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
-                    transition: 'all 150ms ease'
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Active Filter Clear */}
+          {(companyFilter !== 'ALL' || statusFilter !== 'ALL' || search.trim() !== '') && (
+            <button
+              type="button"
+              onClick={() => {
+                setCompanyFilter('ALL');
+                setStatusFilter('ALL');
+                setSearch('');
+              }}
+              style={{
+                height: 38,
+                padding: '0 14px',
+                borderRadius: 'var(--radius-lg)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 600,
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-surface)',
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                transition: 'all 150ms ease'
+              }}
+              title="Reset all filters"
+            >
+              <XCircle size={14} /> Clear
+            </button>
+          )}
         </div>
       </div>
 

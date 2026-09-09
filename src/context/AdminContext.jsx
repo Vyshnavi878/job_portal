@@ -1903,6 +1903,7 @@ const SEED_REPORTS = [
     id: 'rep-1',
     reportType: 'Job Scam / Fee Request',
     reportedEntity: 'Fast Cash Enterprises (Manoj Kumar)',
+    reportedUserType: 'RECRUITER',
     reporter: 'Candidate User (Anonymous)',
     reporterEmail: 'cand.verify@example.com',
     date: '2026-08-26',
@@ -1914,6 +1915,7 @@ const SEED_REPORTS = [
     id: 'rep-2',
     reportType: 'Misleading Job Description',
     reportedEntity: 'AI Model Trainer (TechGlobal)',
+    reportedUserType: 'RECRUITER',
     reporter: 'Sneha Kulkarni',
     reporterEmail: 'sneha.kulkarni@example.com',
     date: '2026-09-01',
@@ -1925,6 +1927,7 @@ const SEED_REPORTS = [
     id: 'rep-3',
     reportType: 'Profile Harassment in Messages',
     reportedEntity: 'Unverified Candidate ID #409',
+    reportedUserType: 'CANDIDATE',
     reporter: 'ABC Technologies HR Team',
     reporterEmail: 'careers@abctechnologies.example.com',
     date: '2026-09-03',
@@ -2734,6 +2737,22 @@ export function AdminProvider({ children }) {
     addAuditLog('Company Verification Rejected', comp?.name || companyId, 'COMPANY');
   };
 
+  const suspendCompany = (companyId) => {
+    setCompanies(prev =>
+      prev.map(c => (c.id === companyId ? { ...c, verificationStatus: 'SUSPENDED', accountStatus: 'SUSPENDED' } : c))
+    );
+    const comp = companies.find(c => c.id === companyId);
+    addAuditLog('Company Suspended', comp?.name || companyId, 'COMPANY');
+  };
+
+  const activateCompany = (companyId) => {
+    setCompanies(prev =>
+      prev.map(c => (c.id === companyId ? { ...c, verificationStatus: 'VERIFIED', accountStatus: 'ACTIVE' } : c))
+    );
+    const comp = companies.find(c => c.id === companyId);
+    addAuditLog('Company Activated', comp?.name || companyId, 'COMPANY');
+  };
+
   // Job actions
   const approveJob = (jobId) => {
     setJobs(prev =>
@@ -3119,6 +3138,8 @@ export function AdminProvider({ children }) {
         activateCandidate,
         approveCompany,
         rejectCompany,
+        suspendCompany,
+        activateCompany,
         approveJob,
         rejectJob,
         requestJobChanges,

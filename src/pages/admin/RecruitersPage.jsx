@@ -11,6 +11,8 @@ import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import Table from '../../components/ui/Table';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
+import ExportDropdown from '../../components/ui/ExportDropdown';
+import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
 
@@ -20,7 +22,17 @@ import AdminInternshipsPage from './InternshipsPage';
 
 export default function AdminRecruitersPage() {
   const { addToast } = useToast();
-  const { recruiters, verifyRecruiter, suspendRecruiter, activateRecruiter } = useAdmin();
+  const {
+    recruiters,
+    verifyRecruiter,
+    suspendRecruiter,
+    activateRecruiter,
+    companies = [],
+    jobs = [],
+    internships = [],
+    applications = [],
+    jobMelas = []
+  } = useAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabParam = searchParams.get('tab');
@@ -53,11 +65,30 @@ export default function AdminRecruitersPage() {
   const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [companyFilter, setCompanyFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, companyFilter]);
+
+  // Derive unique company names from existing recruiter and company data
+  const availableCompanies = useMemo(() => {
+    const set = new Set();
+    recruiters?.forEach(r => {
+      const c = r.company || r.companyName;
+      if (c && typeof c === 'string' && c.trim()) {
+        set.add(c.trim());
+      }
+    });
+    companies?.forEach(c => {
+      const name = typeof c === 'string' ? c : (c.name || c.companyName || c.company);
+      if (name && typeof name === 'string' && name.trim()) {
+        set.add(name.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [recruiters, companies]);
 
   // View modal
   const [selectedRecruiter, setSelectedRecruiter] = useState(null);
@@ -66,8 +97,31 @@ export default function AdminRecruitersPage() {
   // Suspend Dialog
   const [suspendTarget, setSuspendTarget] = useState(null);
 
+  const filterTabs = [
+    { key: 'ALL', label: 'All Recruiters' },
+    { key: 'VERIFIED', label: 'Verified' },
+    { key: 'PENDING', label: 'Pending' },
+    { key: 'SUSPENDED', label: 'Suspended' },
+  ];
+
   const filtered = useMemo(() => {
-    return recruiters.filter((r) => {
+    return (recruiters || []).filter((r) => {
+      // 1. Company Filter
+      if (companyFilter !== 'ALL') {
+        const recruiterCompany = (r.company || r.companyName || '').trim().toLowerCase();
+        if (recruiterCompany !== companyFilter.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
+      // 2. Status Filter
+      if (statusFilter !== 'ALL') {
+        if (statusFilter === 'VERIFIED' && r.verificationStatus !== 'VERIFIED') return false;
+        if (statusFilter === 'PENDING' && r.verificationStatus !== 'PENDING') return false;
+        if (statusFilter === 'SUSPENDED' && r.accountStatus !== 'SUSPENDED') return false;
+      }
+
+      // 3. Search Filter
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesName = r.name?.toLowerCase().includes(q);
@@ -76,14 +130,9 @@ export default function AdminRecruitersPage() {
         const matchesDesignation = r.designation?.toLowerCase().includes(q);
         if (!matchesName && !matchesEmail && !matchesCompany && !matchesDesignation) return false;
       }
-      if (statusFilter !== 'ALL') {
-        if (statusFilter === 'VERIFIED' && r.verificationStatus !== 'VERIFIED') return false;
-        if (statusFilter === 'PENDING' && r.verificationStatus !== 'PENDING') return false;
-        if (statusFilter === 'SUSPENDED' && r.accountStatus !== 'SUSPENDED') return false;
-      }
       return true;
     });
-  }, [recruiters, search, statusFilter]);
+  }, [recruiters, search, statusFilter, companyFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginatedRecruiters = useMemo(() => {
@@ -106,6 +155,87 @@ export default function AdminRecruitersPage() {
     suspendRecruiter(suspendTarget.id);
     addToast(`Recruiter account for ${suspendTarget.name} has been SUSPENDED.`, 'error');
     setSuspendTarget(null);
+  };
+
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting recruiters list to Excel...', 'info');
+    const headers = [
+      'Recruiter Name',
+      'Email',
+      'Company',
+      'Designation',
+      'Industry',
+      'Location',
+      'Registration Date',
+      'Verification Status',
+      'Account Status'
+    ];
+    const rows = filtered.map(r => [
+      r.name || 'N/A',
+      r.email || 'N/A',
+      r.company || 'N/A',
+      r.designation || 'Talent Acquisition',
+      r.industry || 'IT / Technology',
+      r.location || 'India',
+      r.registrationDate ? new Date(r.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '01 Aug 2026',
+      r.verificationStatus || 'PENDING',
+      r.accountStatus || 'ACTIVE'
+    ]);
+    const fileSuffix = companyFilter !== 'ALL'
+      ? `${companyFilter.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${statusFilter.toLowerCase()}`
+      : statusFilter.toLowerCase();
+    exportToExcel({
+      filename: getExportFilename('recruiters', fileSuffix, 'xlsx'),
+      sheetName: 'Recruiters',
+      headers,
+      rows
+    });
+    addToast('Excel export downloaded successfully!', 'success');
+  };
+
+  const handleExportPdf = () => {
+    if (filtered.length === 0) {
+      addToast('No records available to export for the selected filters.', 'info');
+      return;
+    }
+    addToast('Exporting recruiters list to PDF...', 'info');
+    const headers = ['Recruiter', 'Email', 'Company', 'Designation', 'Location', 'Verification', 'Status'];
+    const rows = filtered.map(r => [
+      r.name || 'N/A',
+      r.email || 'N/A',
+      r.company || 'N/A',
+      r.designation || 'Talent Acquisition',
+      r.location || 'India',
+      r.verificationStatus || 'PENDING',
+      r.accountStatus || 'ACTIVE'
+    ]);
+    const tabObj = filterTabs.find(t => t.key === statusFilter);
+    const statusLabel = tabObj ? tabObj.label : statusFilter;
+    const companyLabel = companyFilter === 'ALL' ? 'All Companies' : companyFilter;
+
+    const fileSuffix = companyFilter !== 'ALL'
+      ? `${companyFilter.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${statusFilter.toLowerCase()}`
+      : statusFilter.toLowerCase();
+
+    exportToPDF({
+      filename: getExportFilename('recruiters', fileSuffix, 'pdf'),
+      title: 'Platform Registered Recruiters Report',
+      subtitle: `NTR Vikasa Admin Audit - Company: ${companyLabel} • Status: ${statusLabel}`,
+      metadata: {
+        'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        'Company Filter': companyLabel,
+        'Status Filter': statusLabel,
+        'Search Query': search || 'None',
+        'Total Records': filtered.length
+      },
+      headers,
+      rows
+    });
+    addToast('PDF export downloaded successfully!', 'success');
   };
 
   const columns = [
@@ -377,9 +507,74 @@ export default function AdminRecruitersPage() {
           </div>
 
           {/* Search & Filter Toolbar */}
-          <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)' }}>
-            <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: 440 }}>
+          <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            {/* Row 1: Status Filters & Export */}
+            <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
+                {filterTabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setStatusFilter(tab.key)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 'var(--radius-lg)',
+                      fontSize: 'var(--text-xs)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: statusFilter === tab.key ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                      background: statusFilter === tab.key ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                      color: statusFilter === tab.key ? '#fff' : 'var(--color-text-muted)',
+                      transition: 'all 150ms ease'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <ExportDropdown
+                onExportExcel={handleExportExcel}
+                onExportPdf={handleExportPdf}
+                disabled={filtered.length === 0}
+              />
+            </div>
+
+            {/* Row 2: Company Filter Dropdown & Search Bar */}
+            <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+              {/* Company Filter */}
+              <div style={{ position: 'relative', minWidth: 260, flex: '0 1 300px' }}>
+                <Building2 size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
+                <select
+                  value={companyFilter}
+                  onChange={(e) => setCompanyFilter(e.target.value)}
+                  className="form-control"
+                  style={{
+                    width: '100%',
+                    height: 38,
+                    paddingLeft: 36,
+                    paddingRight: 28,
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 600,
+                    color: 'var(--color-text)',
+                    cursor: 'pointer',
+                    background: companyFilter === 'ALL' ? 'var(--color-surface)' : 'var(--color-primary-50, #eff6ff)',
+                    borderColor: companyFilter === 'ALL' ? 'var(--color-border)' : 'var(--color-primary-500)'
+                  }}
+                >
+                  <option value="ALL">All Companies</option>
+                  {availableCompanies.map((cName) => (
+                    <option key={cName} value={cName}>
+                      {cName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search Input */}
+              <div style={{ position: 'relative', flex: '1 1 240px' }}>
                 <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
                 <input
                   type="text"
@@ -387,35 +582,39 @@ export default function AdminRecruitersPage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="form-control"
-                  style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)' }}
+                  style={{ width: '100%', paddingLeft: 36, height: 38, borderRadius: 'var(--radius-lg)', fontSize: 'var(--text-xs)' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                  <Filter size={15} style={{ color: 'var(--color-text-muted)' }} />
-                  {['ALL', 'VERIFIED', 'PENDING', 'SUSPENDED'].map((filterKey) => (
-                    <button
-                      key={filterKey}
-                      type="button"
-                      onClick={() => setStatusFilter(filterKey)}
-                      style={{
-                        padding: '5px 12px',
-                        borderRadius: 'var(--radius-lg)',
-                        fontSize: 'var(--text-xs)',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        border: statusFilter === filterKey ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                        background: statusFilter === filterKey ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                        color: statusFilter === filterKey ? '#fff' : 'var(--color-text-muted)',
-                        transition: 'all 150ms ease'
-                      }}
-                    >
-                      {filterKey === 'ALL' ? 'All Recruiters' : filterKey}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Active Filter Clear */}
+              {(companyFilter !== 'ALL' || statusFilter !== 'ALL' || search.trim() !== '') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompanyFilter('ALL');
+                    setStatusFilter('ALL');
+                    setSearch('');
+                  }}
+                  style={{
+                    height: 38,
+                    padding: '0 14px',
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 600,
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-surface)',
+                    color: 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all 150ms ease'
+                  }}
+                  title="Reset all filters"
+                >
+                  <XCircle size={14} /> Clear
+                </button>
+              )}
             </div>
           </div>
 
@@ -445,111 +644,340 @@ export default function AdminRecruitersPage() {
           </div>
 
           {/* ── 1. Recruiter Full Details Modal ── */}
-          {viewModalOpen && selectedRecruiter && (
-            <Modal
-              isOpen={viewModalOpen}
-              onClose={() => setViewModalOpen(false)}
-              title={`Recruiter Dossier: ${selectedRecruiter.name}`}
-              size="lg"
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-                {/* Header Badge */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-4)',
-                  background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
-                  color: '#fff',
-                  padding: 'var(--space-5)',
-                  borderRadius: 'var(--radius-xl)'
-                }}>
+          {viewModalOpen && selectedRecruiter && (() => {
+            const matchedCompany = companies?.find(c => 
+              (selectedRecruiter.company && c.name?.toLowerCase() === selectedRecruiter.company.toLowerCase()) ||
+              (selectedRecruiter.companyId && c.id === selectedRecruiter.companyId)
+            );
+
+            const recruiterLocation = selectedRecruiter.location || matchedCompany?.location || 'India';
+            const recruiterIndustry = selectedRecruiter.industry || matchedCompany?.industry || 'Information Technology & Services';
+
+            const recruiterJobs = jobs?.filter(j => 
+              (selectedRecruiter.company && j.company?.toLowerCase() === selectedRecruiter.company.toLowerCase()) || 
+              (selectedRecruiter.name && j.recruiter?.toLowerCase() === selectedRecruiter.name.toLowerCase()) ||
+              (selectedRecruiter.id && j.recruiterId === selectedRecruiter.id)
+            ) || [];
+
+            const recruiterInternships = internships?.filter(i => 
+              (selectedRecruiter.company && i.company?.toLowerCase() === selectedRecruiter.company.toLowerCase()) || 
+              (selectedRecruiter.name && i.recruiter?.toLowerCase() === selectedRecruiter.name.toLowerCase()) ||
+              (selectedRecruiter.id && i.recruiterId === selectedRecruiter.id)
+            ) || [];
+
+            const recruiterApplications = applications?.filter(a => 
+              (selectedRecruiter.company && a.company?.toLowerCase() === selectedRecruiter.company.toLowerCase()) || 
+              (selectedRecruiter.name && a.recruiter?.toLowerCase() === selectedRecruiter.name.toLowerCase())
+            ) || [];
+
+            const recruiterMelas = jobMelas?.filter(m => 
+              m.participatingCompanies?.some(c => (typeof c === 'string' ? c.toLowerCase() : c.name?.toLowerCase()) === selectedRecruiter.company?.toLowerCase()) ||
+              m.companies?.some(c => (typeof c === 'string' ? c.toLowerCase() : c.name?.toLowerCase()) === selectedRecruiter.company?.toLowerCase())
+            ) || [];
+
+            const activeJobsCount = recruiterJobs.filter(j => j.status === 'ACTIVE' || j.status === 'APPROVED' || !j.status).length;
+            const totalJobsCount = selectedRecruiter.postedJobsCount !== undefined ? selectedRecruiter.postedJobsCount : (recruiterJobs.length > 0 ? recruiterJobs.length : null);
+
+            return (
+              <Modal
+                isOpen={viewModalOpen}
+                onClose={() => setViewModalOpen(false)}
+                title={`Recruiter Dossier: ${selectedRecruiter.name}`}
+                size="lg"
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                  {/* 1. Recruiter Overview */}
                   <div style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 'var(--radius-xl)',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#fff',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 'var(--text-xl)',
-                    fontWeight: 800
+                    gap: 'var(--space-4)',
+                    background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
+                    color: '#fff',
+                    padding: 'var(--space-5)',
+                    borderRadius: 'var(--radius-xl)'
                   }}>
-                    {selectedRecruiter.name?.[0]}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedRecruiter.name}</h3>
-                    <p style={{ fontSize: 'var(--text-sm)', color: '#c7d2fe', margin: '2px 0 0 0' }}>{selectedRecruiter.designation} • {selectedRecruiter.company}</p>
-                    <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#e0e7ff' }}>
-                      <span>📍 {selectedRecruiter.location || 'India'}</span>
-                      <span>🏢 {selectedRecruiter.industry || 'Information Technology'}</span>
-                      <span>📅 Joined: {selectedRecruiter.registrationDate || 'Aug 2026'}</span>
+                    <div style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 'var(--radius-xl)',
+                      background: 'rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 'var(--text-xl)',
+                      fontWeight: 800
+                    }}>
+                      {selectedRecruiter.name?.[0] || 'R'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedRecruiter.name}</h3>
+                      <p style={{ fontSize: 'var(--text-sm)', color: '#c7d2fe', margin: '2px 0 0 0' }}>
+                        {selectedRecruiter.designation || 'Director of Talent Acquisition'} • {selectedRecruiter.company}
+                      </p>
+                      <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#e0e7ff', flexWrap: 'wrap' }}>
+                        <span>📍 {recruiterLocation}</span>
+                        <span>🏢 {recruiterIndustry}</span>
+                        <span>📅 Joined: {selectedRecruiter.registrationDate ? new Date(selectedRecruiter.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026'}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Recruiter Details Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-                  <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
-                    <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                      Employer Details
-                    </h4>
-                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Company:</strong> {selectedRecruiter.company}</p>
-                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Email:</strong> {selectedRecruiter.email}</p>
-                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Phone:</strong> {selectedRecruiter.phone || '+91 80 4920 1000'}</p>
+                  {/* 2. Contact Information & 3. Employer Details */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)' }}>
+                    {/* Section 2: Contact Information */}
+                    <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                        Contact Information
+                      </h4>
+                      <p style={{ fontSize: 'var(--text-xs)', marginBottom: 6 }}><strong>Email:</strong> {selectedRecruiter.email || 'N/A'}</p>
+                      <p style={{ fontSize: 'var(--text-xs)', marginBottom: 6 }}><strong>Phone:</strong> {selectedRecruiter.phone || '+91 98765 00112'}</p>
+                      <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Location:</strong> {recruiterLocation}</p>
+                    </div>
+
+                    {/* Section 3: Employer Details */}
+                    <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                        Employer Details
+                      </h4>
+                      <p style={{ fontSize: 'var(--text-xs)', marginBottom: 6 }}><strong>Company:</strong> {selectedRecruiter.company}</p>
+                      <p style={{ fontSize: 'var(--text-xs)', marginBottom: 6 }}><strong>Industry:</strong> {recruiterIndustry}</p>
+                      <div style={{ fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: matchedCompany?.cin || matchedCompany?.size ? 6 : 0 }}>
+                        <strong>Verification:</strong>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          borderRadius: 'var(--radius-full)',
+                          background: (matchedCompany?.verificationStatus === 'VERIFIED' || selectedRecruiter.verificationStatus === 'VERIFIED') ? '#ecfdf5' : '#fffbeb',
+                          color: (matchedCompany?.verificationStatus === 'VERIFIED' || selectedRecruiter.verificationStatus === 'VERIFIED') ? '#047857' : '#b45309',
+                          border: (matchedCompany?.verificationStatus === 'VERIFIED' || selectedRecruiter.verificationStatus === 'VERIFIED') ? '1px solid #a7f3d0' : '1px solid #fde68a'
+                        }}>
+                          {matchedCompany?.verificationStatus || (selectedRecruiter.verificationStatus === 'VERIFIED' ? 'VERIFIED' : 'PENDING')}
+                        </span>
+                      </div>
+                      {matchedCompany?.cin && (
+                        <p style={{ fontSize: 'var(--text-xs)', marginBottom: matchedCompany?.size ? 6 : 0 }}><strong>CIN:</strong> {matchedCompany.cin}</p>
+                      )}
+                      {matchedCompany?.size && (
+                        <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Company Size:</strong> {matchedCompany.size}</p>
+                      )}
+                    </div>
                   </div>
 
-                  <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
-                    <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
-                      Verification & Postings
+                  {/* 4. Recruiter Account & Verification */}
+                  <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                      Recruiter Account & Verification
                     </h4>
-                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Verification:</strong> {selectedRecruiter.verificationStatus}</p>
-                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Account:</strong> {selectedRecruiter.accountStatus}</p>
-                    <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Active Jobs:</strong> {selectedRecruiter.activeJobsCount || 6} Openings</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--space-3)' }}>
+                      <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                          VERIFICATION STATUS
+                        </span>
+                        <div style={{ marginTop: 3 }}>
+                          <StatusBadge status={selectedRecruiter.verificationStatus || 'PENDING'} />
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                          ACCOUNT STATUS
+                        </span>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: 'var(--radius-full)',
+                          background: selectedRecruiter.accountStatus === 'ACTIVE' ? '#f0fdf4' : '#fef2f2',
+                          color: selectedRecruiter.accountStatus === 'ACTIVE' ? '#15803d' : '#b91c1c',
+                          border: selectedRecruiter.accountStatus === 'ACTIVE' ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          marginTop: 3
+                        }}>
+                          {selectedRecruiter.accountStatus === 'ACTIVE' ? <ShieldCheck size={12} /> : <ShieldAlert size={12} />}
+                          {selectedRecruiter.accountStatus || 'ACTIVE'}
+                        </span>
+                      </div>
+
+                      <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                          ACTIVE JOBS
+                        </span>
+                        <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary-700)', display: 'block', marginTop: 3 }}>
+                          {activeJobsCount || (selectedRecruiter.postedJobsCount !== undefined ? selectedRecruiter.postedJobsCount : 0)} Openings
+                        </strong>
+                      </div>
+
+                      {totalJobsCount !== null && (
+                        <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                            TOTAL JOBS POSTED
+                          </span>
+                          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block', marginTop: 3 }}>
+                            {totalJobsCount} Vacancies
+                          </strong>
+                        </div>
+                      )}
+
+                      {recruiterInternships.length > 0 && (
+                        <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                            INTERNSHIPS POSTED
+                          </span>
+                          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block', marginTop: 3 }}>
+                            {recruiterInternships.length} Programs
+                          </strong>
+                        </div>
+                      )}
+
+                      {recruiterApplications.length > 0 && (
+                        <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                            APPLICATIONS MANAGED
+                          </span>
+                          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block', marginTop: 3 }}>
+                            {recruiterApplications.length} Candidates
+                          </strong>
+                        </div>
+                      )}
+
+                      {recruiterMelas.length > 0 && (
+                        <div style={{ background: '#fff', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                            JOB MELA PARTICIPATION
+                          </span>
+                          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block', marginTop: 3 }}>
+                            {recruiterMelas.length} Event(s)
+                          </strong>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 5. Recruiter Activity / Postings */}
+                  <div style={{ background: 'var(--color-gray-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+                      Recruiter Activity & Vacancies
+                    </h4>
+                    {recruiterJobs.length > 0 || recruiterInternships.length > 0 || recruiterMelas.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                        {recruiterJobs.slice(0, 3).map((job) => (
+                          <div key={job.id} style={{
+                            background: '#fff',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: 'var(--space-3)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 'var(--space-2)'
+                          }}>
+                            <div>
+                              <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', display: 'block' }}>{job.title}</strong>
+                              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                                💼 {job.type || 'Full-time'} • 📍 {job.location || 'India'} • 👥 {job.applicationsCount !== undefined ? `${job.applicationsCount} applicants` : 'Active listing'}
+                              </span>
+                            </div>
+                            <StatusBadge status={job.status || 'ACTIVE'} />
+                          </div>
+                        ))}
+
+                        {recruiterInternships.slice(0, 2).map((intern) => (
+                          <div key={intern.id} style={{
+                            background: '#fff',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: 'var(--space-3)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 'var(--space-2)'
+                          }}>
+                            <div>
+                              <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', display: 'block' }}>{intern.title}</strong>
+                              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                                🎓 Internship • 📍 {intern.location || 'India'} • ⏱️ {intern.duration || '3 Months'}
+                              </span>
+                            </div>
+                            <StatusBadge status={intern.status || 'ACTIVE'} />
+                          </div>
+                        ))}
+
+                        {recruiterMelas.slice(0, 2).map((mela) => (
+                          <div key={mela.id} style={{
+                            background: '#fff',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-md)',
+                            padding: 'var(--space-3)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 'var(--space-2)'
+                          }}>
+                            <div>
+                              <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', display: 'block' }}>{mela.title || mela.event}</strong>
+                              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                                🎟️ Job Mela Participation • 📍 {mela.location || 'State Level'} • 📅 {mela.date || 'Aug 2026'}
+                              </span>
+                            </div>
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)',
+                              background: '#ecfdf5',
+                              color: '#047857',
+                              border: '1px solid #a7f3d0'
+                            }}>
+                              PARTICIPATING
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+                        No active vacancies or Job Mela participations recorded for this recruiter yet.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 6. Admin Actions (ONLY [ Close ] [ Suspend Account ]) */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
+                    <Button variant="outline" onClick={() => setViewModalOpen(false)}>
+                      Close
+                    </Button>
+                    {selectedRecruiter.accountStatus === 'ACTIVE' ? (
+                      <Button
+                        variant="danger"
+                        onClick={() => {
+                          setViewModalOpen(false);
+                          setSuspendTarget(selectedRecruiter);
+                        }}
+                      >
+                        Suspend Account
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        onClick={() => {
+                          handleActivate(selectedRecruiter);
+                          setSelectedRecruiter({ ...selectedRecruiter, accountStatus: 'ACTIVE' });
+                        }}
+                      >
+                        Activate Account
+                      </Button>
+                    )}
                   </div>
                 </div>
-
-                {/* Modal Actions */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-4)' }}>
-                  <Button variant="outline" onClick={() => setViewModalOpen(false)}>
-                    Close
-                  </Button>
-                  {selectedRecruiter.verificationStatus === 'PENDING' && (
-                    <Button
-                      variant="primary"
-                      onClick={() => {
-                        handleVerify(selectedRecruiter);
-                        setSelectedRecruiter({ ...selectedRecruiter, verificationStatus: 'VERIFIED' });
-                      }}
-                    >
-                      Verify Recruiter
-                    </Button>
-                  )}
-                  {selectedRecruiter.accountStatus === 'ACTIVE' ? (
-                    <Button
-                      variant="danger"
-                      onClick={() => {
-                        setViewModalOpen(false);
-                        setSuspendTarget(selectedRecruiter);
-                      }}
-                    >
-                      Suspend Account
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        handleActivate(selectedRecruiter);
-                        setSelectedRecruiter({ ...selectedRecruiter, accountStatus: 'ACTIVE' });
-                      }}
-                    >
-                      Activate Account
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Modal>
-          )}
+              </Modal>
+            );
+          })()}
 
           {/* ── 2. Confirm Suspend Dialog ── */}
           {suspendTarget && (

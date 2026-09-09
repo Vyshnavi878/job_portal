@@ -9,7 +9,7 @@ const CANDIDATE_1_DATA = {
   phone: '+91 98765 43210',
   location: 'Visakhapatnam, Andhra Pradesh',
   bio: 'Passionate frontend engineer specializing in performant React architectures, design systems, TypeScript, and micro-frontend state management with 4+ years of industry experience across enterprise web applications.',
-  avatar: 'P',
+  avatar: '/candidate_avatar.jpg',
   verified: true,
   profileCompletion: 80,
   linkedin: 'https://linkedin.com/in/priyasharma-dev',
@@ -91,8 +91,41 @@ const CANDIDATE_1_DATA = {
   // Applications
   applications: [
     {
+      id: 'app-mela-1',
+      jobId: 'mela-1-comp-2',
+      melaId: '1',
+      melaTitle: 'AP Mega IT & ITES Job Mela 2026',
+      eventNumber: '01',
+      companySequence: '02',
+      applicationSequence: '0024',
+      appNumber: 'NTR-01-02-0024',
+      applicationType: 'Job Mela Application',
+      title: 'Graduate Trainee Engineer',
+      company: 'TechCorp India',
+      companyLogo: null,
+      location: 'Visakhapatnam',
+      salary: '₹5.0 - ₹8.0 LPA',
+      type: 'Full-time',
+      mode: 'On-site',
+      appliedDate: '22 Aug 2026',
+      status: 'SHORTLISTED',
+      melaDate: '28 Sept 2026',
+      melaVenue: 'AU Convention Center, Beach Road, Visakhapatnam',
+      passId: 'PASS-AP-849201',
+      passStatus: 'Confirmed / Active Pass (Gate 3)',
+      timeline: [
+        { stage: 'Applied', date: '22 Aug 2026', completed: true, current: false },
+        { stage: 'Screening', date: '24 Aug 2026', completed: true, current: false },
+        { stage: 'Shortlisted', date: '26 Aug 2026', completed: true, current: true },
+        { stage: 'Interview', date: 'Spot Interview at Event (28 Sept)', completed: false, current: false },
+        { stage: 'Selected', date: 'TBD', completed: false, current: false },
+      ]
+    },
+    {
       id: 'app-1',
       jobId: '1',
+      appNumber: 'APP-000124',
+      applicationType: 'Direct Job Application',
       title: 'Senior Python Developer',
       company: 'TechCorp India',
       companyLogo: null,
@@ -113,6 +146,8 @@ const CANDIDATE_1_DATA = {
     {
       id: 'app-2',
       jobId: '2',
+      appNumber: 'APP-000002',
+      applicationType: 'Direct Job Application',
       title: 'Senior React Developer',
       company: 'Infosys Digital',
       companyLogo: null,
@@ -133,6 +168,8 @@ const CANDIDATE_1_DATA = {
     {
       id: 'app-3',
       jobId: '3',
+      appNumber: 'APP-000003',
+      applicationType: 'Direct Job Application',
       title: 'Frontend UI Architect',
       company: 'Wipro Cloud Services',
       companyLogo: null,
@@ -153,6 +190,8 @@ const CANDIDATE_1_DATA = {
     {
       id: 'app-4',
       jobId: '4',
+      appNumber: 'APP-000004',
+      applicationType: 'Direct Job Application',
       title: 'Design Systems Engineer',
       company: 'Flipkart AP Tech Hub',
       companyLogo: null,
@@ -173,6 +212,8 @@ const CANDIDATE_1_DATA = {
     {
       id: 'app-5',
       jobId: '5',
+      appNumber: 'APP-000005',
+      applicationType: 'Direct Job Application',
       title: 'Frontend Developer (React)',
       company: 'TCS Innovation',
       companyLogo: null,
@@ -193,6 +234,8 @@ const CANDIDATE_1_DATA = {
     {
       id: 'app-6',
       jobId: '6',
+      appNumber: 'APP-000006',
+      applicationType: 'Direct Job Application',
       title: 'Senior JavaScript Engineer',
       company: 'Capgemini India',
       companyLogo: null,
@@ -564,7 +607,35 @@ export function CandidateProvider({ children }) {
   const [candidatesData, setCandidatesData] = useState(() => {
     try {
       const stored = localStorage.getItem('ntr_candidate_users_v2');
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed['cand-1']?.applications) {
+          // Check if app-mela-1 or Job Mela application is present
+          const hasMelaApp = parsed['cand-1'].applications.some(
+            a => a.id === 'app-mela-1' || a.melaId || a.appNumber === 'NTR-01-02-0024' || a.applicationType === 'Job Mela Application'
+          );
+          if (!hasMelaApp) {
+            const melaApp = CANDIDATE_1_DATA.applications.find(a => a.id === 'app-mela-1');
+            if (melaApp) {
+              parsed['cand-1'].applications = [melaApp, ...parsed['cand-1'].applications];
+            }
+          }
+          // Ensure each application has its own distinct appNumber and applicationType
+          parsed['cand-1'].applications = parsed['cand-1'].applications.map((app, idx) => {
+            const fallback = CANDIDATE_1_DATA.applications.find(a => a.id === app.id);
+            const isMela = Boolean(app.melaId || app.applicationType === 'Job Mela Application' || (app.appNumber && app.appNumber.startsWith('NTR-')));
+            return {
+              ...app,
+              appNumber: app.appNumber || fallback?.appNumber || (isMela ? 'NTR-01-02-0024' : `APP-${String(app.id || idx + 1).replace(/\D/g, '').padStart(6, '0')}`),
+              applicationType: app.applicationType || fallback?.applicationType || (isMela ? 'Job Mela Application' : 'Direct Job Application')
+            };
+          });
+        }
+        if (parsed['cand-1'] && (parsed['cand-1'].avatar === 'P' || !parsed['cand-1'].avatar)) {
+          parsed['cand-1'].avatar = CANDIDATE_1_DATA.avatar;
+        }
+        return parsed;
+      }
     } catch (e) {
       // ignore
     }
@@ -645,10 +716,29 @@ export function CandidateProvider({ children }) {
 
   // Apply for Job
   const applyJob = (job, applicationDetails = {}) => {
+    const isJobMela = Boolean(job.melaId || applicationDetails.melaId || applicationDetails.applicationType === 'Job Mela Application');
+    
+    // Deterministic sequential application numbering without Math.random()
+    let defaultAppNumber;
+    if (isJobMela) {
+      defaultAppNumber = applicationDetails.appNumber || job.appNumber || 'NTR-01-02-0024';
+    } else {
+      const normalCount = candidate.applications.filter(a => !a.melaId && a.applicationType !== 'Job Mela Application').length + 1;
+      const numStr = String(job.id ? Number(job.id) || normalCount : normalCount).padStart(6, '0');
+      defaultAppNumber = job.appNumber || `APP-${numStr}`;
+    }
+
     const newApp = {
       id: `app-${Date.now()}`,
       jobId: String(job.id),
-      title: job.title,
+      appNumber: applicationDetails.appNumber || defaultAppNumber,
+      applicationType: isJobMela ? 'Job Mela Application' : 'Direct Job Application',
+      melaId: job.melaId || applicationDetails.melaId || null,
+      melaTitle: job.melaTitle || applicationDetails.melaTitle || null,
+      eventNumber: applicationDetails.eventNumber || job.eventNumber || (isJobMela ? '01' : null),
+      companySequence: applicationDetails.companySequence || job.companySequence || (isJobMela ? '02' : null),
+      applicationSequence: applicationDetails.applicationSequence || job.applicationSequence || (isJobMela ? '0024' : null),
+      title: job.title || job.role,
       company: job.company,
       companyLogo: job.companyLogo || null,
       location: job.location,

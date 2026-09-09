@@ -51,8 +51,6 @@ import CandidateJobDetailPage     from './pages/candidate/CandidateJobDetailPage
 import CandidateInternshipsPage   from './pages/candidate/CandidateInternshipsPage';
 import CandidateCompaniesPage     from './pages/candidate/CandidateCompaniesPage';
 import CandidateProfilePage       from './pages/candidate/ProfilePage';
-import CandidateResumePage        from './pages/candidate/ResumePage';
-import CandidateSkillsPreferencesPage from './pages/candidate/SkillsPreferencesPage';
 import CandidateApplicationsPage  from './pages/candidate/ApplicationsPage';
 import CandidateSavedJobsPage     from './pages/candidate/SavedJobsPage';
 import CandidateJobMelaPage       from './pages/candidate/JobMelaPage';
@@ -158,8 +156,8 @@ export default function App() {
                       <Route path="internships"        element={<CandidateInternshipsPage />} />
                       <Route path="companies"          element={<CandidateCompaniesPage />} />
                       <Route path="profile"            element={<CandidateProfilePage />} />
-                      <Route path="resume"             element={<CandidateResumePage />} />
-                      <Route path="skills-preferences" element={<CandidateSkillsPreferencesPage />} />
+                      <Route path="resume"             element={<Navigate to="/candidate/profile" replace />} />
+                      <Route path="skills-preferences" element={<Navigate to="/candidate/profile" replace />} />
                       <Route path="applications"       element={<CandidateApplicationsPage />} />
                       <Route path="saved-jobs"         element={<CandidateSavedJobsPage />} />
                       <Route path="job-mela"           element={<CandidateJobMelaPage />} />

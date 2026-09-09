@@ -9,6 +9,7 @@ import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
 import { useCandidate } from '../../context/CandidateContext';
 import { useToast } from '../../context/ToastContext';
+import ApplicationDetailsModal from '../../components/ui/ApplicationDetailsModal';
 
 export default function CandidateApplicationsPage() {
   const { candidate } = useCandidate();
@@ -19,33 +20,44 @@ export default function CandidateApplicationsPage() {
   const [page, setPage] = useState(1);
   const [selectedApp, setSelectedApp] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [timelineModalOpen, setTimelineModalOpen] = useState(false);
+
+  const allApplications = candidate?.applications || [];
 
   const filterTabs = [
-    { key: 'ALL', label: 'All', count: candidate.applications.length },
-    { key: 'APPLIED', label: 'Applied', count: candidate.applications.filter(a => a.status === 'APPLIED').length },
-    { key: 'SCREENING', label: 'Screening', count: candidate.applications.filter(a => a.status === 'SCREENING').length },
-    { key: 'SHORTLISTED', label: 'Shortlisted', count: candidate.applications.filter(a => a.status === 'SHORTLISTED').length },
-    { key: 'INTERVIEW', label: 'Interview', count: candidate.applications.filter(a => a.status === 'INTERVIEW').length },
-    { key: 'SELECTED', label: 'Selected', count: candidate.applications.filter(a => a.status === 'SELECTED').length },
-    { key: 'REJECTED', label: 'Rejected', count: candidate.applications.filter(a => a.status === 'REJECTED').length },
+    { key: 'ALL', label: 'All', count: allApplications.length },
+    { key: 'APPLIED', label: 'Applied', count: allApplications.filter(a => a.status === 'APPLIED').length },
+    { key: 'SCREENING', label: 'Screening', count: allApplications.filter(a => a.status === 'SCREENING').length },
+    { key: 'SHORTLISTED', label: 'Shortlisted', count: allApplications.filter(a => a.status === 'SHORTLISTED').length },
+    { key: 'INTERVIEW', label: 'Interview', count: allApplications.filter(a => a.status === 'INTERVIEW').length },
+    { key: 'SELECTED', label: 'Selected', count: allApplications.filter(a => a.status === 'SELECTED').length },
+    { key: 'REJECTED', label: 'Rejected', count: allApplications.filter(a => a.status === 'REJECTED').length },
   ];
 
   const filteredApps = useMemo(() => {
-    return candidate.applications.filter((app) => {
+    return allApplications.filter((app) => {
       if (search.trim()) {
         const q = search.toLowerCase();
-        const matchTitle = app.title.toLowerCase().includes(q);
-        const matchComp = app.company.toLowerCase().includes(q);
-        if (!matchTitle && !matchComp) return false;
+        const matchTitle = app.title?.toLowerCase().includes(q);
+        const matchComp = app.company?.toLowerCase().includes(q);
+        const matchAppNo = app.appNumber?.toLowerCase().includes(q);
+        const matchLoc = app.location?.toLowerCase().includes(q);
+        const matchMela = app.melaTitle?.toLowerCase().includes(q);
+        if (!matchTitle && !matchComp && !matchAppNo && !matchLoc && !matchMela) return false;
       }
       if (statusFilter !== 'ALL' && app.status !== statusFilter) return false;
       return true;
     });
-  }, [candidate.applications, search, statusFilter]);
+  }, [allApplications, search, statusFilter]);
 
   const handleOpenDetails = (app) => {
     setSelectedApp(app);
     setDetailsModalOpen(true);
+  };
+
+  const handleOpenTimeline = (app) => {
+    setSelectedApp(app);
+    setTimelineModalOpen(true);
   };
 
   const PER_PAGE = 9;
@@ -228,24 +240,88 @@ export default function CandidateApplicationsPage() {
                       <span>Applied: {app.appliedDate}</span>
                     </div>
                   </div>
+
+                  {/* Application Number & Application Type */}
+                  {(() => {
+                    const isMela = Boolean(
+                      app.melaId ||
+                      app.applicationType === 'Job Mela Application' ||
+                      (app.appNumber && app.appNumber.startsWith('NTR-'))
+                    );
+                    const appNumber = app.appNumber || (
+                      isMela
+                        ? (app.appId || 'NTR-01-02-0024')
+                        : `APP-${String(app.id || app.jobId || '1').replace(/\D/g, '').padStart(6, '0')}`
+                    );
+                    const appType = isMela ? 'Job Mela Application' : 'Direct Job Application';
+
+                    return (
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                        margin: 'var(--space-2) 0',
+                        padding: '8px 10px',
+                        background: 'var(--color-bg)',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--color-border)'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                          <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Application No:</span>
+                          <span style={{
+                            fontFamily: 'monospace, monospace',
+                            fontWeight: 800,
+                            color: isMela ? 'var(--color-primary-700)' : 'var(--color-text)',
+                            background: 'var(--color-surface)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '1px 6px',
+                          }}>
+                            {appNumber}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                          <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Application Type:</span>
+                          <span style={{
+                            fontWeight: 700,
+                            fontSize: '10px',
+                            color: isMela ? 'var(--color-primary-700)' : 'var(--color-text-muted)',
+                            background: isMela ? 'var(--color-primary-50)' : 'var(--color-gray-100)',
+                            border: isMela ? '1px solid var(--color-primary-200)' : '1px solid var(--color-gray-200)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '1px 6px',
+                          }}>
+                            {appType}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
-                {/* Footer: Status + View Timeline Button */}
+                {/* Footer: Status + View Details & View Timeline Buttons */}
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   borderTop: '1px solid var(--color-gray-100)',
                   paddingTop: 'var(--space-3)',
-                  gap: 'var(--space-2)'
+                  gap: 'var(--space-2)',
+                  flexWrap: 'wrap'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <StatusBadge status={app.status} />
                   </div>
 
-                  <Button size="sm" variant="outline" onClick={() => handleOpenDetails(app)}>
-                    View Timeline
-                  </Button>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <Button size="sm" variant="primary" onClick={() => handleOpenDetails(app)}>
+                      View Details
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleOpenTimeline(app)}>
+                      View Timeline
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -267,8 +343,21 @@ export default function CandidateApplicationsPage() {
         </>
       )}
 
+      {/* ── Application Details Modal ── */}
+      <ApplicationDetailsModal
+        isOpen={detailsModalOpen}
+        onClose={() => setDetailsModalOpen(false)}
+        application={selectedApp}
+        candidate={candidate}
+        onViewTimeline={(app) => {
+          setDetailsModalOpen(false);
+          setSelectedApp(app);
+          setTimelineModalOpen(true);
+        }}
+      />
+
       {/* ── Detail Timeline Modal ── */}
-      {detailsModalOpen && selectedApp && (
+      {timelineModalOpen && selectedApp && (
         <div
           style={{
             position: 'fixed',
@@ -281,7 +370,7 @@ export default function CandidateApplicationsPage() {
             background: 'rgba(15, 23, 42, 0.65)',
             backdropFilter: 'blur(4px)'
           }}
-          onClick={() => setDetailsModalOpen(false)}
+          onClick={() => setTimelineModalOpen(false)}
         >
           <div
             style={{
@@ -316,7 +405,7 @@ export default function CandidateApplicationsPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setDetailsModalOpen(false)}
+                onClick={() => setTimelineModalOpen(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
                 aria-label="Close modal"
               >
@@ -330,6 +419,44 @@ export default function CandidateApplicationsPage() {
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Current Status:</span>
                 <StatusBadge status={selectedApp.status} />
               </div>
+
+              {/* Application No. & Type */}
+              {(() => {
+                const isMela = Boolean(
+                  selectedApp.melaId ||
+                  selectedApp.applicationType === 'Job Mela Application' ||
+                  (selectedApp.appNumber && selectedApp.appNumber.startsWith('NTR-'))
+                );
+                const appNumber = selectedApp.appNumber || (
+                  isMela
+                    ? (selectedApp.appId || 'NTR-01-02-0024')
+                    : `APP-${String(selectedApp.id || selectedApp.jobId || '1').replace(/\D/g, '').padStart(6, '0')}`
+                );
+                const appType = isMela ? 'Job Mela Application' : 'Direct Job Application';
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-lg)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Application No:</span>
+                      <span style={{ fontSize: '12px', fontFamily: 'monospace, monospace', fontWeight: 700, color: isMela ? 'var(--color-primary-700)' : 'var(--color-text)' }}>
+                        {appNumber}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Application Type:</span>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: isMela ? 'var(--color-primary-600)' : 'var(--color-text-muted)' }}>
+                        {appType}
+                      </span>
+                    </div>
+                    {isMela && selectedApp.melaTitle && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Job Mela:</span>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text)', textAlign: 'right', maxWidth: '60%' }}>{selectedApp.melaTitle}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Step by step timeline */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
@@ -363,7 +490,7 @@ export default function CandidateApplicationsPage() {
             </div>
 
             <div style={{ padding: 'var(--space-4) var(--space-6)', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end' }}>
-              <Button variant="primary" onClick={() => setDetailsModalOpen(false)}>
+              <Button variant="primary" onClick={() => setTimelineModalOpen(false)}>
                 Close
               </Button>
             </div>

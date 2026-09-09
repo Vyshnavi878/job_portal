@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Search, BookOpen, Building2, Bookmark,
-  FileText, CalendarDays, User, Sliders, Video,
+  FileText, CalendarDays, User, Video,
   HelpCircle, Settings
 } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -21,9 +21,7 @@ const NAV_ITEMS = [
   { section: 'MAIN', label: 'Job Melas',            href: '/candidate/job-melas',         icon: <CalendarDays size={18} /> },
 
   // ── PROFILE ──
-  { section: 'PROFILE', label: 'My Profile',        href: '/candidate/profile',           icon: <User size={18} /> },
-  { section: 'PROFILE', label: 'My Resume',         href: '/candidate/resume',            icon: <FileText size={18} /> },
-  { section: 'PROFILE', label: 'Skills & Preferences', href: '/candidate/skills-preferences', icon: <Sliders size={18} /> },
+  { section: 'PROFILE', label: 'Profile', href: '/candidate/profile', icon: <User size={18} /> },
 
   // ── ACTIVITY ──
   { section: 'ACTIVITY', label: 'Interviews',       href: '/candidate/interviews',        icon: <Video size={18} /> },
@@ -39,9 +37,9 @@ function getPageTitle(pathname) {
     '/candidate/jobs':              'Find Jobs',
     '/candidate/internships':       'Internships',
     '/candidate/companies':         'Companies',
-    '/candidate/profile':           'My Profile',
-    '/candidate/resume':            'My Resume',
-    '/candidate/skills-preferences':'Skills & Preferences',
+    '/candidate/profile':           'Profile',
+    '/candidate/resume':            'Profile',
+    '/candidate/skills-preferences':'Profile',
     '/candidate/applications':      'My Applications',
     '/candidate/saved-jobs':        'Saved Jobs',
     '/candidate/job-mela':          'Job Melas',
@@ -62,7 +60,8 @@ export default function CandidateLayout() {
   const currentUser = {
     name: candidate.name,
     role: 'Candidate',
-    email: candidate.email
+    email: candidate.email,
+    avatar: (candidate.avatar && (candidate.avatar.startsWith('data:') || candidate.avatar.startsWith('http') || candidate.avatar.startsWith('/'))) ? candidate.avatar : null
   };
 
   return (

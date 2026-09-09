@@ -1,13 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CalendarDays, Clock, Video, Building2, MapPin, CheckCircle2,
   ExternalLink, Calendar, ArrowRight, UserCheck, ShieldCheck,
-  AlertCircle, Sparkles, MessageSquare, Info, ChevronRight
+  Sparkles, MessageSquare, Info, ChevronRight, Check
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge, Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
 import { useCandidate } from '../../context/CandidateContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -15,13 +16,84 @@ export default function CandidateInterviewsPage() {
   const { candidate } = useCandidate();
   const { toast } = useToast();
 
-  const upcomingInterviews = useMemo(() => {
-    return candidate.interviews.filter(i => i.status === 'UPCOMING');
-  }, [candidate.interviews]);
+  // Status Filter: 'ALL' | 'UPCOMING' | 'TODAY' | 'COMPLETED'
+  const [filter, setFilter] = useState('ALL');
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 9;
 
-  const pastInterviews = useMemo(() => {
-    return candidate.interviews.filter(i => i.status === 'COMPLETED');
-  }, [candidate.interviews]);
+  // Helper to check if an interview is scheduled for today
+  const isInterviewToday = (item) => {
+    if (!item?.date) return false;
+    const dStr = item.date.toLowerCase();
+    if (dStr.includes('today')) return true;
+
+    const now = new Date();
+    const day = now.getDate();
+    const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+    const monthNamesAlt = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = monthNamesShort[now.getMonth()];
+    const currentMonthAlt = monthNamesAlt[now.getMonth()];
+    const year = now.getFullYear();
+
+    const regex = new RegExp(`(^|\\s)0?${day}\\s+(${currentMonth}|${currentMonthAlt})\\s+${year}`, 'i');
+    return regex.test(item.date);
+  };
+
+  const isCompletedInterview = (item) => {
+    return item.status === 'COMPLETED' || item.status === 'PAST' || Boolean(item.result);
+  };
+
+  const isUpcomingInterview = (item) => {
+    return item.status === 'UPCOMING';
+  };
+
+  const allInterviews = candidate?.interviews || [];
+
+  // Filter tabs with counts
+  const filterTabs = useMemo(() => {
+    return [
+      { key: 'ALL', label: 'All', count: allInterviews.length },
+      { key: 'UPCOMING', label: 'Upcoming', count: allInterviews.filter(isUpcomingInterview).length },
+      { key: 'TODAY', label: 'Today', count: allInterviews.filter(isInterviewToday).length },
+      { key: 'COMPLETED', label: 'Completed', count: allInterviews.filter(isCompletedInterview).length },
+    ];
+  }, [allInterviews]);
+
+  // Filtered interviews based on selected tab
+  const filteredInterviews = useMemo(() => {
+    switch (filter) {
+      case 'UPCOMING':
+        return allInterviews.filter(isUpcomingInterview);
+      case 'TODAY':
+        return allInterviews.filter(isInterviewToday);
+      case 'COMPLETED':
+        return allInterviews.filter(isCompletedInterview);
+      case 'ALL':
+      default:
+        return allInterviews;
+    }
+  }, [allInterviews, filter]);
+
+  // Reset page to 1 whenever filter changes
+  const handleFilterChange = (newFilter) => {
+    setFilter(newFilter);
+    setPage(1);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(filteredInterviews.length / PER_PAGE));
+
+  // Keep pagination valid if items change
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages, page]);
+
+  // Paginated slice (maximum 9 per page)
+  const paginatedInterviews = useMemo(() => {
+    const start = (page - 1) * PER_PAGE;
+    return filteredInterviews.slice(start, start + PER_PAGE);
+  }, [filteredInterviews, page]);
 
   const handleJoinMeeting = (meetingUrl, company) => {
     toast({
@@ -38,6 +110,21 @@ export default function CandidateInterviewsPage() {
       title: 'Calendar Event Exported',
       message: `Added "${title} with ${company}" to your calendar.`,
     });
+  };
+
+  // Section title based on active filter
+  const getSectionTitle = () => {
+    switch (filter) {
+      case 'UPCOMING':
+        return `Upcoming Interviews (${filteredInterviews.length})`;
+      case 'TODAY':
+        return `Today's Interviews (${filteredInterviews.length})`;
+      case 'COMPLETED':
+        return `Past Interview History (${filteredInterviews.length})`;
+      case 'ALL':
+      default:
+        return `All Scheduled & Past Interviews (${filteredInterviews.length})`;
+    }
   };
 
   return (
@@ -62,165 +149,256 @@ export default function CandidateInterviewsPage() {
             </Button>
           </Link>
         </div>
+
+        {/* ── Filter Buttons: All | Upcoming | Today | Completed ── */}
+        <div style={{ display: 'flex', gap: 'var(--space-2)', overflowX: 'auto', paddingBottom: 'var(--space-1)', marginTop: 'var(--space-5)' }}>
+          {filterTabs.map((tab) => {
+            const active = filter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => handleFilterChange(tab.key)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 'var(--radius-full)',
+                  border: active ? '1.5px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                  background: active ? 'var(--color-primary-600)' : 'var(--color-surface)',
+                  color: active ? '#fff' : 'var(--color-text-muted)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  whiteSpace: 'nowrap',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                {tab.label}
+                <span style={{
+                  background: active ? 'rgba(255,255,255,0.25)' : 'var(--color-gray-100)',
+                  color: active ? '#fff' : 'var(--color-text-muted)',
+                  padding: '1px 6px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '10px'
+                }}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* ── Section 1: Upcoming Interviews ── */}
+      {/* ── Interviews Grid Section ── */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
           <Clock size={18} style={{ color: 'var(--color-primary-600)' }} />
           <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 800 }}>
-            Upcoming Interviews ({upcomingInterviews.length})
+            {getSectionTitle()}
           </h2>
         </div>
 
-        {upcomingInterviews.length === 0 ? (
+        {filteredInterviews.length === 0 ? (
           <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-8)' }}>
             <EmptyState
               icon="default"
-              title="No upcoming interviews scheduled"
-              description="When recruiters shortlist your applications, your interview invitations and video conference links will appear here."
+              title={
+                filter === 'TODAY'
+                  ? 'No interviews scheduled for today'
+                  : filter === 'UPCOMING'
+                    ? 'No upcoming interviews scheduled'
+                    : filter === 'COMPLETED'
+                      ? 'No completed interviews on record'
+                      : 'No interviews found'
+              }
+              description={
+                filter === 'TODAY'
+                  ? 'You have no interviews scheduled for today. Check your upcoming schedule to prepare ahead.'
+                  : 'When recruiters shortlist your applications, your interview invitations and video conference links will appear here.'
+              }
               action={
-                <Link to="/candidate/applications">
-                  <Button variant="primary">Check Application Status</Button>
-                </Link>
+                filter !== 'ALL' ? (
+                  <Button variant="outline" onClick={() => handleFilterChange('ALL')}>
+                    View All Interviews
+                  </Button>
+                ) : (
+                  <Link to="/candidate/applications">
+                    <Button variant="primary">Check Application Status</Button>
+                  </Link>
+                )
               }
             />
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            {upcomingInterviews.map((item) => (
-              <div
-                key={item.id}
-                className="card"
-                style={{
-                  borderRadius: 'var(--radius-2xl)',
-                  padding: 'var(--space-6)',
-                  border: '1px solid var(--color-primary-200)',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #fcfaff 100%)',
-                  boxShadow: 'var(--shadow-sm)'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-                  
-                  <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'flex-start' }}>
-                    <div style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: 'var(--radius-xl)',
-                      background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
-                      color: '#fff',
-                      fontSize: 'var(--text-xl)',
-                      fontWeight: 800,
+          <>
+            {/* Responsive Card Grid: 3 cards per row (desktop), 2 (tablet), 1 (mobile) */}
+            <div className="recruiter-jobs-grid">
+              {paginatedInterviews.map((item) => {
+                const isUpcoming = item.status === 'UPCOMING';
+                return (
+                  <div
+                    key={item.id}
+                    className="card card-hoverable"
+                    style={{
+                      borderRadius: 'var(--radius-2xl)',
+                      padding: 'var(--space-5)',
+                      border: isUpcoming ? '1.5px solid var(--color-primary-200)' : '1px solid var(--color-border)',
+                      background: isUpcoming ? 'linear-gradient(135deg, #ffffff 0%, #fdfbff 100%)' : 'var(--color-surface)',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      {item.company?.[0] || 'I'}
-                    </div>
-
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: 'var(--space-4)'
+                    }}
+                  >
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                        <span className="badge badge-warning" style={{ fontSize: '10px' }}>
-                          Upcoming • {item.mode || 'Online Interview'}
-                        </span>
-                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                          Platform: {item.meetingPlatform || 'Google Meet'}
+                      {/* Top Row: Status Badge + Meeting Platform */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)', flexWrap: 'wrap', gap: 4 }}>
+                        {isUpcoming ? (
+                          <span className="badge badge-warning" style={{ fontSize: '10px' }}>
+                            Upcoming • {item.mode || 'Online Interview'}
+                          </span>
+                        ) : (
+                          <span className="badge badge-success" style={{ fontSize: '10px' }}>
+                            {item.result || 'Completed'}
+                          </span>
+                        )}
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Video size={12} style={{ color: 'var(--color-primary-600)' }} />
+                          {item.meetingPlatform || 'Video Call'}
                         </span>
                       </div>
 
-                      <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text)', marginTop: 4 }}>
-                        {item.title}
-                      </h3>
+                      {/* Header: Company Avatar + Title + Role/Company */}
+                      <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
+                        <div style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: 'var(--radius-xl)',
+                          background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+                          color: '#fff',
+                          fontSize: 'var(--text-base)',
+                          fontWeight: 800,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {item.company?.[0] || 'I'}
+                        </div>
 
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 700, marginTop: 2 }}>
-                        {item.role} • {item.company}
-                      </p>
-
-                      <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', marginTop: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={14} /> {item.date}</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={14} /> {item.time}</span>
-                        {item.panel && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><UserCheck size={14} /> Panel: {item.panel}</span>}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text)', lineHeight: 1.3, marginBottom: 2 }}>
+                            {item.title}
+                          </h3>
+                          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-600)', fontWeight: 700 }}>
+                            {item.role} • {item.company}
+                          </p>
+                        </div>
                       </div>
 
+                      {/* Details: Date, Time, Panel */}
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                        fontSize: 'var(--text-xs)',
+                        color: 'var(--color-text-muted)',
+                        marginTop: 'var(--space-3)',
+                        padding: 'var(--space-2) var(--space-3)',
+                        background: 'var(--color-bg)',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--color-border)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <CalendarDays size={13} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                          <span><strong>Date:</strong> {item.date}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Clock size={13} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                          <span><strong>Time:</strong> {item.time}</span>
+                        </div>
+                        {item.panel && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <UserCheck size={13} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                            <span><strong>Panel:</strong> {item.panel}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Preparation Note (if provided) */}
                       {item.instructions && (
-                        <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-primary-50)', borderRadius: 'var(--radius-md)', fontSize: '11px', color: 'var(--color-primary-800)' }}>
+                        <div style={{
+                          marginTop: 'var(--space-2)',
+                          padding: '6px 10px',
+                          background: 'var(--color-primary-50)',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '11px',
+                          color: 'var(--color-primary-900)',
+                          border: '1px solid var(--color-primary-200)',
+                          lineHeight: 1.4
+                        }}>
                           <strong>Preparation Note:</strong> {item.instructions}
                         </div>
                       )}
                     </div>
+
+                    {/* Actions Footer */}
+                    <div style={{
+                      borderTop: '1px solid var(--color-gray-100)',
+                      paddingTop: 'var(--space-3)',
+                      display: 'flex',
+                      justifyContent: isUpcoming ? 'flex-end' : 'space-between',
+                      alignItems: 'center',
+                      gap: 'var(--space-2)',
+                      flexWrap: 'wrap'
+                    }}>
+                      {isUpcoming ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Calendar size={13} />}
+                            onClick={() => handleAddToCalendar(item.title, item.company)}
+                          >
+                            Add to Calendar
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            leftIcon={<ExternalLink size={13} />}
+                            onClick={() => handleJoinMeeting(item.meetingUrl, item.company)}
+                          >
+                            Join Meeting
+                          </Button>
+                        </>
+                      ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>Status / Result:</span>
+                          <span className="badge badge-success" style={{ fontSize: '11px' }}>
+                            {item.result || 'Completed'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      leftIcon={<Calendar size={14} />}
-                      onClick={() => handleAddToCalendar(item.title, item.company)}
-                    >
-                      Add to Calendar
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      leftIcon={<ExternalLink size={14} />}
-                      onClick={() => handleJoinMeeting(item.meetingUrl, item.company)}
-                    >
-                      Join Meeting
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Section 2: Past Interviews ── */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
-          <CheckCircle2 size={18} style={{ color: 'var(--color-success-600)' }} />
-          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 800 }}>
-            Past Interview History ({pastInterviews.length})
-          </h2>
-        </div>
-
-        {pastInterviews.length === 0 ? (
-          <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)' }}>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>No completed past interviews on record.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            {pastInterviews.map((item) => (
-              <div
-                key={item.id}
-                className="card"
-                style={{
-                  borderRadius: 'var(--radius-xl)',
-                  padding: 'var(--space-5)',
-                  border: '1px solid var(--color-border)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: 'var(--space-3)'
-                }}
-              >
-                <div>
-                  <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 800 }}>{item.title}</h3>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                    {item.role} • <strong>{item.company}</strong> ({item.date})
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                  <span className="badge badge-success" style={{ fontSize: '11px' }}>
-                    {item.result || 'Completed'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+            {/* Pagination: 9 per page */}
+            <div style={{ marginTop: 'var(--space-6)', display: 'flex', justifyContent: 'center' }}>
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={filteredInterviews.length}
+                pageSize={PER_PAGE}
+                onPageChange={(p) => setPage(p)}
+                itemName="interviews"
+              />
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -1,24 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Search, Filter, Clock, Building2, MapPin, DollarSign,
-  Calendar, CheckCircle2, XCircle, ArrowRight, Eye, RefreshCw,
-  AlertCircle, Sparkles, UserCheck, MessageSquare, ChevronRight,
-  Briefcase, Check, X
+  Search, MapPin, DollarSign, Calendar, ArrowRight, Briefcase, X
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/States';
+import Pagination from '../../components/ui/Pagination';
 import { useCandidate } from '../../context/CandidateContext';
 import { useToast } from '../../context/ToastContext';
-
-const TIMELINE_STAGES = [
-  { key: 'Applied', label: 'Applied', desc: 'Application & resume submitted' },
-  { key: 'Screening', label: 'Screening', desc: 'Recruiter evaluating qualifications' },
-  { key: 'Shortlisted', label: 'Shortlisted', desc: 'Shortlisted for technical rounds' },
-  { key: 'Interview', label: 'Interview', desc: 'Technical & architectural discussion' },
-  { key: 'Selected', label: 'Selected', desc: 'Offer release & onboarding' },
-];
 
 export default function CandidateApplicationsPage() {
   const { candidate } = useCandidate();
@@ -26,6 +16,7 @@ export default function CandidateApplicationsPage() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [page, setPage] = useState(1);
   const [selectedApp, setSelectedApp] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
@@ -57,17 +48,23 @@ export default function CandidateApplicationsPage() {
     setDetailsModalOpen(true);
   };
 
-  const getStageIndex = (status) => {
-    switch (status) {
-      case 'APPLIED': return 0;
-      case 'SCREENING': return 1;
-      case 'SHORTLISTED': return 2;
-      case 'INTERVIEW': return 3;
-      case 'SELECTED': return 4;
-      case 'REJECTED': return 1;
-      default: return 0;
+  const PER_PAGE = 9;
+  const calculatedPages = Math.ceil(filteredApps.length / PER_PAGE);
+  const totalPages = Math.max(3, calculatedPages);
+
+  // Keep pagination valid if items are filtered
+  useEffect(() => {
+    if (page > totalPages && totalPages > 0) {
+      setPage(totalPages);
     }
-  };
+  }, [totalPages, page]);
+
+  const paginatedApps = useMemo(() => {
+    const start = (page - 1) * PER_PAGE;
+    const end = start + PER_PAGE;
+    const sliced = filteredApps.slice(start, end);
+    return sliced.length > 0 ? sliced : filteredApps.slice(0, PER_PAGE);
+  }, [filteredApps, page]);
 
   return (
     <div className="candidate-applications-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
@@ -100,7 +97,10 @@ export default function CandidateApplicationsPage() {
               className="input has-icon-left"
               placeholder="Search applied role, company name..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
         </div>
@@ -113,7 +113,10 @@ export default function CandidateApplicationsPage() {
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setStatusFilter(tab.key)}
+                onClick={() => {
+                  setStatusFilter(tab.key);
+                  setPage(1);
+                }}
                 style={{
                   padding: '6px 14px',
                   borderRadius: 'var(--radius-full)',
@@ -146,7 +149,7 @@ export default function CandidateApplicationsPage() {
         </div>
       </div>
 
-      {/* ── Applications List ── */}
+      {/* ── Applications Grid ── */}
       {filteredApps.length === 0 ? (
         <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-10)' }}>
           <EmptyState
@@ -161,32 +164,32 @@ export default function CandidateApplicationsPage() {
           />
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          {filteredApps.map((app) => {
-            const currentStage = getStageIndex(app.status);
-            return (
+        <>
+          <div className="recruiter-jobs-grid">
+            {paginatedApps.map((app) => (
               <div
                 key={app.id}
                 className="card card-hoverable"
                 style={{
                   borderRadius: 'var(--radius-2xl)',
-                  padding: 'var(--space-6)',
+                  padding: 'var(--space-5)',
                   border: '1px solid var(--color-border)',
                   display: 'flex',
                   flexDirection: 'column',
+                  justifyContent: 'space-between',
                   gap: 'var(--space-4)'
                 }}
               >
-                {/* Header info */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                <div>
+                  {/* Header: Company Icon + Title + Company */}
                   <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
                     <div style={{
-                      width: 48,
-                      height: 48,
+                      width: 44,
+                      height: 44,
                       borderRadius: 'var(--radius-xl)',
                       background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
                       color: '#fff',
-                      fontSize: 'var(--text-lg)',
+                      fontSize: 'var(--text-base)',
                       fontWeight: 800,
                       display: 'flex',
                       alignItems: 'center',
@@ -196,102 +199,72 @@ export default function CandidateApplicationsPage() {
                       {app.company?.[0] || 'C'}
                     </div>
 
-                    <div>
-                      <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text)' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-text)', lineHeight: 1.3, marginBottom: 2 }}>
                         {app.title}
                       </h2>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-primary-600)' }}>
-                          {app.company}
-                        </span>
-                        <span style={{ color: 'var(--color-text-light)' }}>•</span>
-                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                          Applied: {app.appliedDate}
-                        </span>
-                      </div>
+                      <p style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-primary-600)' }}>
+                        {app.company}
+                      </p>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                  {/* Meta Details: Location • Salary • Type / Mode • Applied Date */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 'var(--space-3) 0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <MapPin size={13} style={{ flexShrink: 0 }} />
+                      <span>{app.location}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <DollarSign size={13} style={{ flexShrink: 0 }} />
+                      <span>{app.salary}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Briefcase size={13} style={{ flexShrink: 0 }} />
+                      <span>{app.type} ({app.mode})</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <Calendar size={13} style={{ flexShrink: 0 }} />
+                      <span>Applied: {app.appliedDate}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer: Status + View Timeline Button */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderTop: '1px solid var(--color-gray-100)',
+                  paddingTop: 'var(--space-3)',
+                  gap: 'var(--space-2)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <StatusBadge status={app.status} />
-                    <Button size="sm" variant="outline" onClick={() => handleOpenDetails(app)}>
-                      View Timeline
-                    </Button>
                   </div>
-                </div>
 
-                {/* Meta details */}
-                <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {app.location}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><DollarSign size={13} /> {app.salary}</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Briefcase size={13} /> {app.type} ({app.mode})</span>
-                </div>
-
-                {/* ── Progress Milestone Line ── */}
-                <div style={{ background: 'var(--color-bg)', padding: 'var(--space-4)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--color-gray-100)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', alignItems: 'center' }}>
-                    
-                    {/* Background track */}
-                    <div style={{
-                      position: 'absolute',
-                      top: 12,
-                      left: '8%',
-                      right: '8%',
-                      height: 2,
-                      background: 'var(--color-gray-200)',
-                      zIndex: 1
-                    }} />
-
-                    {TIMELINE_STAGES.map((stage, idx) => {
-                      const isCompleted = idx <= currentStage && app.status !== 'REJECTED';
-                      const isCurrent = idx === currentStage && app.status !== 'REJECTED';
-                      const isRejectedState = app.status === 'REJECTED' && idx === 1;
-
-                      return (
-                        <div
-                          key={stage.key}
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            zIndex: 2,
-                            position: 'relative'
-                          }}
-                        >
-                          <div style={{
-                            width: 26,
-                            height: 26,
-                            borderRadius: '50%',
-                            background: isRejectedState ? 'var(--color-danger-500)' : isCompleted ? 'var(--color-primary-600)' : 'var(--color-surface)',
-                            border: isCompleted || isRejectedState ? 'none' : '2px solid var(--color-gray-300)',
-                            color: '#fff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 11,
-                            fontWeight: 700,
-                            boxShadow: isCurrent ? '0 0 0 4px var(--color-primary-100)' : 'none'
-                          }}>
-                            {isRejectedState ? <X size={13} /> : isCompleted ? <Check size={13} /> : idx + 1}
-                          </div>
-
-                          <span style={{
-                            fontSize: '11px',
-                            fontWeight: isCurrent ? 800 : 600,
-                            color: isRejectedState ? 'var(--color-danger-600)' : isCurrent ? 'var(--color-primary-700)' : isCompleted ? 'var(--color-text)' : 'var(--color-text-light)',
-                            marginTop: 4
-                          }}>
-                            {stage.label}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <Button size="sm" variant="outline" onClick={() => handleOpenDetails(app)}>
+                    View Timeline
+                  </Button>
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+
+          {/* Pagination UI */}
+          <div style={{ marginTop: 'var(--space-8)', display: 'flex', justifyContent: 'center' }}>
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              pageSize={PER_PAGE}
+              onPageChange={(p) => {
+                setPage(p);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              itemName="applications"
+            />
+          </div>
+        </>
       )}
 
       {/* ── Detail Timeline Modal ── */}
@@ -345,6 +318,7 @@ export default function CandidateApplicationsPage() {
                 type="button"
                 onClick={() => setDetailsModalOpen(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+                aria-label="Close modal"
               >
                 <X size={20} />
               </button>

@@ -765,143 +765,141 @@ export default function JobsPage() {
         <div className="responsive-split-sidebar">
 
           {/* Left Column: Sticky Filters Panel */}
-          <aside className="sticky-filter-sidebar hide-mobile">
-            <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', border: '1px solid var(--color-border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--color-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <Filter size={16} style={{ color: 'var(--color-primary-600)' }} />
-                  <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text)' }}>
-                    Filter Jobs
-                  </h2>
-                  {activeFilterCount > 0 && (
-                    <span style={{ fontSize: '11px', fontWeight: 800, background: 'var(--color-primary-50)', color: 'var(--color-primary-700)', padding: '1px 7px', borderRadius: 'var(--radius-full)' }}>
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleResetFilters}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--color-primary-600)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4
-                  }}
-                >
-                  <RotateCcw size={12} /> Reset
-                </button>
+          <aside className="sticky-filter-sidebar">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <Filter size={16} style={{ color: 'var(--color-primary-600)' }} />
+                <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text)', margin: 0 }}>
+                  Filter Jobs
+                </h2>
+                {activeFilterCount > 0 && (
+                  <span style={{ fontSize: '11px', fontWeight: 800, background: 'var(--color-primary-50)', color: 'var(--color-primary-700)', padding: '1px 7px', borderRadius: 'var(--radius-full)' }}>
+                    {activeFilterCount}
+                  </span>
+                )}
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                {/* Experience */}
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
-                    Experience Level
-                  </label>
-                  <Select
-                    value={experience}
-                    onChange={(e) => setExperience(e.target.value)}
-                    options={EXPERIENCE_LEVELS}
-                  />
-                </div>
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-primary-600)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                <RotateCcw size={12} /> Reset
+              </button>
+            </div>
 
-                {/* Salary Range */}
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
-                    Salary Range (CTC)
-                  </label>
-                  <Select
-                    value={salaryRange}
-                    onChange={(e) => setSalaryRange(e.target.value)}
-                    options={SALARY_RANGES}
-                  />
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              {/* Experience */}
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                  Experience Level
+                </label>
+                <Select
+                  value={experience}
+                  onChange={(e) => setExperience(e.target.value)}
+                  options={EXPERIENCE_LEVELS}
+                />
+              </div>
 
-                {/* Work Mode */}
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
-                    Work Mode
-                  </label>
-                  <Select
-                    value={workMode}
-                    onChange={(e) => setWorkMode(e.target.value)}
-                    options={WORK_MODES}
-                  />
-                </div>
+              {/* Salary Range */}
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                  Salary Range (CTC)
+                </label>
+                <Select
+                  value={salaryRange}
+                  onChange={(e) => setSalaryRange(e.target.value)}
+                  options={SALARY_RANGES}
+                />
+              </div>
 
-                {/* Job Type */}
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
-                    Job Type
-                  </label>
-                  <Select
-                    value={jobType}
-                    onChange={(e) => setJobType(e.target.value)}
-                    options={JOB_TYPES}
-                  />
-                </div>
+              {/* Work Mode */}
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                  Work Mode
+                </label>
+                <Select
+                  value={workMode}
+                  onChange={(e) => setWorkMode(e.target.value)}
+                  options={WORK_MODES}
+                />
+              </div>
 
-                {/* Industry */}
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
-                    Industry Sector
-                  </label>
-                  <Select
-                    value={industry}
-                    onChange={(e) => setIndustry(e.target.value)}
-                    options={INDUSTRIES}
-                  />
-                </div>
+              {/* Job Type */}
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                  Job Type
+                </label>
+                <Select
+                  value={jobType}
+                  onChange={(e) => setJobType(e.target.value)}
+                  options={JOB_TYPES}
+                />
+              </div>
 
-                {/* Technical Skills */}
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 6 }}>
-                    Required Technical Skills
-                  </label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {['Python', 'React', 'TypeScript', 'SQL', 'FastAPI', 'Node.js', 'Docker', 'AWS'].map((s) => {
-                      const isSelected = selectedSkill.toLowerCase() === s.toLowerCase();
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setSelectedSkill(isSelected ? '' : s)}
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            padding: '3px 8px',
-                            borderRadius: 'var(--radius-md)',
-                            border: isSelected ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
-                            background: isSelected ? 'var(--color-primary-50)' : 'var(--color-surface)',
-                            color: isSelected ? 'var(--color-primary-700)' : 'var(--color-text-muted)',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {s} {isSelected && '✓'}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+              {/* Industry */}
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                  Industry Sector
+                </label>
+                <Select
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  options={INDUSTRIES}
+                />
+              </div>
 
-                {/* Date Posted */}
-                <div>
-                  <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
-                    Date Posted
-                  </label>
-                  <Select
-                    value={datePosted}
-                    onChange={(e) => setDatePosted(e.target.value)}
-                    options={POSTED_DATES}
-                  />
+              {/* Technical Skills */}
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 6 }}>
+                  Required Technical Skills
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {['Python', 'React', 'TypeScript', 'SQL', 'FastAPI', 'Node.js', 'Docker', 'AWS'].map((s) => {
+                    const isSelected = selectedSkill.toLowerCase() === s.toLowerCase();
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setSelectedSkill(isSelected ? '' : s)}
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          padding: '3px 8px',
+                          borderRadius: 'var(--radius-md)',
+                          border: isSelected ? '1px solid var(--color-primary-600)' : '1px solid var(--color-border)',
+                          background: isSelected ? 'var(--color-primary-50)' : 'var(--color-surface)',
+                          color: isSelected ? 'var(--color-primary-700)' : 'var(--color-text-muted)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {s} {isSelected && '✓'}
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
+
+              {/* Date Posted */}
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>
+                  Date Posted
+                </label>
+                <Select
+                  value={datePosted}
+                  onChange={(e) => setDatePosted(e.target.value)}
+                  options={POSTED_DATES}
+                />
               </div>
             </div>
           </aside>

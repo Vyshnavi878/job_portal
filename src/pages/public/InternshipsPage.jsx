@@ -161,15 +161,7 @@ export default function InternshipsPage() {
         <div className="responsive-split-sidebar">
 
           {/* ── Filters Sidebar (All required filters: location, work mode, stipend, duration, skills, industry) ── */}
-          <aside className="sticky-filter-sidebar" style={{
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-2xl)',
-            padding: 'var(--space-6)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-5)'
-          }}>
+          <aside className="sticky-filter-sidebar">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                 <SlidersHorizontal size={18} style={{ color: 'var(--color-primary-600)' }} />
@@ -207,6 +199,18 @@ export default function InternshipsPage() {
                 options={INTERNSHIP_DURATIONS}
                 value={duration}
                 onChange={(e) => { setDuration(e.target.value); setPage(1); }}
+              />
+            </div>
+
+            {/* Work Mode Filter */}
+            <div>
+              <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: 'var(--space-2)', display: 'block' }}>
+                Work Mode
+              </label>
+              <Select
+                options={WORK_MODES}
+                value={workMode}
+                onChange={(e) => { setWorkMode(e.target.value); setPage(1); }}
               />
             </div>
 

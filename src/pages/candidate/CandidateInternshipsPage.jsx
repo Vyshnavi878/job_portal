@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Search, MapPin, Briefcase, Banknote, Clock, Building2,
-  GraduationCap, SlidersHorizontal, RotateCcw, CheckCircle2, Bookmark, BookmarkCheck
+  GraduationCap, SlidersHorizontal, RotateCcw, CheckCircle2, Bookmark, BookmarkCheck,
+  Filter, Zap
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
@@ -30,6 +31,7 @@ export default function CandidateInternshipsPage() {
   const [stipendRange, setStipendRange] = useState('');
   const [duration, setDuration] = useState('');
   const [selectedSkill, setSelectedSkill] = useState('');
+  const [sortBy, setSortBy] = useState('latest');
   const [page, setPage] = useState(1);
 
   const [applyModalOpen, setApplyModalOpen] = useState(false);
@@ -38,7 +40,7 @@ export default function CandidateInternshipsPage() {
   const handleOpenApply = (internship) => {
     setSelectedInternshipForApply({
       ...internship,
-      salary: internship.stipend ? `${internship.stipend}/mo` : '₹15,000/mo'
+      salary: internship.stipend ? `${internship.stipend}` : '₹15,000 / month'
     });
     setApplyModalOpen(true);
   };
@@ -60,11 +62,12 @@ export default function CandidateInternshipsPage() {
     setStipendRange('');
     setDuration('');
     setSelectedSkill('');
+    setSortBy('latest');
     setPage(1);
   };
 
   const filteredInternships = useMemo(() => {
-    return MOCK_INTERNSHIPS.filter((item) => {
+    let result = MOCK_INTERNSHIPS.filter((item) => {
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchTitle = item.title.toLowerCase().includes(q);
@@ -91,206 +94,453 @@ export default function CandidateInternshipsPage() {
         if (!item.duration.toLowerCase().includes(duration.toLowerCase().split(' ')[0])) return false;
       }
 
-      if (selectedSkill && selectedSkill !== '') {
+      if (selectedSkill && selectedSkill !== 'All Skills' && selectedSkill !== '') {
         if (!item.skills?.some(s => s.toLowerCase() === selectedSkill.toLowerCase())) return false;
       }
 
       return true;
     });
-  }, [search, location, workMode, stipendRange, duration, selectedSkill]);
 
-  const PER_PAGE = 6;
+    if (sortBy === 'stipendHigh') {
+      result.sort((a, b) => (b.stipendAmount || 0) - (a.stipendAmount || 0));
+    } else if (sortBy === 'stipendLow') {
+      result.sort((a, b) => (a.stipendAmount || 0) - (b.stipendAmount || 0));
+    } else {
+      result.sort((a, b) => new Date(b.startDate || '2026-09-01') - new Date(a.startDate || '2026-09-01'));
+    }
+
+    return result;
+  }, [search, location, workMode, stipendRange, duration, selectedSkill, sortBy]);
+
+  const PER_PAGE = 9;
   const totalPages = Math.ceil(filteredInternships.length / PER_PAGE);
   const paginated = filteredInternships.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
+  const activeFiltersCount = [
+    location && location !== 'All Locations',
+    workMode && workMode !== 'All Modes',
+    stipendRange && stipendRange !== 'All Stipends',
+    duration && duration !== 'All Durations',
+    selectedSkill && selectedSkill !== 'All Skills' && selectedSkill !== ''
+  ].filter(Boolean).length;
+
+  const handlePageChange = (p) => {
+    setPage(p);
+    const resultsPane = document.querySelector('.candidate-results-pane');
+    if (resultsPane) {
+      resultsPane.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="candidate-internships-page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', paddingBottom: 'var(--space-16)' }}>
+    <div className="candidate-internships-page">
       
-      {/* Header Banner */}
-      <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)', color: '#fff' }}>
-        <div style={{ maxWidth: 700 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
-            <GraduationCap size={18} style={{ color: '#c7d2fe' }} />
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c7d2fe' }}>
-              Campus & Early Career Programs
-            </span>
-          </div>
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: '#ffffff', marginBottom: 4 }}>
-            Explore Verified Paid Internships
-          </h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: '#cbd5e1' }}>
-            Gain hands-on corporate experience, monthly stipends, and direct Pre-Placement Offers (PPOs).
-          </p>
-        </div>
-
-        {/* Quick Search */}
-        <div style={{ marginTop: 'var(--space-4)', display: 'grid', gridTemplateColumns: 'minmax(240px, 2fr) minmax(180px, 1fr) auto', gap: 'var(--space-2)', background: 'rgba(255,255,255,0.12)', padding: 'var(--space-2)', borderRadius: 'var(--radius-xl)' }}>
-          <div className="input-wrapper" style={{ background: '#fff', borderRadius: 'var(--radius-lg)' }}>
-            <span className="input-icon-left"><Search size={16} style={{ color: 'var(--color-primary-600)' }} /></span>
-            <input
-              className="input has-icon-left"
-              style={{ border: 'none', background: 'transparent' }}
-              placeholder="Search by role, company, or key skill..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            />
-          </div>
-
-          <div style={{ background: '#fff', borderRadius: 'var(--radius-lg)' }}>
-            <select
-              className="select"
-              style={{ border: 'none', background: 'transparent', height: '100%', width: '100%' }}
-              value={location}
-              onChange={(e) => { setLocation(e.target.value); setPage(1); }}
-            >
-              {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-            </select>
-          </div>
-
-          <Button variant="primary" style={{ background: 'var(--color-primary-500)' }}>
-            Search
-          </Button>
-        </div>
-      </div>
-
-      {/* Main Split Layout */}
-      <div className="responsive-split-sidebar">
+      {/* ── Main Split Layout: Filters on Left, Internships on Right ── */}
+      <div className="candidate-find-jobs-layout">
         
-        {/* Filters Sidebar */}
-        <aside style={{
-          background: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-2xl)',
-          padding: 'var(--space-6)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-5)',
-          position: 'sticky',
-          top: '80px',
-          height: 'fit-content'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: 'var(--space-3)' }}>
-            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 700 }}>Internship Filters</h2>
-            <button
-              type="button"
+        {/* Filters Sidebar (Left Stationary - Full Panel Height) */}
+        <aside className="candidate-filter-pane">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.65rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Filter size={16} style={{ color: 'var(--color-primary-600)' }} />
+                <h2 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Filter Internships</h2>
+              </div>
+              {activeFiltersCount > 0 && (
+                <span style={{
+                  background: 'var(--color-primary-50)',
+                  color: 'var(--color-primary-700)',
+                  border: '1px solid var(--color-primary-200)',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '0.1rem 0.45rem',
+                  borderRadius: '10px'
+                }}>
+                  {activeFiltersCount} active
+                </span>
+              )}
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'block' }}>
+                Monthly Stipend
+              </label>
+              <Select options={STIPEND_RANGES} value={stipendRange} onChange={(e) => { setStipendRange(e.target.value); setPage(1); }} />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'block' }}>
+                Duration
+              </label>
+              <Select options={INTERNSHIP_DURATIONS} value={duration} onChange={(e) => { setDuration(e.target.value); setPage(1); }} />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'block' }}>
+                Work Mode
+              </label>
+              <Select options={WORK_MODES} value={workMode} onChange={(e) => { setWorkMode(e.target.value); setPage(1); }} />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem', display: 'block' }}>
+                Key Skill
+              </label>
+              <Select options={['All Skills', ...SKILL_OPTIONS]} value={selectedSkill} onChange={(e) => { setSelectedSkill(e.target.value === 'All Skills' ? '' : e.target.value); setPage(1); }} />
+            </div>
+          </div>
+
+          {/* Bottom Area: Reset Filters Action */}
+          <div style={{ marginTop: 'auto', paddingTop: '0.85rem', borderTop: '1px solid var(--color-border)' }}>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleReset}
-              style={{ background: 'none', border: 'none', color: 'var(--color-primary-600)', fontSize: 'var(--text-xs)', cursor: 'pointer', fontWeight: 600 }}
+              disabled={activeFiltersCount === 0 && !search && !location}
+              style={{
+                width: '100%',
+                fontSize: '0.78rem',
+                height: '34px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.35rem',
+                color: activeFiltersCount > 0 || search || location ? 'var(--color-primary-600)' : 'var(--color-text-muted)',
+                borderColor: activeFiltersCount > 0 || search || location ? 'var(--color-primary-300)' : 'var(--color-border)'
+              }}
             >
-              Reset
-            </button>
-          </div>
-
-          <div>
-            <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: 'var(--space-2)', display: 'block' }}>
-              Monthly Stipend
-            </label>
-            <Select options={STIPEND_RANGES} value={stipendRange} onChange={(e) => { setStipendRange(e.target.value); setPage(1); }} />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: 'var(--space-2)', display: 'block' }}>
-              Duration
-            </label>
-            <Select options={INTERNSHIP_DURATIONS} value={duration} onChange={(e) => { setDuration(e.target.value); setPage(1); }} />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: 'var(--space-2)', display: 'block' }}>
-              Work Mode
-            </label>
-            <Select options={WORK_MODES} value={workMode} onChange={(e) => { setWorkMode(e.target.value); setPage(1); }} />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: 'var(--space-2)', display: 'block' }}>
-              Key Skill
-            </label>
-            <Select options={['All Skills', ...SKILL_OPTIONS]} value={selectedSkill} onChange={(e) => { setSelectedSkill(e.target.value === 'All Skills' ? '' : e.target.value); setPage(1); }} />
+              <RotateCcw size={13} />
+              <span>Reset Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}</span>
+            </Button>
           </div>
         </aside>
 
-        {/* Results */}
-        <main style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800 }}>
-              Showing {filteredInternships.length} Available Internships
-            </h2>
+        {/* Results (Right Column Dedicated Scroll Container) */}
+        <main className="candidate-results-pane">
+          
+          {/* Header Banner */}
+          <div
+            className="card"
+            style={{
+              borderRadius: 'var(--radius-xl)',
+              padding: '1.1rem 1.25rem',
+              background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
+              color: '#fff'
+            }}
+          >
+            <div style={{ maxWidth: 700, marginBottom: '0.4rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: '0.25rem' }}>
+                <GraduationCap size={16} style={{ color: '#c7d2fe' }} />
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#c7d2fe' }}>
+                  Campus & Early Career Programs
+                </span>
+              </div>
+              <h1 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff', margin: 0, lineHeight: 1.2 }}>
+                Explore Verified Paid Internships
+              </h1>
+            </div>
+
+            {/* Quick Search */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(200px, 2fr) minmax(150px, 1fr) auto',
+              gap: '0.45rem',
+              background: 'rgba(255,255,255,0.12)',
+              padding: '0.35rem',
+              borderRadius: 'var(--radius-lg)'
+            }}>
+              <div className="input-wrapper" style={{ background: '#fff', borderRadius: 'var(--radius-md)' }}>
+                <span className="input-icon-left"><Search size={15} style={{ color: 'var(--color-primary-600)' }} /></span>
+                <input
+                  className="input has-icon-left"
+                  style={{ border: 'none', background: 'transparent', height: '36px', fontSize: '0.85rem' }}
+                  placeholder="Search by role, company, or key skill..."
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                />
+              </div>
+
+              <div style={{ background: '#fff', borderRadius: 'var(--radius-md)' }}>
+                <select
+                  className="select"
+                  style={{ border: 'none', background: 'transparent', height: '36px', width: '100%', fontSize: '0.85rem' }}
+                  value={location}
+                  onChange={(e) => { setLocation(e.target.value); setPage(1); }}
+                >
+                  {LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                </select>
+              </div>
+
+              <Button variant="primary" style={{ background: 'var(--color-primary-500)', height: '36px', fontSize: '0.85rem', padding: '0 1rem' }}>
+                Search
+              </Button>
+            </div>
+          </div>
+
+          {/* Results Header with Count and Sort */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+            <div>
+              <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, margin: 0 }}>
+                {filteredInternships.length} Internships Found
+              </h2>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 0 }}>
+                Showing page {page} of {totalPages || 1} • Verified paid internships with stipends & PPO
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>Sort by:</span>
+              <select
+                className="select"
+                style={{ padding: '6px 12px', fontSize: 'var(--text-xs)', width: 'auto', height: '34px' }}
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                <option value="latest">Latest Posted</option>
+                <option value="stipendHigh">Stipend: High to Low</option>
+                <option value="stipendLow">Stipend: Low to High</option>
+              </select>
+            </div>
           </div>
 
           {filteredInternships.length === 0 ? (
-            <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-10)' }}>
+            <div className="card" style={{ borderRadius: 'var(--radius-xl)', padding: 'var(--space-10)' }}>
               <EmptyState
                 icon="default"
-                title="No internships found"
-                description="Try clearing your filters to see more opportunities."
-                action={<Button variant="primary" onClick={handleReset}>Clear Filters</Button>}
+                title="No internships found matching your criteria"
+                description="Try clearing your search query or broadening your stipend and duration filters."
+                action={<Button variant="primary" onClick={handleReset}>Clear All Filters</Button>}
               />
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
+            <div
+              className="recruiter-jobs-grid"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: '1rem'
+              }}
+            >
               {paginated.map((item) => {
                 const isSaved = isJobSaved(item.id);
                 return (
                   <div
                     key={item.id}
-                    className="card card-hoverable"
+                    className="card recruiter-job-card"
                     style={{
-                      borderRadius: 'var(--radius-2xl)',
-                      padding: 'var(--space-6)',
-                      border: '1px solid var(--color-border)',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
-                      gap: 'var(--space-4)'
+                      padding: '1rem',
+                      gap: '0.65rem',
+                      borderRadius: 'var(--radius-xl)',
+                      border: '1px solid var(--color-gray-200)',
+                      background: '#fff',
+                      boxShadow: 'var(--shadow-xs)',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-2)' }}>
-                        <div>
-                          <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-text)' }}>
-                            {item.title}
-                          </h3>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-primary-600)' }}>
-                              {item.company}
-                            </span>
-                            <CheckCircle2 size={13} style={{ color: 'var(--color-success-600)' }} />
+                      {/* Header: Company Avatar + Title + Badges + Save */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.45rem', marginBottom: '0.4rem' }}>
+                        <div style={{ display: 'flex', gap: '0.55rem', alignItems: 'center', minWidth: 0 }}>
+                          <div style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 'var(--radius-lg)',
+                            background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+                            color: '#fff',
+                            fontSize: '0.9rem',
+                            fontWeight: 800,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            {item.company?.[0] || 'I'}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <Link
+                              to={`/internships/${item.id}`}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              <h3
+                                title={item.title}
+                                style={{
+                                  fontSize: '0.92rem',
+                                  fontWeight: 700,
+                                  color: 'var(--color-gray-900)',
+                                  margin: 0,
+                                  lineHeight: 1.25,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {item.title}
+                              </h3>
+                            </Link>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: 2 }}>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-primary-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {item.company}
+                              </span>
+                              <CheckCircle2 size={11} style={{ color: 'var(--color-success-600)', flexShrink: 0 }} />
+                            </div>
                           </div>
                         </div>
 
                         <button
                           type="button"
                           onClick={() => handleToggleSave(item.id)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: isSaved ? 'var(--color-primary-600)' : 'var(--color-text-light)' }}
+                          style={{
+                            background: isSaved ? 'var(--color-primary-50)' : 'transparent',
+                            border: isSaved ? '1px solid var(--color-primary-200)' : '1px solid var(--color-gray-200)',
+                            color: isSaved ? 'var(--color-primary-600)' : 'var(--color-gray-400)',
+                            borderRadius: 'var(--radius-md)',
+                            width: 28,
+                            height: 28,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            transition: 'all 0.15s ease'
+                          }}
+                          aria-label={isSaved ? 'Unsave internship' : 'Save internship'}
                         >
-                          {isSaved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+                          {isSaved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
                         </button>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: 'var(--space-3) 0' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={13} /> {item.location}</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Banknote size={13} /> {item.stipend?.includes('/mo') ? item.stipend : `${item.stipend}/month`}</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={13} /> {item.duration} ({item.mode})</span>
+                      {/* Status / Feature Badges */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '0.35rem',
+                        background: 'var(--color-gray-50)',
+                        padding: '0.35rem 0.5rem',
+                        borderRadius: '6px',
+                        border: '1px solid var(--color-gray-200)',
+                        marginBottom: '0.45rem'
+                      }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                          <CheckCircle2 size={11} style={{ color: 'var(--color-success-600)' }} /> Verified Employer
+                        </span>
+                        {item.isFeatured && (
+                          <span style={{
+                            background: '#ecfdf5',
+                            color: '#059669',
+                            border: '1px solid #a7f3d0',
+                            padding: '0.08rem 0.35rem',
+                            borderRadius: '10px',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            flexShrink: 0
+                          }}>
+                            Featured
+                          </span>
+                        )}
+                        {item.isNew && !item.isFeatured && (
+                          <span style={{
+                            background: '#eef2ff',
+                            color: 'var(--color-primary-700)',
+                            border: '1px solid #c7d2fe',
+                            padding: '0.08rem 0.35rem',
+                            borderRadius: '10px',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            flexShrink: 0
+                          }}>
+                            New
+                          </span>
+                        )}
                       </div>
 
+                      {/* Metadata: Location, Stipend, Duration, Mode */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--color-gray-600)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <MapPin size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                            <span>{item.location}</span>
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 700, color: 'var(--color-gray-800)', flexShrink: 0 }}>
+                            <Banknote size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                            <span>{item.stipend?.includes('/mo') || item.stipend?.includes('/month') ? item.stipend : `${item.stipend || '₹15,000'}/month`}</span>
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem', color: 'var(--color-gray-500)', fontSize: '0.72rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <Clock size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                            <span>{item.duration}</span>
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            <Briefcase size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                            <span>Internship ({item.mode})</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Skills Tags */}
                       {item.skills && item.skills.length > 0 && (
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          {item.skills.slice(0, 3).map(skill => (
-                            <span key={skill} style={{ background: 'var(--color-gray-100)', padding: '2px 8px', borderRadius: 'var(--radius-md)', fontSize: '11px', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.4rem', minHeight: '20px' }}>
+                          {item.skills.slice(0, 3).map((skill, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                background: 'var(--color-gray-100)',
+                                color: 'var(--color-gray-700)',
+                                padding: '0.1rem 0.35rem',
+                                borderRadius: '4px',
+                                fontSize: '0.68rem',
+                                fontWeight: 500
+                              }}
+                            >
                               {skill}
                             </span>
                           ))}
+                          {item.skills.length > 3 && (
+                            <span style={{ fontSize: '0.65rem', color: 'var(--color-gray-500)', fontWeight: 500 }}>
+                              +{item.skills.length - 3}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: 'var(--space-3)' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--color-text-light)' }}>
-                        Apply by {new Date(item.deadline || '2026-09-30').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                      </span>
-                      <Button size="sm" variant="primary" onClick={() => handleOpenApply(item)}>
-                        Apply Now
-                      </Button>
+                    {/* Footer: Apply by Date + View & Apply Buttons */}
+                    <div style={{
+                      borderTop: '1px solid var(--color-gray-100)',
+                      paddingTop: '0.5rem',
+                      marginTop: '0.25rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)' }}>
+                          Apply by {item.deadline ? new Date(item.deadline).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '30 Sep'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '0.35rem' }}>
+                        <Link to={`/internships/${item.id}`} style={{ textDecoration: 'none' }}>
+                          <Button size="sm" variant="outline" style={{ width: '100%', fontSize: '0.75rem', padding: '0.25rem 0.4rem', height: '30px' }}>
+                            View
+                          </Button>
+                        </Link>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={() => handleOpenApply(item)}
+                          style={{ width: '100%', fontSize: '0.75rem', padding: '0.25rem 0.4rem', height: '30px' }}
+                        >
+                          Apply Now
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -298,14 +548,22 @@ export default function CandidateInternshipsPage() {
             </div>
           )}
 
+          {/* Pagination (9 internships per page) */}
           {totalPages > 1 && (
             <div style={{ marginTop: 'var(--space-6)' }}>
-              <Pagination currentPage={page} totalPages={totalPages} totalItems={filteredInternships.length} pageSize={PER_PAGE} onPageChange={setPage} />
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={filteredInternships.length}
+                pageSize={PER_PAGE}
+                onPageChange={handlePageChange}
+              />
             </div>
           )}
         </main>
       </div>
 
+      {/* Reusable Apply Modal */}
       {selectedInternshipForApply && (
         <ApplyModal
           isOpen={applyModalOpen}
@@ -316,3 +574,4 @@ export default function CandidateInternshipsPage() {
     </div>
   );
 }
+

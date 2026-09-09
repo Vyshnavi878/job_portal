@@ -11,7 +11,7 @@ import { useRecruiter } from '../../context/RecruiterContext';
 
 const NAV_ITEMS = [
   // 1. MAIN
-  { label: 'Home',             href: '/',                         icon: <Home size={18} />,           section: 'MAIN' },
+  { label: 'Home',             href: '/',                         icon: <Home size={18} />,           end: true, section: 'MAIN' },
   { label: 'Dashboard',        href: '/recruiter/dashboard',      icon: <LayoutDashboard size={18} />, end: true, section: 'MAIN' },
   { label: 'My Jobs',          href: '/recruiter/jobs',           icon: <Briefcase size={18} />,      section: 'MAIN' },
   { label: 'Applications',     href: '/recruiter/applications',   icon: <FileText size={18} />,       section: 'MAIN' },

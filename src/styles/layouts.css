@@ -529,7 +529,7 @@
    GLOBAL RESPONSIVE UTILITIES & AUDIT POLISH
 ══════════════════════════════════════════ */
 
-/* Responsive 2-column sidebar layout (Filters + List - Naukri Style) */
+/* Responsive 2-column sidebar layout (Filters + List) */
 .responsive-split-sidebar {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
@@ -537,17 +537,28 @@
   align-items: start;
 }
 
-/* Naukri-style sticky filter sidebar */
+/* Sticky filter sidebar */
 .sticky-filter-sidebar {
+  position: -webkit-sticky;
   position: sticky;
   top: calc(var(--header-height, 64px) + var(--space-4));
   align-self: start;
-  width: 300px;
+  width: 100%;
   max-width: 100%;
   flex-shrink: 0;
   max-height: calc(100vh - var(--header-height, 64px) - var(--space-8));
   overflow-y: auto;
   overscroll-behavior: contain;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-sizing: border-box;
+  z-index: 10;
 }
 
 /* Custom subtle scrollbar only if filter content overflows viewport */
@@ -1042,5 +1053,86 @@
 
 .recruiter-job-card.is-published {
   border-color: #c7d2fe;
+}
+
+/* ══════════════════════════════════════════
+   CANDIDATE FIND JOBS FIXED SPLIT LAYOUT
+══════════════════════════════════════════ */
+.candidate-find-jobs-layout {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: var(--space-6);
+  height: calc(100vh - var(--header-height, 64px) - 3rem);
+  max-height: calc(100vh - var(--header-height, 64px) - 3rem);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.candidate-filter-pane {
+  width: 270px;
+  height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.candidate-results-pane {
+  height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-right: 0.35rem;
+  box-sizing: border-box;
+}
+
+.candidate-results-pane::-webkit-scrollbar,
+.candidate-filter-pane::-webkit-scrollbar {
+  width: 6px;
+}
+.candidate-results-pane::-webkit-scrollbar-track,
+.candidate-filter-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+.candidate-results-pane::-webkit-scrollbar-thumb,
+.candidate-filter-pane::-webkit-scrollbar-thumb {
+  background: var(--color-gray-200);
+  border-radius: var(--radius-full);
+}
+.candidate-results-pane::-webkit-scrollbar-thumb:hover,
+.candidate-filter-pane::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-300);
+}
+
+@media (max-width: 1024px) {
+  .candidate-find-jobs-layout {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .candidate-filter-pane {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+  .candidate-results-pane {
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+    padding-right: 0 !important;
+  }
 }
 

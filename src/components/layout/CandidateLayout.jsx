@@ -11,7 +11,7 @@ import { useCandidate } from '../../context/CandidateContext';
 
 const NAV_ITEMS = [
   // ── MAIN ──
-  { section: 'MAIN', label: 'Home',                 href: '/',                            icon: <Home size={18} /> },
+  { section: 'MAIN', label: 'Home',                 href: '/',                            icon: <Home size={18} />, end: true },
   { section: 'MAIN', label: 'Dashboard',            href: '/candidate/dashboard',         icon: <LayoutDashboard size={18} />, end: true },
   { section: 'MAIN', label: 'Find Jobs',            href: '/candidate/jobs',              icon: <Search size={18} /> },
   { section: 'MAIN', label: 'Internships',          href: '/candidate/internships',       icon: <BookOpen size={18} /> },

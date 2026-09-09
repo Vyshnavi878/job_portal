@@ -93,7 +93,7 @@ export default function AdminLayout() {
 
   const navItems = [
     // 1. MAIN
-    { label: 'Home',                  href: '/',                            icon: <Home size={18} />,             section: 'MAIN' },
+    { label: 'Home',                  href: '/',                            icon: <Home size={18} />,             end: true, section: 'MAIN' },
     { label: 'Dashboard',             href: '/admin/dashboard',             icon: <LayoutDashboard size={18} />,  end: true, section: 'MAIN' },
 
     // 2. USERS

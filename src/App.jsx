@@ -104,6 +104,8 @@ import AdminHomeContentPage        from './pages/admin/HomeContentPage';
 import AdminSkillContentPage       from './pages/admin/SkillContentPage';
 import AdminAboutContentPage       from './pages/admin/AboutContentPage';
 import AdminSettingsPage           from './pages/admin/SettingsPage';
+import AdminProfilePage            from './pages/admin/ProfilePage';
+import AdminChangePasswordPage     from './pages/admin/ChangePasswordPage';
 
 export default function App() {
   return (
@@ -227,6 +229,8 @@ export default function App() {
                       <Route path="job-melas-content"          element={<AdminWebsiteContentPage />} />
                       <Route path="about-content"              element={<AdminWebsiteContentPage />} />
                       <Route path="settings"                   element={<AdminSettingsPage />} />
+                      <Route path="profile"                    element={<AdminProfilePage />} />
+                      <Route path="change-password"            element={<AdminChangePasswordPage />} />
                     </Route>
 
                     {/* ── 404 Fallback ── */}

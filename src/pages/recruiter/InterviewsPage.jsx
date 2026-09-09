@@ -19,7 +19,7 @@ import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/expor
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 9;
 
 export default function RecruiterInterviewsPage() {
   const {
@@ -297,7 +297,8 @@ export default function RecruiterInterviewsPage() {
                 whiteSpace: 'nowrap',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.4rem'
+                gap: '0.4rem',
+                transition: 'all 0.15s ease'
               }}
             >
               <span>{tab.label}</span>
@@ -329,79 +330,128 @@ export default function RecruiterInterviewsPage() {
           }
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {paginatedInterviews.map((item) => {
-            const isUpcoming = item.status === 'SCHEDULED' || item.status === 'RESCHEDULED';
-            return (
-              <div
-                key={item.id}
-                className="card"
-                style={{
-                  padding: '1.25rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.85rem',
-                  border: isUpcoming ? '1px solid #c7d2fe' : '1px solid var(--color-gray-200)'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                    <div style={{
-                      width: '46px',
-                      height: '46px',
-                      borderRadius: '50%',
-                      background: 'var(--color-primary-600)',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      flexShrink: 0
-                    }}>
-                      {item.candidateName?.[0]?.toUpperCase() || 'C'}
+        <div>
+          <div className="recruiter-jobs-grid">
+            {paginatedInterviews.map((item) => {
+              const isUpcoming = item.status === 'SCHEDULED' || item.status === 'RESCHEDULED';
+              const isCompleted = item.status === 'COMPLETED';
+              const isCancelled = item.status === 'CANCELLED';
+
+              return (
+                <div
+                  key={item.id}
+                  className={`card recruiter-job-card ${isUpcoming ? 'is-published' : ''}`}
+                >
+                  {/* Top: Candidate Avatar, Name, Email, Status */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, var(--color-primary-600), #7c3aed)',
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          flexShrink: 0
+                        }}>
+                          {item.candidateName?.[0]?.toUpperCase() || 'C'}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <h3
+                            title={item.candidateName}
+                            style={{
+                              margin: 0,
+                              fontSize: '0.98rem',
+                              fontWeight: 700,
+                              color: 'var(--color-gray-900)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {item.candidateName}
+                          </h3>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--color-gray-500)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {item.candidateEmail || 'Candidate'}
+                          </span>
+                        </div>
+                      </div>
+                      <StatusBadge status={item.status} />
                     </div>
 
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--color-gray-900)' }}>
-                          {item.candidateName}
-                        </h3>
-                        <StatusBadge status={item.status} />
+                    {/* Applied Job Role Box */}
+                    <div style={{
+                      background: 'var(--color-gray-50)',
+                      padding: '0.4rem 0.55rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--color-gray-200)',
+                      marginBottom: '0.45rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--color-gray-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          Role: <strong style={{ color: 'var(--color-primary-700)', fontWeight: 600 }}>{item.jobTitle}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Interview Schedule Details: Date, Time, Mode, Interviewer */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.76rem', color: 'var(--color-gray-600)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600, color: 'var(--color-gray-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Calendar size={12} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                          <span>{item.date} • {item.time}</span>
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          <Video size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                          <span>{item.type || item.mode || 'Video Call'}</span>
+                        </span>
                       </div>
 
-                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--color-primary-700)', fontWeight: 600 }}>
-                        {item.jobTitle}
-                      </p>
-
-                      <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginTop: '0.45rem', fontSize: '0.8rem', color: 'var(--color-gray-600)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600, color: 'var(--color-gray-800)' }}>
-                          <Calendar size={14} color="var(--color-primary-600)" />
-                          {item.date} at {item.time}
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <Video size={14} color="var(--color-gray-400)" />
-                          {item.type || item.mode || 'Video Call'}
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <User size={14} color="var(--color-gray-400)" />
-                          Interviewer: {item.interviewer}
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-gray-600)' }}>
+                        <User size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Panel: {item.interviewer}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {item.meetingLink && (
+                  {/* Notes Preview (if any) */}
+                  {item.notes && (
+                    <div style={{
+                      fontSize: '0.74rem',
+                      color: 'var(--color-gray-600)',
+                      background: '#f8fafc',
+                      padding: '0.35rem 0.5rem',
+                      borderRadius: '4px',
+                      borderLeft: '2px solid var(--color-primary-400)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      <strong>Notes:</strong> {item.notes}
+                    </div>
+                  )}
+
+                  {/* Action Buttons Footer */}
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.65rem', marginTop: 'auto', flexWrap: 'wrap' }}>
+                    {item.meetingLink && isUpcoming && (
                       <a
                         href={item.meetingLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ textDecoration: 'none' }}
+                        style={{ textDecoration: 'none', flex: 1, minWidth: '70px' }}
                       >
-                        <Button variant="primary" size="sm" icon={<Video size={14} />}>
-                          Join Meeting
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          style={{ width: '100%', padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                          icon={<Video size={13} />}
+                        >
+                          Join
                         </Button>
                       </a>
                     )}
@@ -411,48 +461,50 @@ export default function RecruiterInterviewsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          icon={<CheckCircle2 size={14} />}
+                          style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                          icon={<CheckCircle2 size={13} />}
                           onClick={() => handleMarkCompleted(item)}
+                          title="Mark Completed"
                         >
-                          Mark Completed
+                          Done
                         </Button>
                         <Button
                           variant="secondary"
                           size="sm"
-                          icon={<RefreshCw size={14} />}
+                          style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                          icon={<RefreshCw size={13} />}
                           onClick={() => handleOpenReschedule(item)}
+                          title="Reschedule Interview"
                         >
                           Reschedule
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          style={{ color: 'var(--color-danger-600)' }}
-                          icon={<XCircle size={14} />}
+                          style={{ color: 'var(--color-danger-600)', padding: '0.35rem 0.45rem' }}
+                          icon={<XCircle size={13} />}
                           onClick={() => setCancelTarget(item)}
-                        >
-                          Cancel
-                        </Button>
+                          title="Cancel Interview"
+                        />
                       </>
+                    )}
+
+                    {isCompleted && (
+                      <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0' }}>
+                        <CheckCircle2 size={13} /> Interview Completed
+                      </span>
+                    )}
+
+                    {isCancelled && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-danger-600)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0' }}>
+                        <XCircle size={13} /> Interview Cancelled
+                      </span>
                     )}
                   </div>
                 </div>
-
-                {item.notes && (
-                  <div style={{
-                    background: '#f8fafc',
-                    padding: '0.6rem 0.85rem',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    color: 'var(--color-gray-600)',
-                    borderLeft: '3px solid var(--color-primary-400)'
-                  }}>
-                    <strong>Notes:</strong> {item.notes}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
 
           {/* Pagination */}
           <div style={{ marginTop: 'var(--space-6)' }}>
@@ -461,6 +513,7 @@ export default function RecruiterInterviewsPage() {
               totalPages={totalPages}
               totalItems={filteredInterviews.length}
               pageSize={PAGE_SIZE}
+              itemName="interviews"
               onPageChange={(p) => {
                 setCurrentPage(p);
                 window.scrollTo({ top: 120, behavior: 'smooth' });

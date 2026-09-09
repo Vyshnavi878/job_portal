@@ -25,7 +25,6 @@ export default function RecruiterSettingsPage() {
     activeRecruiterId,
     activeUserId,
     switchRecruiter,
-    updateCompanyProfile,
     updateSettings,
     inviteTeamMember,
     removeTeamMember,
@@ -281,7 +280,7 @@ export default function RecruiterSettingsPage() {
         </h2>
 
         <form onSubmit={handleProfileSave} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-          <FormField label="Full Name *" required>
+          <FormField label="Full Name" required>
             <Input
               type="text"
               value={profile.name}
@@ -290,7 +289,7 @@ export default function RecruiterSettingsPage() {
             />
           </FormField>
 
-          <FormField label="Designation / Title *" required>
+          <FormField label="Designation / Title" required>
             <Input
               type="text"
               value={profile.designation}
@@ -299,7 +298,7 @@ export default function RecruiterSettingsPage() {
             />
           </FormField>
 
-          <FormField label="Work Email *" required>
+          <FormField label="Work Email" required>
             <Input
               type="email"
               value={profile.email}
@@ -581,7 +580,7 @@ export default function RecruiterSettingsPage() {
         </h2>
 
         <form onSubmit={handlePasswordSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-          <FormField label="Current Password *" required>
+          <FormField label="Current Password" required>
             <Input
               type="password"
               placeholder="••••••••"
@@ -591,7 +590,7 @@ export default function RecruiterSettingsPage() {
             />
           </FormField>
 
-          <FormField label="New Password *" required>
+          <FormField label="New Password" required>
             <Input
               type="password"
               placeholder="Min 8 characters"
@@ -601,7 +600,7 @@ export default function RecruiterSettingsPage() {
             />
           </FormField>
 
-          <FormField label="Confirm New Password *" required>
+          <FormField label="Confirm New Password" required>
             <Input
               type="password"
               placeholder="••••••••"
@@ -645,7 +644,7 @@ export default function RecruiterSettingsPage() {
           </div>
 
           <FormField
-            label="Full Name *"
+            label="Full Name"
             error={inviteErrors.name}
             required
           >
@@ -662,7 +661,7 @@ export default function RecruiterSettingsPage() {
           </FormField>
 
           <FormField
-            label="Work Email Address *"
+            label="Work Email Address"
             error={inviteErrors.email}
             required
           >
@@ -679,7 +678,7 @@ export default function RecruiterSettingsPage() {
           </FormField>
 
           <FormField
-            label="Assign Role *"
+            label="Assign Role"
             error={inviteErrors.role}
             required
           >

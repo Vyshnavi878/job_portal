@@ -1,10 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  MessageSquare, Send, Phone, Mail, Clock, LifeBuoy,
-  ShieldCheck, FileText, CalendarDays, Video, Bookmark,
-  CheckCircle2, MapPin, ArrowRight, Briefcase, Building2,
-  BarChart3, UserCheck, HelpCircle
+  MessageSquare, Send, Phone, Mail, LifeBuoy, MapPin
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import FormField from '../../components/ui/FormField';
@@ -71,187 +67,49 @@ export default function RecruiterHelpSupportPage() {
       </div>
 
       {/* 2-Column Support Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(340px, 1fr)', gap: 'var(--space-6)', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(340px, 1fr)', gap: 'var(--space-6)', alignItems: 'start' }}>
         
         {/* Left Column: Support Channels & Helpful Information */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          
-          {/* Quick Helpline & Channels */}
-          <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', background: 'var(--color-surface)' }}>
-            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, marginBottom: 'var(--space-1)' }}>
-              Official Employer Support Channels
-            </h3>
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-5)' }}>
-              Direct contact channels dedicated to verified recruiters and hiring partners.
-            </p>
+        <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, marginBottom: 'var(--space-1)' }}>
+            Official Employer Support Channels
+          </h3>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-5)' }}>
+            Direct contact channels dedicated to verified recruiters and hiring partners.
+          </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-primary-50)', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Mail size={18} />
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Employer Email Support</span>
-                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>recruiter-support@ntrvikasa.ap.gov.in</strong>
-                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>Priority response within 2–4 hours during business days</p>
-                </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-primary-50)', color: 'var(--color-primary-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Mail size={18} />
               </div>
-
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-success-50, #f0fdf4)', color: 'var(--color-success-600, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Phone size={18} />
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Toll-Free Recruitment Helpline</span>
-                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>1800-425-VIKASA (8452)</strong>
-                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>Operating hours: Monday to Saturday, 9:00 AM – 6:00 PM IST</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-accent-50)', color: 'var(--color-accent-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <MapPin size={18} />
-                </div>
-                <div>
-                  <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>State Skill Center</span>
-                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>APSSDC Headquarters, Tadepalli, Guntur District, AP</strong>
-                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>Government of Andhra Pradesh Employment & Skill Development</p>
-                </div>
+              <div>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Employer Email Support</span>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>recruiter-support@ntrvikasa.ap.gov.in</strong>
+                <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>Priority response within 2–4 hours during business days</p>
               </div>
             </div>
-          </div>
 
-          {/* Quick Workspace Shortcuts */}
-          <div className="card" style={{ borderRadius: 'var(--radius-2xl)', padding: 'var(--space-6)', background: 'var(--color-surface)' }}>
-            <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 700, marginBottom: 'var(--space-3)' }}>
-              Quick Self-Service Shortcuts
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
-              <Link
-                to="/recruiter/jobs"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'var(--color-gray-50)',
-                  color: 'var(--color-text)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  border: '1px solid var(--color-border)',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <Briefcase size={15} style={{ color: 'var(--color-primary-600)' }} />
-                <span>My Posted Jobs</span>
-              </Link>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-success-50, #f0fdf4)', color: 'var(--color-success-600, #16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Phone size={18} />
+              </div>
+              <div>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Toll-Free Recruitment Helpline</span>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>1800-425-VIKASA (8452)</strong>
+                <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>Operating hours: Monday to Saturday, 9:00 AM – 6:00 PM IST</p>
+              </div>
+            </div>
 
-              <Link
-                to="/recruiter/applications"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'var(--color-gray-50)',
-                  color: 'var(--color-text)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  border: '1px solid var(--color-border)',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <FileText size={15} style={{ color: '#16a34a' }} />
-                <span>Candidate Pipeline</span>
-              </Link>
-
-              <Link
-                to="/recruiter/interviews"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'var(--color-gray-50)',
-                  color: 'var(--color-text)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  border: '1px solid var(--color-border)',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <Video size={15} style={{ color: 'var(--color-accent-600)' }} />
-                <span>Interview Schedule</span>
-              </Link>
-
-              <Link
-                to="/recruiter/company"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'var(--color-gray-50)',
-                  color: 'var(--color-text)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  border: '1px solid var(--color-border)',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <Building2 size={15} style={{ color: '#6366f1' }} />
-                <span>Company Profile</span>
-              </Link>
-
-              <Link
-                to="/recruiter/job-melas"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'var(--color-gray-50)',
-                  color: 'var(--color-text)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  border: '1px solid var(--color-border)',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <CalendarDays size={15} style={{ color: '#ec4899' }} />
-                <span>Job Melas</span>
-              </Link>
-
-              <Link
-                to="/recruiter/analytics"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'var(--color-gray-50)',
-                  color: 'var(--color-text)',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  border: '1px solid var(--color-border)',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                <BarChart3 size={15} style={{ color: '#d97706' }} />
-                <span>Hiring Analytics</span>
-              </Link>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-xl)' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-lg)', background: 'var(--color-accent-50)', color: 'var(--color-accent-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <MapPin size={18} />
+              </div>
+              <div>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: '11px', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>State Skill Center</span>
+                <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>APSSDC Headquarters, Tadepalli, Guntur District, AP</strong>
+                <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: 2 }}>Government of Andhra Pradesh Employment & Skill Development</p>
+              </div>
             </div>
           </div>
         </div>

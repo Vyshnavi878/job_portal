@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Briefcase, FileText,
-  UserCheck, CalendarCheck, GraduationCap, CalendarDays,
+  CalendarCheck, GraduationCap, CalendarDays,
   BarChart3, HelpCircle
 } from 'lucide-react';
 import Sidebar from './Sidebar';
@@ -15,7 +15,6 @@ const NAV_ITEMS = [
   { label: 'Dashboard',        href: '/recruiter/dashboard',      icon: <LayoutDashboard size={18} />, end: true, section: 'MAIN' },
   { label: 'My Jobs',          href: '/recruiter/jobs',           icon: <Briefcase size={18} />,      section: 'MAIN' },
   { label: 'Applications',     href: '/recruiter/applications',   icon: <FileText size={18} />,       section: 'MAIN' },
-  { label: 'Shortlisted',      href: '/recruiter/shortlisted',    icon: <UserCheck size={18} />,      section: 'MAIN' },
   { label: 'Interviews',       href: '/recruiter/interviews',     icon: <CalendarCheck size={18} />,  section: 'MAIN' },
 
   // 2. COMPANY

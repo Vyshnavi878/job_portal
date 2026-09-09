@@ -17,9 +17,9 @@ import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
 import ExportDropdown from '../../components/ui/ExportDropdown';
-import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
+import { exportToExcel, exportToPDF, generatePDFBlob, getExportFilename } from '../../utils/exportUtils';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 9;
 
 export default function ApplicationsPage() {
   const {
@@ -48,13 +48,16 @@ export default function ApplicationsPage() {
   const [interviewTarget, setInterviewTarget] = useState(null);
 
   const [interviewForm, setInterviewForm] = useState({
-    date: '2026-09-08',
-    time: '14:30',
-    type: 'Video Call (Google Meet)',
-    meetingLink: 'https://meet.google.com/ntr-hiring-round',
-    interviewer: recruiter?.name || 'Recruiter Lead',
-    notes: 'Technical discussion and architecture deep-dive.'
+    date: '',
+    time: '11:00',
+    format: 'Video Interview',
+    meetingLink: 'https://meet.google.com/abc-interview',
+    locationAddress: '',
+    phoneDetails: '',
+    interviewer: '',
+    notes: ''
   });
+  const [interviewErrors, setInterviewErrors] = useState({});
 
   const allApplicants = recruiter?.applicants || recruiter?.applications || [];
   const allJobs = recruiter?.jobs || [];
@@ -148,34 +151,203 @@ export default function ApplicationsPage() {
     }
   };
 
+  // ── Resume Actions (View & Download) ──
+  const handleViewResume = (applicant) => {
+    const app = applicant || selectedApplicant;
+    if (!app) return;
+    const matchedCand = (recruiter?.candidates || []).find(
+      c => c.id === app.candidateId || c.email === app.candidateEmail
+    );
+    const resumeUrl = app.resumeUrl || matchedCand?.resumeUrl;
+    const resumeFileName = app.resumeName || matchedCand?.resumeName || `${(app.candidateName || 'Candidate').replace(/\s+/g, '_')}_Resume.pdf`;
+
+    if (resumeUrl) {
+      window.open(resumeUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const candName = app.candidateName || matchedCand?.name || 'Candidate';
+    const headers = ['Resume Section', 'Candidate Details'];
+    const rows = [
+      ['Candidate Name', candName],
+      ['Applied Position', app.jobTitle || 'Job Seeker'],
+      ['Email Address', app.candidateEmail || matchedCand?.email || 'N/A'],
+      ['Phone Number', app.candidatePhone || app.phone || matchedCand?.phone || '+91 98765 43210'],
+      ['Location', app.location || matchedCand?.location || 'India'],
+      ['Total Experience', app.experience || matchedCand?.experience || 'N/A'],
+      ['Education Background', matchedCand?.education || 'B.Tech / Graduate'],
+      ['Skills & Competencies', Array.isArray(app.skills || matchedCand?.skills) ? (app.skills || matchedCand?.skills).join(', ') : (app.skills || matchedCand?.skills || 'N/A')],
+      ['Notice Period', app.noticePeriod || matchedCand?.availability || '30 Days'],
+      ['Expected Compensation', app.expectedSalary || matchedCand?.expectedSalary || 'Competitive'],
+      ['Professional Summary', app.coverNote || matchedCand?.summary || 'Experienced software professional with demonstrated engineering track record.']
+    ];
+
+    const blob = generatePDFBlob({
+      filename: resumeFileName,
+      title: `Curriculum Vitae: ${candName}`,
+      subtitle: `Verified Candidate Resume Document — ${app.jobTitle || 'Applicant Dossier'}`,
+      metadata: {
+        'Candidate Name': candName,
+        'Applied Role': app.jobTitle || 'N/A',
+        'Experience': app.experience || matchedCand?.experience || 'N/A',
+        'Match Score': app.matchScore ? `${app.matchScore}%` : 'N/A'
+      },
+      headers,
+      rows
+    });
+
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank', 'noopener,noreferrer');
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+  };
+
+  const handleDownloadResume = (applicant) => {
+    const app = applicant || selectedApplicant;
+    if (!app) return;
+    const matchedCand = (recruiter?.candidates || []).find(
+      c => c.id === app.candidateId || c.email === app.candidateEmail
+    );
+    const resumeUrl = app.resumeUrl || matchedCand?.resumeUrl;
+    const resumeFileName = app.resumeName || matchedCand?.resumeName || `${(app.candidateName || 'Candidate').replace(/\s+/g, '_')}_Resume.pdf`;
+
+    if (resumeUrl) {
+      const a = document.createElement('a');
+      a.href = resumeUrl;
+      a.download = resumeFileName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => document.body.removeChild(a), 100);
+      addToast(`Downloading ${resumeFileName}...`, 'info');
+      return;
+    }
+
+    const candName = app.candidateName || matchedCand?.name || 'Candidate';
+    const headers = ['Resume Section', 'Candidate Details'];
+    const rows = [
+      ['Candidate Name', candName],
+      ['Applied Position', app.jobTitle || 'Job Seeker'],
+      ['Email Address', app.candidateEmail || matchedCand?.email || 'N/A'],
+      ['Phone Number', app.candidatePhone || app.phone || matchedCand?.phone || '+91 98765 43210'],
+      ['Location', app.location || matchedCand?.location || 'India'],
+      ['Total Experience', app.experience || matchedCand?.experience || 'N/A'],
+      ['Education Background', matchedCand?.education || 'B.Tech / Graduate'],
+      ['Skills & Competencies', Array.isArray(app.skills || matchedCand?.skills) ? (app.skills || matchedCand?.skills).join(', ') : (app.skills || matchedCand?.skills || 'N/A')],
+      ['Notice Period', app.noticePeriod || matchedCand?.availability || '30 Days'],
+      ['Expected Compensation', app.expectedSalary || matchedCand?.expectedSalary || 'Competitive'],
+      ['Professional Summary', app.coverNote || matchedCand?.summary || 'Experienced software professional with demonstrated engineering track record.']
+    ];
+
+    exportToPDF({
+      filename: resumeFileName,
+      title: `Curriculum Vitae: ${candName}`,
+      subtitle: `Verified Candidate Resume Document — ${app.jobTitle || 'Applicant Dossier'}`,
+      metadata: {
+        'Candidate Name': candName,
+        'Applied Role': app.jobTitle || 'N/A',
+        'Experience': app.experience || matchedCand?.experience || 'N/A',
+        'Match Score': app.matchScore ? `${app.matchScore}%` : 'N/A'
+      },
+      headers,
+      rows
+    });
+    addToast(`Downloading ${resumeFileName}...`, 'success');
+  };
+
+  // ── Interview Scheduling Actions & Validation ──
   const handleOpenScheduleModal = (app) => {
     setInterviewTarget(app);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    setInterviewForm({
+      date: tomorrowStr,
+      time: '11:00',
+      format: 'Video Interview',
+      meetingLink: 'https://meet.google.com/abc-interview',
+      locationAddress: recruiter?.company?.address || 'ABC Technologies HQ, Outer Ring Road, Bengaluru',
+      phoneDetails: app.candidatePhone || app.phone || '+91 98765 43210',
+      interviewer: recruiter?.name ? `${recruiter.name} (${recruiter.designation || 'Talent Acquisition'})` : 'Recruiter Lead',
+      notes: 'Technical evaluation and architecture discussion.'
+    });
+    setInterviewErrors({});
     setIsInterviewModalOpen(true);
+  };
+
+  const validateInterviewForm = () => {
+    const errors = {};
+    if (!interviewForm.date || !interviewForm.date.trim()) {
+      errors.date = 'Interview date is required.';
+    }
+    if (!interviewForm.time || !interviewForm.time.trim()) {
+      errors.time = 'Interview time is required.';
+    }
+    if (!interviewForm.format) {
+      errors.format = 'Interview format / medium is required.';
+    }
+    if (!interviewForm.interviewer || !interviewForm.interviewer.trim()) {
+      errors.interviewer = 'Interviewer / panel name is required.';
+    }
+
+    if (interviewForm.format === 'Video Interview') {
+      if (!interviewForm.meetingLink || !interviewForm.meetingLink.trim()) {
+        errors.meetingLink = 'Meeting link is required for video interviews.';
+      } else {
+        const link = interviewForm.meetingLink.trim();
+        if (!link.startsWith('http://') && !link.startsWith('https://') && !link.includes('.')) {
+          errors.meetingLink = 'Please enter a valid meeting URL (e.g., https://meet.google.com/xyz).';
+        }
+      }
+    } else if (interviewForm.format === 'In-Person Interview') {
+      if (!interviewForm.locationAddress || !interviewForm.locationAddress.trim()) {
+        errors.locationAddress = 'Location / venue address is required for in-person interviews.';
+      }
+    }
+
+    return errors;
   };
 
   const handleConfirmSchedule = (e) => {
     e.preventDefault();
     if (!interviewTarget) return;
 
+    const errors = validateInterviewForm();
+    if (Object.keys(errors).length > 0) {
+      setInterviewErrors(errors);
+      addToast('Please fill all required interview details correctly.', 'error');
+      return;
+    }
+
+    setInterviewErrors({});
+
+    const formattedMode = interviewForm.format === 'Video Interview'
+      ? 'Online (Google Meet / Video)'
+      : (interviewForm.format === 'In-Person Interview' ? 'In-Person (Office Round)' : 'Phone Interview');
+
+    const destination = interviewForm.format === 'Video Interview'
+      ? interviewForm.meetingLink.trim()
+      : (interviewForm.format === 'In-Person Interview' ? interviewForm.locationAddress.trim() : (interviewForm.phoneDetails?.trim() || interviewTarget.candidatePhone || 'Candidate Phone'));
+
     scheduleInterview({
       jobId: interviewTarget.jobId,
       jobTitle: interviewTarget.jobTitle,
-      candidateId: interviewTarget.id,
+      candidateId: interviewTarget.candidateId || interviewTarget.id,
       candidateName: interviewTarget.candidateName,
       candidateEmail: interviewTarget.candidateEmail,
       date: interviewForm.date,
       time: interviewForm.time,
-      type: interviewForm.type,
-      meetingLink: interviewForm.meetingLink,
-      interviewer: interviewForm.interviewer,
-      notes: interviewForm.notes
+      type: interviewForm.format,
+      mode: formattedMode,
+      meetingLink: destination,
+      interviewer: interviewForm.interviewer.trim(),
+      notes: interviewForm.notes.trim()
     });
 
     addToast(`Interview scheduled with ${interviewTarget.candidateName}!`, 'success');
     setIsInterviewModalOpen(false);
     setInterviewTarget(null);
     if (selectedApplicant?.id === interviewTarget.id) {
-      setSelectedApplicant({ ...selectedApplicant, status: 'INTERVIEW' });
+      setSelectedApplicant((prev) => (prev ? { ...prev, status: 'INTERVIEW' } : null));
     }
   };
 
@@ -248,13 +420,13 @@ export default function ApplicationsPage() {
 
     exportToPDF({
       filename: getExportFilename('applications', selectedStatusTab.toLowerCase(), 'pdf'),
-      title: 'Job Applications Activity Report',
-      subtitle: `Company: ${recruiter?.company?.name || recruiter?.name || 'Recruiter'}`,
+      title: 'Candidate Applications & Screening Pipeline Report',
+      subtitle: `Employer: ${recruiter?.company?.name || recruiter?.name || 'Recruiter'} • Job Filter: ${selectedJobTitle}`,
       metadata: {
         'Export Date': new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
         'Status Filter': statusLabel,
         'Job Position': selectedJobTitle,
-        'Total Records': filteredApplicants.length
+        'Total Applications': filteredApplicants.length
       },
       headers,
       rows
@@ -431,104 +603,154 @@ export default function ApplicationsPage() {
           }
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {paginatedApplicants.map((app) => {
-            const isShortlisted = app.status === 'SHORTLISTED';
-            const isInterview = app.status === 'INTERVIEW';
-            const isRejected = app.status === 'REJECTED';
-            const isSelected = app.status === 'SELECTED' || app.status === 'HIRED';
+        <div>
+          <div className="recruiter-jobs-grid">
+            {paginatedApplicants.map((app) => {
+              const isShortlisted = app.status === 'SHORTLISTED';
+              const isInterview = app.status === 'INTERVIEW';
+              const isRejected = app.status === 'REJECTED';
+              const isSelected = app.status === 'SELECTED' || app.status === 'HIRED';
 
-            return (
-              <div
-                key={app.id}
-                className="card"
-                style={{
-                  padding: '1.25rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                  transition: 'box-shadow 0.2s ease',
-                  border: isShortlisted ? '1px solid #c7d2fe' : '1px solid var(--color-gray-200)'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                  {/* Left: Avatar & Details */}
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                    <div style={{
-                      width: '48px',
-                      height: '48px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, var(--color-primary-600), #7c3aed)',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      flexShrink: 0
-                    }}>
-                      {app.candidateName?.[0]?.toUpperCase() || 'C'}
+              return (
+                <div
+                  key={app.id}
+                  className={`card recruiter-job-card ${isShortlisted ? 'is-published' : ''}`}
+                >
+                  {/* Top: Candidate Avatar, Name, Email, Status */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, var(--color-primary-600), #7c3aed)',
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          flexShrink: 0
+                        }}>
+                          {app.candidateName?.[0]?.toUpperCase() || 'C'}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <h3
+                            title={app.candidateName}
+                            style={{
+                              margin: 0,
+                              fontSize: '0.98rem',
+                              fontWeight: 700,
+                              color: 'var(--color-gray-900)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {app.candidateName}
+                          </h3>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--color-gray-500)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {app.candidateEmail || 'Candidate'}
+                          </span>
+                        </div>
+                      </div>
+                      <StatusBadge status={app.status || 'UNDER_REVIEW'} />
                     </div>
 
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--color-gray-900)' }}>
-                          {app.candidateName}
-                        </h3>
+                    {/* Applied Job & Match Badge */}
+                    <div style={{
+                      background: 'var(--color-gray-50)',
+                      padding: '0.4rem 0.55rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--color-gray-200)',
+                      marginBottom: '0.45rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--color-gray-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          Role: <strong style={{ color: 'var(--color-primary-700)', fontWeight: 600 }}>{app.jobTitle}</strong>
+                        </span>
                         {app.matchScore && (
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.25rem',
+                            gap: '0.2rem',
                             background: app.matchScore >= 90 ? '#ecfdf5' : '#eef2ff',
                             color: app.matchScore >= 90 ? '#059669' : 'var(--color-primary-700)',
-                            fontSize: '0.75rem',
+                            fontSize: '0.68rem',
                             fontWeight: 700,
-                            padding: '0.15rem 0.5rem',
-                            borderRadius: '12px',
-                            border: `1px solid ${app.matchScore >= 90 ? '#a7f3d0' : '#c7d2fe'}`
+                            padding: '0.1rem 0.35rem',
+                            borderRadius: '10px',
+                            border: `1px solid ${app.matchScore >= 90 ? '#a7f3d0' : '#c7d2fe'}`,
+                            flexShrink: 0
                           }}>
-                            <Sparkles size={12} />
-                            {app.matchScore}% Match
+                            <Sparkles size={10} />
+                            {app.matchScore}%
                           </span>
                         )}
-                        <StatusBadge status={app.status || 'UNDER_REVIEW'} />
                       </div>
+                    </div>
 
-                      <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.875rem', color: 'var(--color-gray-600)', fontWeight: 500 }}>
-                        Applied for: <span style={{ color: 'var(--color-primary-700)', fontWeight: 600 }}>{app.jobTitle}</span>
-                      </p>
-
-                      <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <Briefcase size={14} />
-                          {app.experience || '3+ Years'} Experience
+                    {/* Metadata: Experience, Location, Applied Date */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.76rem', color: 'var(--color-gray-600)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <Briefcase size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                          <span>{app.experience || '3+ Years'} Exp</span>
                         </span>
                         {app.location && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                            <MapPin size={14} />
-                            {app.location}
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            <MapPin size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                            <span>{app.location}</span>
                           </span>
                         )}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', color: 'var(--color-gray-500)', fontSize: '0.72rem' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <Clock size={14} />
-                          Applied {app.appliedDate}
+                          <Clock size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                          <span>Applied: {app.appliedDate}</span>
                         </span>
                         {app.noticePeriod && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                            Notice: {app.noticePeriod}
-                          </span>
+                          <span style={{ flexShrink: 0 }}>Notice: {app.noticePeriod}</span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Right: Quick Actions */}
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {/* Skills Preview */}
+                  {app.skills && app.skills.length > 0 && (
+                    <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center', minHeight: '22px' }}>
+                      {app.skills.slice(0, 3).map((skill, idx) => (
+                        <span
+                          key={idx}
+                          style={{
+                            background: 'var(--color-primary-50)',
+                            color: 'var(--color-primary-700)',
+                            fontSize: '0.7rem',
+                            padding: '0.1rem 0.4rem',
+                            borderRadius: '4px',
+                            fontWeight: 500
+                          }}
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                      {app.skills.length > 3 && (
+                        <span style={{ fontSize: '0.68rem', color: 'var(--color-gray-500)', fontWeight: 500 }}>
+                          +{app.skills.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Quick Actions Footer */}
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.65rem', marginTop: 'auto', flexWrap: 'wrap' }}>
                     <Button
                       variant="outline"
                       size="sm"
-                      icon={<Eye size={14} />}
+                      style={{ flex: 1, minWidth: '70px', padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                      icon={<Eye size={13} />}
                       onClick={() => handleOpenReview(app)}
                     >
                       Review
@@ -538,8 +760,10 @@ export default function ApplicationsPage() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        icon={<Check size={14} />}
+                        style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                        icon={<Check size={13} />}
                         onClick={() => handleShortlist(app)}
+                        title="Shortlist Candidate"
                       >
                         Shortlist
                       </Button>
@@ -549,10 +773,12 @@ export default function ApplicationsPage() {
                       <Button
                         variant="primary"
                         size="sm"
-                        icon={<CalendarCheck size={14} />}
+                        style={{ padding: '0.35rem 0.5rem', fontSize: '0.78rem' }}
+                        icon={<CalendarCheck size={13} />}
                         onClick={() => handleOpenScheduleModal(app)}
+                        title="Schedule Interview"
                       >
-                        Schedule Interview
+                        Interview
                       </Button>
                     )}
 
@@ -560,39 +786,17 @@ export default function ApplicationsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        style={{ color: 'var(--color-danger-600)' }}
-                        icon={<X size={14} />}
+                        style={{ color: 'var(--color-danger-600)', padding: '0.35rem 0.45rem' }}
+                        icon={<X size={13} />}
                         onClick={() => handleReject(app)}
-                      >
-                        Reject
-                      </Button>
+                        title="Reject Application"
+                      />
                     )}
                   </div>
                 </div>
-
-                {/* Skills tags preview */}
-                {app.skills && app.skills.length > 0 && (
-                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', paddingTop: '0.5rem', borderTop: '1px solid var(--color-gray-100)' }}>
-                    {app.skills.map((skill, idx) => (
-                      <span
-                        key={idx}
-                        style={{
-                          background: 'var(--color-gray-100)',
-                          color: 'var(--color-gray-700)',
-                          fontSize: '0.75rem',
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: '4px',
-                          fontWeight: 500
-                        }}
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
 
           {/* Pagination */}
           <div style={{ marginTop: 'var(--space-6)' }}>
@@ -601,6 +805,7 @@ export default function ApplicationsPage() {
               totalPages={totalPages}
               totalItems={filteredApplicants.length}
               pageSize={PAGE_SIZE}
+              itemName="applications"
               onPageChange={(p) => {
                 setCurrentPage(p);
                 window.scrollTo({ top: 120, behavior: 'smooth' });
@@ -751,33 +956,71 @@ export default function ApplicationsPage() {
             </div>
 
             {/* Resume Preview */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.75rem 1rem',
-              border: '1px solid var(--color-gray-200)',
-              borderRadius: '8px',
-              background: '#f8fafc'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <FileText size={28} color="var(--color-primary-600)" />
+            {(() => {
+              const matchedCand = (recruiter?.candidates || []).find(
+                c => c.id === selectedApplicant.candidateId || c.email === selectedApplicant.candidateEmail
+              );
+              const hasResume = Boolean(
+                selectedApplicant.resumeUrl || selectedApplicant.resumeName || matchedCand?.resumeUrl || matchedCand?.resumeName
+              );
+              const resumeFileName = selectedApplicant.resumeName || matchedCand?.resumeName || (hasResume && selectedApplicant.candidateName ? `${selectedApplicant.candidateName.replace(/\s+/g, '_')}_Resume.pdf` : null);
+
+              return (
                 <div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-gray-900)' }}>
-                    {selectedApplicant.resumeName || `${selectedApplicant.candidateName.replace(/\s+/g, '_')}_Resume.pdf`}
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-gray-700)', marginBottom: '0.4rem' }}>
+                    Candidate Resume
+                  </h4>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem 1rem',
+                    border: '1px solid var(--color-gray-200)',
+                    borderRadius: '8px',
+                    background: '#f8fafc',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '200px' }}>
+                      <FileText size={28} color={hasResume ? 'var(--color-primary-600)' : 'var(--color-gray-400)'} />
+                      <div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: hasResume ? 'var(--color-gray-900)' : 'var(--color-gray-600)' }}>
+                          {hasResume ? resumeFileName : 'Resume not available'}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>
+                          {hasResume ? 'Verified PDF Document • 1.4 MB' : 'No resume file attached to this application'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {hasResume ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon={<Eye size={14} />}
+                          onClick={() => handleViewResume(selectedApplicant)}
+                        >
+                          View Resume
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon={<Download size={14} />}
+                          onClick={() => handleDownloadResume(selectedApplicant)}
+                        >
+                          Download Resume
+                        </Button>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-400)', fontStyle: 'italic' }}>
+                        Resume not available
+                      </span>
+                    )}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>Verified PDF • 1.4 MB</div>
                 </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                icon={<Download size={14} />}
-                onClick={() => addToast('Downloading candidate resume...', 'info')}
-              >
-                Download Resume
-              </Button>
-            </div>
+              );
+            })()}
 
             {/* Modal Actions Footer */}
             <div style={{
@@ -839,86 +1082,186 @@ export default function ApplicationsPage() {
       {isInterviewModalOpen && interviewTarget && (
         <Modal
           isOpen={isInterviewModalOpen}
-          onClose={() => { setIsInterviewModalOpen(false); setInterviewTarget(null); }}
+          onClose={() => {
+            setIsInterviewModalOpen(false);
+            setInterviewTarget(null);
+            setInterviewErrors({});
+          }}
           title={`Schedule Interview: ${interviewTarget.candidateName}`}
           size="md"
         >
-          <form onSubmit={handleConfirmSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ background: 'var(--color-primary-50)', padding: '0.75rem 1rem', borderRadius: '6px', fontSize: '0.85rem' }}>
-              <strong>Job Role:</strong> {interviewTarget.jobTitle}
-              <br />
-              <strong>Candidate:</strong> {interviewTarget.candidateName} ({interviewTarget.candidateEmail})
+          <form onSubmit={handleConfirmSchedule} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Header info box */}
+            <div style={{
+              background: 'var(--color-primary-50)',
+              padding: '0.85rem 1rem',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
+              border: '1px solid var(--color-primary-100)'
+            }}>
+              <div style={{ marginBottom: '0.35rem' }}>
+                <strong style={{ color: 'var(--color-gray-800)' }}>Job Role:</strong>{' '}
+                <span style={{ color: 'var(--color-primary-700)', fontWeight: 600 }}>{interviewTarget.jobTitle}</span>
+              </div>
+              <div>
+                <strong style={{ color: 'var(--color-gray-800)' }}>Candidate:</strong>{' '}
+                <span style={{ color: 'var(--color-gray-900)' }}>
+                  {interviewTarget.candidateName} ({interviewTarget.candidateEmail || 'Candidate'})
+                </span>
+              </div>
             </div>
 
+            {/* Date and Time Pickers */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <FormField label="Interview Date *" required>
+              <FormField label="Interview Date" required error={interviewErrors.date}>
                 <Input
                   type="date"
+                  min={new Date().toISOString().split('T')[0]}
                   value={interviewForm.date}
-                  onChange={(e) => setInterviewForm({ ...interviewForm, date: e.target.value })}
+                  onChange={(e) => {
+                    setInterviewForm({ ...interviewForm, date: e.target.value });
+                    if (interviewErrors.date) setInterviewErrors({ ...interviewErrors, date: null });
+                  }}
+                  error={interviewErrors.date}
                   required
                 />
               </FormField>
 
-              <FormField label="Interview Time *" required>
+              <FormField label="Interview Time" required error={interviewErrors.time}>
                 <Input
                   type="time"
                   value={interviewForm.time}
-                  onChange={(e) => setInterviewForm({ ...interviewForm, time: e.target.value })}
+                  onChange={(e) => {
+                    setInterviewForm({ ...interviewForm, time: e.target.value });
+                    if (interviewErrors.time) setInterviewErrors({ ...interviewErrors, time: null });
+                  }}
+                  error={interviewErrors.time}
                   required
                 />
               </FormField>
             </div>
 
-            <FormField label="Interview Format / Medium" required>
+            {/* Interview Format / Medium */}
+            <FormField label="Interview Format / Medium" required error={interviewErrors.format}>
               <Select
-                value={interviewForm.type}
-                onChange={(e) => setInterviewForm({ ...interviewForm, type: e.target.value })}
+                value={interviewForm.format}
+                onChange={(e) => {
+                  setInterviewForm({ ...interviewForm, format: e.target.value });
+                  if (interviewErrors.format) setInterviewErrors({ ...interviewErrors, format: null });
+                  if (interviewErrors.meetingLink || interviewErrors.locationAddress) {
+                    setInterviewErrors({ ...interviewErrors, meetingLink: null, locationAddress: null });
+                  }
+                }}
+                error={interviewErrors.format}
               >
-                <option value="Video Call (Google Meet)">Video Call (Google Meet)</option>
-                <option value="Video Call (Microsoft Teams)">Video Call (Microsoft Teams)</option>
-                <option value="Video Call (Zoom)">Video Call (Zoom)</option>
-                <option value="In-Person (Office Round)">In-Person (Office Round)</option>
-                <option value="Telephonic Screening">Telephonic Screening</option>
+                <option value="Video Interview">Video Interview</option>
+                <option value="Phone Interview">Phone Interview</option>
+                <option value="In-Person Interview">In-Person Interview</option>
               </Select>
             </FormField>
 
-            <FormField label="Meeting Link / Location Address">
-              <Input
-                type="text"
-                value={interviewForm.meetingLink}
-                onChange={(e) => setInterviewForm({ ...interviewForm, meetingLink: e.target.value })}
-                placeholder="https://meet.google.com/xyz or Office address"
-              />
-            </FormField>
+            {/* Conditional Meeting Link / Location Address */}
+            {interviewForm.format === 'Video Interview' && (
+              <FormField
+                label="Meeting Link"
+                required
+                hint="Google Meet, Microsoft Teams, or Zoom URL"
+                error={interviewErrors.meetingLink}
+              >
+                <Input
+                  type="url"
+                  value={interviewForm.meetingLink}
+                  onChange={(e) => {
+                    setInterviewForm({ ...interviewForm, meetingLink: e.target.value });
+                    if (interviewErrors.meetingLink) setInterviewErrors({ ...interviewErrors, meetingLink: null });
+                  }}
+                  placeholder="https://meet.google.com/xyz-abc"
+                  error={interviewErrors.meetingLink}
+                  required
+                />
+              </FormField>
+            )}
 
-            <FormField label="Interviewer / Panel Name">
+            {interviewForm.format === 'Phone Interview' && (
+              <FormField
+                label="Phone / Call Details"
+                hint="Candidate phone number or bridge contact"
+                error={interviewErrors.phoneDetails}
+              >
+                <Input
+                  type="text"
+                  value={interviewForm.phoneDetails}
+                  onChange={(e) => {
+                    setInterviewForm({ ...interviewForm, phoneDetails: e.target.value });
+                    if (interviewErrors.phoneDetails) setInterviewErrors({ ...interviewErrors, phoneDetails: null });
+                  }}
+                  placeholder="+91 98765 43210"
+                  error={interviewErrors.phoneDetails}
+                />
+              </FormField>
+            )}
+
+            {interviewForm.format === 'In-Person Interview' && (
+              <FormField
+                label="Location Address"
+                required
+                hint="Office address, meeting room number, or venue details"
+                error={interviewErrors.locationAddress}
+              >
+                <Input
+                  type="text"
+                  value={interviewForm.locationAddress}
+                  onChange={(e) => {
+                    setInterviewForm({ ...interviewForm, locationAddress: e.target.value });
+                    if (interviewErrors.locationAddress) setInterviewErrors({ ...interviewErrors, locationAddress: null });
+                  }}
+                  placeholder="e.g. Block B, RMZ Ecospace, Outer Ring Road, Bengaluru"
+                  error={interviewErrors.locationAddress}
+                  required
+                />
+              </FormField>
+            )}
+
+            {/* Interviewer / Panel Name */}
+            <FormField label="Interviewer / Panel Name" required error={interviewErrors.interviewer}>
               <Input
                 type="text"
                 value={interviewForm.interviewer}
-                onChange={(e) => setInterviewForm({ ...interviewForm, interviewer: e.target.value })}
+                onChange={(e) => {
+                  setInterviewForm({ ...interviewForm, interviewer: e.target.value });
+                  if (interviewErrors.interviewer) setInterviewErrors({ ...interviewErrors, interviewer: null });
+                }}
+                placeholder="e.g. Arjun Reddy (Director of Talent Acquisition)"
+                error={interviewErrors.interviewer}
+                required
               />
             </FormField>
 
-            <FormField label="Notes / Agenda for Candidate">
+            {/* Notes / Agenda for Candidate */}
+            <FormField label="Notes / Agenda for Candidate" hint="Preparation guidelines, agenda items, or topics to cover">
               <Textarea
                 rows={3}
                 value={interviewForm.notes}
                 onChange={(e) => setInterviewForm({ ...interviewForm, notes: e.target.value })}
-                placeholder="Details on topics to cover, technical task presentation, etc."
+                placeholder="Details on topics to cover, technical task presentation, preparation guide, etc."
               />
             </FormField>
 
+            {/* Modal Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
               <Button
                 variant="outline"
                 type="button"
-                onClick={() => { setIsInterviewModalOpen(false); setInterviewTarget(null); }}
+                onClick={() => {
+                  setIsInterviewModalOpen(false);
+                  setInterviewTarget(null);
+                  setInterviewErrors({});
+                }}
               >
                 Cancel
               </Button>
               <Button variant="primary" type="submit" icon={<CalendarCheck size={16} />}>
-                Confirm & Send Invite
+                Schedule Interview
               </Button>
             </div>
           </form>

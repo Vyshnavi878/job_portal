@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Users, Building2,
@@ -12,6 +13,8 @@ import { useAdmin } from '../../context/AdminContext';
 function getPageTitle(pathname) {
   const map = {
     '/admin/dashboard':               'System Administration Dashboard',
+    '/admin/profile':                 'Admin Profile',
+    '/admin/change-password':         'Change Password',
     '/admin/candidates':              'Platform Candidates Management',
     '/admin/recruiters':              'Registered Recruiters',
     '/admin/companies':               'Registered Companies',
@@ -53,6 +56,41 @@ export default function AdminLayout() {
   const { currentAdmin, pendingCounts } = useAdmin();
   const title = getPageTitle(location.pathname);
 
+  const [customProfile, setCustomProfile] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ntr_admin_custom_profile');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [customAvatar, setCustomAvatar] = useState(() => {
+    try {
+      return localStorage.getItem('ntr_admin_custom_avatar') || null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      try {
+        setCustomAvatar(localStorage.getItem('ntr_admin_custom_avatar') || null);
+        const storedProf = localStorage.getItem('ntr_admin_custom_profile');
+        if (storedProf) setCustomProfile(JSON.parse(storedProf));
+      } catch (e) {}
+    };
+    window.addEventListener('storage', handleAvatarUpdate);
+    window.addEventListener('admin_avatar_updated', handleAvatarUpdate);
+    window.addEventListener('admin_profile_updated', handleAvatarUpdate);
+    return () => {
+      window.removeEventListener('storage', handleAvatarUpdate);
+      window.removeEventListener('admin_avatar_updated', handleAvatarUpdate);
+      window.removeEventListener('admin_profile_updated', handleAvatarUpdate);
+    };
+  }, []);
+
   const navItems = [
     // 1. MAIN
     { label: 'Home',                  href: '/',                            icon: <Home size={18} />,             section: 'MAIN' },
@@ -79,9 +117,9 @@ export default function AdminLayout() {
   ];
 
   const adminUserObj = {
-    name: currentAdmin?.name || 'Admin User',
-    role: currentAdmin?.title || 'Platform Administrator',
-    avatar: currentAdmin?.avatar || 'A',
+    name: customProfile?.name || currentAdmin?.name || 'Admin User',
+    role: customProfile?.role || currentAdmin?.title || 'Admin Control',
+    avatar: customAvatar || currentAdmin?.avatar || 'A',
   };
 
   return (

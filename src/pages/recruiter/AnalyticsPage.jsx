@@ -13,15 +13,140 @@ export default function AnalyticsPage() {
   const { recruiter } = useRecruiter();
   const { addToast } = useToast();
   const [timeRange, setTimeRange] = useState('30d');
+  const [customFrom, setCustomFrom] = useState('2026-08-01');
+  const [customTo, setCustomTo] = useState('2026-09-09');
+  const [appliedCustomRange, setAppliedCustomRange] = useState(null);
+  const [dateError, setDateError] = useState('');
 
   const jobs = recruiter?.jobs || [];
-  const applicants = recruiter?.applicants || [];
+  const applicants = recruiter?.applicants || recruiter?.applications || [];
   const interviews = recruiter?.interviews || [];
 
-  const totalApplicants = applicants.length;
-  const totalShortlisted = applicants.filter(a => a.status === 'SHORTLISTED' || a.status === 'INTERVIEW' || a.status === 'SELECTED' || a.status === 'HIRED').length;
-  const totalInterviews = interviews.length;
-  const totalOffers = applicants.filter(a => a.status === 'SELECTED' || a.status === 'HIRED').length;
+  // Active date boundary calculation
+  const activeDateRange = useMemo(() => {
+    const now = new Date('2026-09-09T23:59:59.999Z');
+    if (timeRange === '7d') {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 7);
+      return { from, to: now, label: '7 Days' };
+    }
+    if (timeRange === '30d') {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 30);
+      return { from, to: now, label: '30 Days' };
+    }
+    if (timeRange === '90d') {
+      const from = new Date(now);
+      from.setDate(from.getDate() - 90);
+      return { from, to: now, label: '90 Days' };
+    }
+    if (timeRange === '1y') {
+      const from = new Date(now);
+      from.setFullYear(from.getFullYear() - 1);
+      return { from, to: now, label: '1 Year' };
+    }
+    if (timeRange === 'custom' && appliedCustomRange) {
+      const from = new Date(appliedCustomRange.from);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(appliedCustomRange.to);
+      to.setHours(23, 59, 59, 999);
+      const label = `${from.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} – ${to.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+      return { from, to, label };
+    }
+    return null;
+  }, [timeRange, appliedCustomRange]);
+
+  const isWithinRange = (dateStr) => {
+    if (!activeDateRange) return true;
+    if (!dateStr) return true;
+    const cleanStr = String(dateStr).replace(/\s*\([^)]*\)/g, '').replace(/Sept/gi, 'Sep').trim();
+    const d = new Date(cleanStr);
+    if (isNaN(d.getTime())) return true;
+    return d >= activeDateRange.from && d <= activeDateRange.to;
+  };
+
+  const handleTimeRangeChange = (e) => {
+    const val = e.target.value;
+    setTimeRange(val);
+    setDateError('');
+    if (val !== 'custom') {
+      setAppliedCustomRange(null);
+    }
+  };
+
+  const handleFromChange = (e) => {
+    const val = e.target.value;
+    setCustomFrom(val);
+    if (customTo && val && val > customTo) {
+      setDateError('From Date cannot be later than To Date.');
+    } else {
+      setDateError('');
+    }
+  };
+
+  const handleToChange = (e) => {
+    const val = e.target.value;
+    setCustomTo(val);
+    if (customFrom && val && customFrom > val) {
+      setDateError('From Date cannot be later than To Date.');
+    } else {
+      setDateError('');
+    }
+  };
+
+  const handleApplyCustomDate = (e) => {
+    if (e) e.preventDefault();
+    if (!customFrom || !customTo) {
+      setDateError('Both From Date and To Date are required.');
+      addToast('Both From Date and To Date are required.', 'error');
+      return;
+    }
+
+    const fromDate = new Date(customFrom);
+    const toDate = new Date(customTo);
+
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      setDateError('Please enter a valid date range.');
+      addToast('Please enter a valid date range.', 'error');
+      return;
+    }
+
+    if (customFrom > customTo) {
+      setDateError('From Date cannot be later than To Date.');
+      addToast('From Date cannot be later than To Date.', 'error');
+      return;
+    }
+
+    setDateError('');
+    setAppliedCustomRange({ from: customFrom, to: customTo });
+    addToast(
+      `Applied custom date range: ${new Date(customFrom).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} to ${new Date(customTo).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      'success'
+    );
+  };
+
+  const isApplyDisabled = !customFrom || !customTo || Boolean(dateError) || (customFrom > customTo);
+
+  // Filtered collections
+  const filteredApplicants = useMemo(() => {
+    if (timeRange !== 'custom' || !appliedCustomRange) return applicants;
+    return applicants.filter(a => isWithinRange(a.appliedDate || a.createdAt));
+  }, [applicants, timeRange, appliedCustomRange, activeDateRange]);
+
+  const filteredInterviews = useMemo(() => {
+    if (timeRange !== 'custom' || !appliedCustomRange) return interviews;
+    return interviews.filter(i => isWithinRange(i.date || i.interviewDate || i.createdAt));
+  }, [interviews, timeRange, appliedCustomRange, activeDateRange]);
+
+  const filteredJobs = useMemo(() => {
+    if (timeRange !== 'custom' || !appliedCustomRange) return jobs;
+    return jobs.filter(j => isWithinRange(j.createdAt || j.postedDate));
+  }, [jobs, timeRange, appliedCustomRange, activeDateRange]);
+
+  const totalApplicants = filteredApplicants.length;
+  const totalShortlisted = filteredApplicants.filter(a => a.status === 'SHORTLISTED' || a.status === 'INTERVIEW' || a.status === 'SELECTED' || a.status === 'HIRED').length;
+  const totalInterviews = filteredInterviews.length;
+  const totalOffers = filteredApplicants.filter(a => a.status === 'SELECTED' || a.status === 'HIRED').length;
 
   const shortlistRate = totalApplicants > 0 ? Math.round((totalShortlisted / totalApplicants) * 100) : 0;
   const interviewRate = totalShortlisted > 0 ? Math.round((totalInterviews / totalShortlisted) * 100) : 0;
@@ -59,25 +184,87 @@ export default function AnalyticsPage() {
             Comprehensive performance metrics, pipeline health, and hiring velocity for {recruiter?.company?.name}.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <select
-            className="form-control"
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            style={{ height: '38px', borderRadius: '6px', fontSize: '0.85rem' }}
-          >
-            <option value="7d">Last 7 Days</option>
-            <option value="30d">Last 30 Days</option>
-            <option value="90d">Last 90 Days</option>
-            <option value="1y">Past 12 Months</option>
-          </select>
-          <Button
-            variant="outline"
-            icon={<Download size={14} />}
-            onClick={() => addToast('Exporting recruitment report (PDF/CSV)...', 'success')}
-          >
-            Export Report
-          </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-gray-700)', whiteSpace: 'nowrap' }}>
+                Date Range:
+              </span>
+              <select
+                className="form-control"
+                value={timeRange}
+                onChange={handleTimeRangeChange}
+                style={{ height: '38px', borderRadius: '6px', fontSize: '0.85rem', minWidth: '130px' }}
+              >
+                <option value="7d">7 Days</option>
+                <option value="30d">30 Days</option>
+                <option value="90d">90 Days</option>
+                <option value="1y">1 Year</option>
+                <option value="custom">Custom Date</option>
+              </select>
+            </div>
+
+            {timeRange === 'custom' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-gray-600)', whiteSpace: 'nowrap' }}>From:</span>
+                  <input
+                    type="date"
+                    value={customFrom}
+                    onChange={handleFromChange}
+                    className="form-control"
+                    style={{ height: '38px', borderRadius: '6px', fontSize: '0.85rem', padding: '0.25rem 0.5rem' }}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-gray-600)', whiteSpace: 'nowrap' }}>To:</span>
+                  <input
+                    type="date"
+                    value={customTo}
+                    onChange={handleToChange}
+                    className="form-control"
+                    style={{ height: '38px', borderRadius: '6px', fontSize: '0.85rem', padding: '0.25rem 0.5rem' }}
+                    required
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleApplyCustomDate}
+                  disabled={isApplyDisabled}
+                  style={{ height: '38px', padding: '0 0.85rem', fontSize: '0.85rem', fontWeight: 600 }}
+                >
+                  Apply
+                </Button>
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              icon={<Download size={14} />}
+              onClick={() => {
+                const label = activeDateRange?.label || (timeRange === 'custom' ? 'Custom Date Range' : timeRange);
+                addToast(`Exporting recruitment report (${label})...`, 'success');
+              }}
+            >
+              Export Report
+            </Button>
+          </div>
+
+          {/* Validation error or active filter indicator */}
+          {timeRange === 'custom' && dateError && (
+            <div style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 600 }}>
+              ⚠️ {dateError}
+            </div>
+          )}
+          {timeRange === 'custom' && appliedCustomRange && !dateError && (
+            <div style={{ fontSize: '0.78rem', color: 'var(--color-primary-700)', fontWeight: 600 }}>
+              Showing data from {new Date(appliedCustomRange.from).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(appliedCustomRange.to).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -275,35 +462,43 @@ export default function AnalyticsPage() {
                 </tr>
               </thead>
               <tbody>
-                {jobs.map((job) => (
-                  <tr key={job.id} style={{ borderBottom: '1px solid var(--color-gray-100)' }}>
-                    <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--color-gray-900)' }}>
-                      {job.title}
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', fontWeight: 400 }}>{job.department} • {job.workMode}</div>
-                    </td>
-                    <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 600 }}>
-                      {job.applicantsCount || 0}
-                    </td>
-                    <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: 'var(--color-primary-600)', fontWeight: 600 }}>
-                      {job.shortlistedCount || 0}
-                    </td>
-                    <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#8b5cf6', fontWeight: 600 }}>
-                      {job.interviewsCount || 0}
-                    </td>
-                    <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
-                      <span style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: '4px',
-                        background: job.status === 'PUBLISHED' ? '#ecfdf5' : '#fffbeb',
-                        color: job.status === 'PUBLISHED' ? '#059669' : '#d97706'
-                      }}>
-                        {job.status}
-                      </span>
+                {filteredJobs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-gray-500)' }}>
+                      No job postings found in the selected date range.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredJobs.map((job) => (
+                    <tr key={job.id} style={{ borderBottom: '1px solid var(--color-gray-100)' }}>
+                      <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--color-gray-900)' }}>
+                        {job.title}
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', fontWeight: 400 }}>{job.department} • {job.workMode}</div>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontWeight: 600 }}>
+                        {job.applicantsCount || 0}
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: 'var(--color-primary-600)', fontWeight: 600 }}>
+                        {job.shortlistedCount || 0}
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center', color: '#8b5cf6', fontWeight: 600 }}>
+                        {job.interviewsCount || 0}
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', textAlign: 'right' }}>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '4px',
+                          background: job.status === 'PUBLISHED' ? '#ecfdf5' : '#fffbeb',
+                          color: job.status === 'PUBLISHED' ? '#059669' : '#d97706'
+                        }}>
+                          {job.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

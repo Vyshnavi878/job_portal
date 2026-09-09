@@ -15,7 +15,7 @@ import Pagination from '../../components/ui/Pagination';
 import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 9;
 
 export default function JobsPage() {
   const navigate = useNavigate();
@@ -297,7 +297,7 @@ export default function JobsPage() {
         </div>
       </div>
 
-      {/* Jobs Listing Table */}
+      {/* Jobs Listing Grid */}
       {filteredJobs.length === 0 ? (
         <EmptyState
           icon={<Briefcase size={48} />}
@@ -310,143 +310,163 @@ export default function JobsPage() {
           }
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {paginatedJobs.map((job) => (
-            <div
-              key={job.id}
-              className="card"
-              style={{
-                padding: '1.25rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.85rem',
-                transition: 'box-shadow 0.2s ease',
-                border: job.status === 'PUBLISHED' ? '1px solid #c7d2fe' : '1px solid var(--color-gray-200)'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <div className="recruiter-jobs-grid">
+            {paginatedJobs.map((job) => (
+              <div
+                key={job.id}
+                className={`card recruiter-job-card ${job.status === 'PUBLISHED' ? 'is-published' : ''}`}
+              >
+                {/* Header: Status & Work Mode */}
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
-                      {job.title}
-                    </h2>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
                     <StatusBadge status={job.status} />
                     <span style={{
-                      fontSize: '0.75rem',
+                      fontSize: '0.72rem',
                       background: 'var(--color-gray-100)',
                       color: 'var(--color-gray-700)',
-                      padding: '0.15rem 0.5rem',
+                      padding: '0.15rem 0.45rem',
                       borderRadius: '4px',
-                      fontWeight: 500
+                      fontWeight: 600
                     }}>
                       {job.workMode || 'Hybrid'}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginTop: '0.5rem', fontSize: '0.825rem', color: 'var(--color-gray-600)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Building2 size={14} color="var(--color-gray-400)" />
-                      {job.department}
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <MapPin size={14} color="var(--color-gray-400)" />
-                      {job.location || 'India'}
-                    </span>
+                  {/* Job Title */}
+                  <h2
+                    title={job.title}
+                    style={{
+                      margin: '0 0 0.4rem 0',
+                      fontSize: '1.05rem',
+                      fontWeight: 700,
+                      color: 'var(--color-gray-900)',
+                      lineHeight: 1.35,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      minHeight: '2.7em'
+                    }}
+                  >
+                    {job.title}
+                  </h2>
+
+                  {/* Metadata: Dept, Location, Salary, Dates */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.78rem', color: 'var(--color-gray-600)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Building2 size={13} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.department}</span>
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        <MapPin size={13} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                        <span>{job.location || 'India'}</span>
+                      </span>
+                    </div>
+
                     {job.salary && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600, color: 'var(--color-gray-800)' }}>
-                        <DollarSign size={14} color="var(--color-gray-400)" />
-                        {job.salary}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600, color: 'var(--color-gray-800)' }}>
+                        <DollarSign size={13} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                        <span>{job.salary}</span>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-gray-500)', fontSize: '0.74rem' }}>
+                      <Calendar size={13} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                      <span>Posted: {job.createdAt} • Deadline: {job.deadline}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pipeline Stats */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  background: 'var(--color-gray-50)',
+                  padding: '0.45rem 0.5rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--color-gray-200)',
+                  textAlign: 'center',
+                  gap: '2px',
+                  marginTop: '0.25rem'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>{job.applicantsCount || 0}</div>
+                    <div style={{ fontSize: '0.66rem', color: 'var(--color-gray-500)', textTransform: 'uppercase', fontWeight: 600 }}>Applicants</div>
+                  </div>
+                  <div style={{ borderLeft: '1px solid var(--color-gray-200)', borderRight: '1px solid var(--color-gray-200)' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-primary-600)' }}>{job.shortlistedCount || 0}</div>
+                    <div style={{ fontSize: '0.66rem', color: 'var(--color-gray-500)', textTransform: 'uppercase', fontWeight: 600 }}>Shortlisted</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#8b5cf6' }}>{job.interviewsCount || 0}</div>
+                    <div style={{ fontSize: '0.66rem', color: 'var(--color-gray-500)', textTransform: 'uppercase', fontWeight: 600 }}>Interviews</div>
+                  </div>
+                </div>
+
+                {/* Skills */}
+                {job.skills && job.skills.length > 0 && (
+                  <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', alignItems: 'center', minHeight: '22px' }}>
+                    {job.skills.slice(0, 3).map((s, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          background: 'var(--color-primary-50)',
+                          color: 'var(--color-primary-700)',
+                          fontSize: '0.72rem',
+                          padding: '0.1rem 0.4rem',
+                          borderRadius: '4px',
+                          fontWeight: 500
+                        }}
+                      >
+                        {s}
+                      </span>
+                    ))}
+                    {job.skills.length > 3 && (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)', fontWeight: 500 }}>
+                        +{job.skills.length - 3}
                       </span>
                     )}
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                      <Calendar size={14} color="var(--color-gray-400)" />
-                      Posted: {job.createdAt} • Deadline: {job.deadline}
-                    </span>
                   </div>
-                </div>
+                )}
 
-                {/* Quick Pipeline Stats */}
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  alignItems: 'center',
-                  background: '#f8fafc',
-                  padding: '0.6rem 1rem',
-                  borderRadius: '8px',
-                  border: '1px solid var(--color-gray-200)'
-                }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>{job.applicantsCount || 0}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Applicants</div>
-                  </div>
-                  <div style={{ width: '1px', height: '24px', background: 'var(--color-gray-200)' }} />
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-primary-600)' }}>{job.shortlistedCount || 0}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Shortlisted</div>
-                  </div>
-                  <div style={{ width: '1px', height: '24px', background: 'var(--color-gray-200)' }} />
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#8b5cf6' }}>{job.interviewsCount || 0}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Interviews</div>
+                {/* Actions Footer */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.65rem', gap: '0.5rem', marginTop: 'auto' }}>
+                  <Link to="/recruiter/applications" style={{ textDecoration: 'none', flex: 1 }}>
+                    <Button variant="primary" size="sm" style={{ width: '100%' }} icon={<Users size={13} />}>
+                      View Applicants ({job.applicantsCount || 0})
+                    </Button>
+                  </Link>
+
+                  <div>
+                    {job.status === 'CLOSED' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={<CheckCircle2 size={13} />}
+                        onClick={() => handleReopen(job.id)}
+                      >
+                        Reopen
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        style={{ color: 'var(--color-danger-600)' }}
+                        icon={<XCircle size={13} />}
+                        onClick={() => setClosingJobId(job.id)}
+                        title="Close Job"
+                      >
+                        Close
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
-
-              {/* Skills required */}
-              {job.skills && job.skills.length > 0 && (
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', fontWeight: 600 }}>Skills:</span>
-                  {job.skills.map((s, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        background: 'var(--color-primary-50)',
-                        color: 'var(--color-primary-700)',
-                        fontSize: '0.75rem',
-                        padding: '0.15rem 0.45rem',
-                        borderRadius: '4px',
-                        fontWeight: 500
-                      }}
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Actions Footer */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <Link to="/recruiter/applications" style={{ textDecoration: 'none' }}>
-                  <Button variant="primary" size="sm" icon={<Users size={14} />}>
-                    View Applicants ({job.applicantsCount || 0})
-                  </Button>
-                </Link>
-
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  {job.status === 'CLOSED' ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      icon={<CheckCircle2 size={14} />}
-                      onClick={() => handleReopen(job.id)}
-                    >
-                      Reopen Job
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      style={{ color: 'var(--color-danger-600)' }}
-                      icon={<XCircle size={14} />}
-                      onClick={() => setClosingJobId(job.id)}
-                    >
-                      Close Job
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
 
           {/* Pagination */}
           <div style={{ marginTop: 'var(--space-6)' }}>
@@ -455,6 +475,7 @@ export default function JobsPage() {
               totalPages={totalPages}
               totalItems={filteredJobs.length}
               pageSize={PAGE_SIZE}
+              itemName="jobs"
               onPageChange={(p) => {
                 setCurrentPage(p);
                 window.scrollTo({ top: 120, behavior: 'smooth' });

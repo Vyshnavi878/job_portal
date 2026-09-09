@@ -17,7 +17,7 @@ import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/expor
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 9;
 
 export default function RecruiterJobMelaPage() {
   const { recruiter, registerJobMela } = useRecruiter();
@@ -261,87 +261,137 @@ export default function RecruiterJobMelaPage() {
           }
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {paginatedEvents.map((event) => {
-            const isApproved = (event.status || event.participationStatus) === 'APPROVED';
-            return (
-              <div
-                key={event.id}
-                className="card"
-                style={{
-                  padding: '1.5rem',
-                  borderRadius: 'var(--radius-2xl)',
-                  border: isApproved ? '1px solid #c7d2fe' : '1px solid var(--color-gray-200)'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+        <div>
+          <div className="recruiter-jobs-grid">
+            {paginatedEvents.map((event) => {
+              const isApproved = (event.status || event.participationStatus) === 'APPROVED';
+              return (
+                <div
+                  key={event.id}
+                  className={`card recruiter-job-card ${isApproved ? 'is-published' : ''}`}
+                >
+                  {/* Top: Status & Booth */}
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                      <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
-                        {event.title}
-                      </h2>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
+                      <StatusBadge status={isApproved ? 'APPROVED' : 'PENDING'} />
                       <span style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '12px',
-                        background: isApproved ? '#ecfdf5' : '#fffbeb',
-                        color: isApproved ? '#059669' : '#d97706',
-                        border: `1px solid ${isApproved ? '#a7f3d0' : '#fde68a'}`
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        color: isApproved ? 'var(--color-primary-700)' : 'var(--color-gray-600)',
+                        background: isApproved ? 'var(--color-primary-50)' : 'var(--color-gray-100)',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '150px'
                       }}>
-                        {isApproved ? '✓ Registered & Approved' : '⏳ Registration Pending Approval'}
+                        <Building2 size={11} style={{ flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {event.boothNumber || 'Awaiting Booth'}
+                        </span>
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--color-gray-600)' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <CalendarDays size={16} color="var(--color-primary-600)" />
-                        {event.date}
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <MapPin size={16} color="var(--color-gray-400)" />
-                        {event.venue}
-                      </span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, color: 'var(--color-primary-800)' }}>
-                        <Building2 size={16} color="var(--color-primary-600)" />
-                        {event.boothNumber}
-                      </span>
+                    {/* Event Title */}
+                    <h3
+                      title={event.title}
+                      style={{
+                        margin: '0 0 0.45rem 0',
+                        fontSize: '0.98rem',
+                        fontWeight: 700,
+                        color: 'var(--color-gray-900)',
+                        lineHeight: 1.3,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        minHeight: '2.5em'
+                      }}
+                    >
+                      {event.title}
+                    </h3>
+
+                    {/* Event Metadata */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.76rem', color: 'var(--color-gray-600)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <CalendarDays size={12} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+                        <span>{event.date} • {event.time || '09:00 AM - 05:30 PM'}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <MapPin size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                        <span title={event.venue}>{event.venue}</span>
+                      </div>
+                      {event.positions && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-gray-500)', fontSize: '0.72rem' }}>
+                          <Briefcase size={11} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                          <span title={event.positions}>Roles: {event.positions}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Event Metrics Box */}
-                  <div style={{ display: 'flex', gap: '1rem', background: '#f8fafc', padding: '0.75rem 1.25rem', borderRadius: '8px', border: '1px solid var(--color-gray-200)' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
-                        {event.registeredCandidatesAtBooth || event.candidatesCount || 0}
+                  {/* Event Metrics / Pipeline Stats */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    background: 'var(--color-gray-50)',
+                    padding: '0.45rem 0.5rem',
+                    borderRadius: '8px',
+                    border: '1px solid var(--color-gray-200)',
+                    textAlign: 'center',
+                    gap: '2px',
+                    marginTop: 'auto'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
+                        {event.registeredCandidatesAtBooth ?? event.candidatesCount ?? 0}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Registered</div>
+                      <div style={{ fontSize: '0.66rem', color: 'var(--color-gray-500)', textTransform: 'uppercase', fontWeight: 600 }}>Registered</div>
                     </div>
-                    <div style={{ width: '1px', height: '28px', background: 'var(--color-gray-200)', alignSelf: 'center' }} />
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary-600)' }}>
-                        {event.spotInterviewsConducted || event.interviewsCount || 0}
+                    <div style={{ borderLeft: '1px solid var(--color-gray-200)' }}>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-primary-600)' }}>
+                        {event.spotInterviewsConducted ?? event.interviewsCount ?? 0}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Spot Interviews</div>
+                      <div style={{ fontSize: '0.66rem', color: 'var(--color-gray-500)', textTransform: 'uppercase', fontWeight: 600 }}>Spot Interviews</div>
                     </div>
                   </div>
-                </div>
 
-                {/* Live Queue Preview */}
-                <div style={{ background: 'var(--color-gray-50)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--color-gray-200)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-gray-700)' }}>
-                      Live Booth Queue & Screening
+                  {/* Footer Status / Live Queue Info */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderTop: '1px solid var(--color-gray-100)',
+                    paddingTop: '0.65rem',
+                    gap: '0.5rem',
+                    fontSize: '0.75rem',
+                    color: 'var(--color-gray-600)'
+                  }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {isApproved ? (
+                        <>
+                          <CheckCircle2 size={13} color="#10b981" />
+                          <span style={{ color: '#059669', fontWeight: 600 }}>Booth Active</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock3 size={13} color="#d97706" />
+                          <span style={{ color: '#d97706', fontWeight: 600 }}>Pending Allocation</span>
+                        </>
+                      )}
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>Updated live during event</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--color-gray-400)' }}>
+                      NTR Vikasa Event
+                    </span>
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-gray-600)' }}>
-                    Candidates walking up to <strong>{event.boothNumber}</strong> will scan QR codes to enter your digital screening pipeline directly.
-                  </p>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
 
           {/* Pagination */}
           <div style={{ marginTop: 'var(--space-6)' }}>
@@ -350,6 +400,7 @@ export default function RecruiterJobMelaPage() {
                totalPages={totalPages}
                totalItems={filteredEvents.length}
                pageSize={PAGE_SIZE}
+               itemName="Job Melas"
                onPageChange={(p) => {
                  setCurrentPage(p);
                  window.scrollTo({ top: 120, behavior: 'smooth' });

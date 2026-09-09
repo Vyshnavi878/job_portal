@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, ChevronDown, User, Settings, LogOut, LayoutDashboard, Briefcase, Search, FileText, Building2 } from 'lucide-react';
+import { Menu, ChevronDown, User, Settings, LogOut, LayoutDashboard, Briefcase, Search, FileText, Building2, KeyRound } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import Breadcrumb from '../ui/Breadcrumb';
 import { DropdownMenu } from '../ui/DropdownMenu';
@@ -69,7 +69,25 @@ export default function PortalHeader({ title, breadcrumb, user, actions }) {
   ];
 
   const adminMenuItems = [
-    { label: `${user?.name || 'Admin'} (Admin)`, header: `${user?.name || 'Admin'} (Admin Control)` },
+    {
+      header: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: '2px 0' }}>
+          <div className="sidebar-user-avatar" style={{ width: 34, height: 34, fontSize: 'var(--text-xs)', flexShrink: 0 }}>
+            {user?.avatar && (typeof user.avatar === 'string' && (user.avatar.startsWith('data:') || user.avatar.startsWith('http') || user.avatar.startsWith('/'))) ? (
+              <img src={user.avatar} alt={user?.name || 'Admin'} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+            ) : (
+              user?.avatar || user?.name?.[0]?.toUpperCase() || 'A'
+            )}
+          </div>
+          <div>
+            <strong style={{ display: 'block', color: 'var(--color-gray-900)', fontSize: '13px', lineHeight: 1.2 }}>{user?.name || 'Admin User'}</strong>
+            <span style={{ fontSize: '11px', color: 'var(--color-gray-500)', fontWeight: 500 }}>{user?.role || 'Admin Control'}</span>
+          </div>
+        </div>
+      )
+    },
+    { label: 'My Profile', icon: <User size={15} />, onClick: () => navigate('/admin/profile') },
+    { label: 'Change Password', icon: <KeyRound size={15} />, onClick: () => navigate('/admin/change-password') },
     { divider: true },
     { label: 'Log Out', icon: <LogOut size={15} />, danger: true, onClick: handleLogout },
   ];
@@ -113,7 +131,11 @@ export default function PortalHeader({ title, breadcrumb, user, actions }) {
             trigger={
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer', padding: '4px 8px', borderRadius: 'var(--radius-lg)', transition: 'background var(--transition-fast)' }}>
                 <div className="sidebar-user-avatar" style={{ width: 32, height: 32, fontSize: 'var(--text-xs)' }}>
-                  {user.name?.[0]?.toUpperCase() || 'U'}
+                  {user.avatar && (typeof user.avatar === 'string' && (user.avatar.startsWith('data:') || user.avatar.startsWith('http') || user.avatar.startsWith('/'))) ? (
+                    <img src={user.avatar} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                  ) : (
+                    user.avatar || user.name?.[0]?.toUpperCase() || 'U'
+                  )}
                 </div>
                 <span className="hide-mobile" style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
                   {user.name}

@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MapPin, Clock, Briefcase, Banknote, Building2, Calendar, Users,
   Share2, Bookmark, BookmarkCheck, ArrowLeft, CheckCircle2,
-  GraduationCap, Sparkles, ExternalLink, Send, ShieldCheck
+  GraduationCap, Sparkles, ExternalLink, Send, ShieldCheck,
+  AlertCircle, ArrowRight
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { Badge, StatusBadge } from '../../components/ui/Badge';
@@ -15,11 +16,16 @@ import Textarea from '../../components/ui/Textarea';
 import FileUpload from '../../components/ui/FileUpload';
 import { InternshipCard } from '../../components/ui/EntityCards';
 import { useToast } from '../../context/ToastContext';
+import { useCandidate } from '../../context/CandidateContext';
 import { MOCK_INTERNSHIPS, MOCK_COMPANIES } from '../../data/mockData';
 
 export default function InternshipDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+  const { candidate, isLoggedIn } = useCandidate();
+  const completion = candidate?.profileCompletion ?? 0;
 
   const [saved, setSaved] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
@@ -45,6 +51,31 @@ export default function InternshipDetailPage() {
   const similar = useMemo(() => {
     return MOCK_INTERNSHIPS.filter((i) => i.id !== internship.id).slice(0, 2);
   }, [internship]);
+
+  // If user returned from login with ?apply=true, automatically open the apply modal
+  useEffect(() => {
+    if (searchParams.get('apply') === 'true' && isLoggedIn) {
+      setApplyModalOpen(true);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('apply');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, isLoggedIn, setSearchParams]);
+
+  const handleApplyClick = () => {
+    if (applied) return;
+    if (!isLoggedIn) {
+      navigate('/login', {
+        state: {
+          redirectTo: `/internships/${internship.id}?apply=true`,
+          internshipId: internship.id,
+          jobTitle: internship.title
+        }
+      });
+      return;
+    }
+    setApplyModalOpen(true);
+  };
 
   const handleApplySubmit = (e) => {
     e.preventDefault();
@@ -137,7 +168,7 @@ export default function InternshipDetailPage() {
                     <Button
                       variant={applied ? 'secondary' : 'primary'}
                       size="md"
-                      onClick={() => !applied && setApplyModalOpen(true)}
+                      onClick={handleApplyClick}
                       disabled={applied}
                     >
                       {applied ? '✓ Applied' : 'Apply Now'}
@@ -320,7 +351,7 @@ export default function InternshipDetailPage() {
                     </p>
                   </div>
                 ) : (
-                  <Button variant="primary" size="lg" fullWidth onClick={() => setApplyModalOpen(true)} style={{ marginBottom: 'var(--space-3)' }}>
+                  <Button variant="primary" size="lg" fullWidth onClick={handleApplyClick} style={{ marginBottom: 'var(--space-3)' }}>
                     Apply for Internship
                   </Button>
                 )}
@@ -357,7 +388,7 @@ export default function InternshipDetailPage() {
           <Button
             variant={applied ? 'secondary' : 'primary'}
             size="sm"
-            onClick={() => !applied && setApplyModalOpen(true)}
+            onClick={handleApplyClick}
             disabled={applied}
           >
             {applied ? '✓ Applied' : 'Apply Now'}
@@ -375,38 +406,106 @@ export default function InternshipDetailPage() {
 
       {/* Apply Modal */}
       <Modal open={applyModalOpen} onClose={() => setApplyModalOpen(false)} title={`Apply: ${internship.title}`} size="md">
-        <form onSubmit={handleApplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <FormField label="Full Name" htmlFor="name" required>
-            <Input id="name" placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} required />
-          </FormField>
+        {completion < 70 ? (
+          <div style={{ textAlign: 'center', padding: 'var(--space-6) 0' }}>
+            <div style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              background: '#fef3c7',
+              color: '#d97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto var(--space-4)'
+            }}>
+              <AlertCircle size={36} />
+            </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-            <FormField label="Email" htmlFor="email" required>
-              <Input id="email" type="email" placeholder="you@college.edu" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </FormField>
-            <FormField label="Phone" htmlFor="phone" required>
-              <Input id="phone" type="tel" placeholder="+91 98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-            </FormField>
+            <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: 'var(--color-text)', marginBottom: 'var(--space-2)' }}>
+              Complete your profile to apply
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', maxWidth: 440, margin: '0 auto var(--space-5)', lineHeight: 'var(--leading-relaxed)' }}>
+              Your profile is currently {completion}% complete. Please complete at least 70% of your profile before applying for jobs.
+            </p>
+
+            <div style={{
+              background: 'var(--color-bg)',
+              borderRadius: 'var(--radius-xl)',
+              padding: 'var(--space-4)',
+              marginBottom: 'var(--space-6)',
+              border: '1px solid var(--color-border)',
+              textAlign: 'left'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                  Profile Completion:
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: '#d97706' }}>
+                  {completion}% <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-text-muted)' }}>/ 70% Required</span>
+                </span>
+              </div>
+              <div style={{ height: 8, background: 'var(--color-gray-200)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${Math.min(completion, 100)}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                  borderRadius: 'var(--radius-full)',
+                  transition: 'width 0.4s ease'
+                }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setApplyModalOpen(false);
+                  navigate('/candidate/profile');
+                }}
+                rightIcon={<ArrowRight size={15} />}
+              >
+                Complete Profile
+              </Button>
+              <Button variant="secondary" onClick={() => setApplyModalOpen(false)}>
+                Cancel
+              </Button>
+            </div>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-4)' }}>
-            <FormField label="College / University" htmlFor="college" required>
-              <Input id="college" placeholder="e.g. IIT Bengaluru, NIT..." value={college} onChange={(e) => setCollege(e.target.value)} required />
+        ) : (
+          <form onSubmit={handleApplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <FormField label="Full Name" htmlFor="name" required>
+              <Input id="name" placeholder="Your full name" value={name} onChange={(e) => setName(e.target.value)} required />
             </FormField>
-            <FormField label="Graduation Year" htmlFor="gradYear">
-              <Input id="gradYear" placeholder="2026" value={gradYear} onChange={(e) => setGradYear(e.target.value)} />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <FormField label="Email" htmlFor="email" required>
+                <Input id="email" type="email" placeholder="you@college.edu" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </FormField>
+              <FormField label="Phone" htmlFor="phone" required>
+                <Input id="phone" type="tel" placeholder="+91 98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+              </FormField>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-4)' }}>
+              <FormField label="College / University" htmlFor="college" required>
+                <Input id="college" placeholder="e.g. IIT Bengaluru, NIT..." value={college} onChange={(e) => setCollege(e.target.value)} required />
+              </FormField>
+              <FormField label="Graduation Year" htmlFor="gradYear">
+                <Input id="gradYear" placeholder="2026" value={gradYear} onChange={(e) => setGradYear(e.target.value)} />
+              </FormField>
+            </div>
+
+            <FormField label="Resume / CV" required hint="PDF, DOC, DOCX up to 5MB">
+              <FileUpload accept=".pdf,.doc,.docx" maxSize="5 MB" />
             </FormField>
-          </div>
 
-          <FormField label="Resume / CV" required hint="PDF, DOC, DOCX up to 5MB">
-            <FileUpload accept=".pdf,.doc,.docx" maxSize="5 MB" />
-          </FormField>
-
-          <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-2)' }}>
-            <Button variant="secondary" type="button" onClick={() => setApplyModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" type="submit" loading={isSubmitting} leftIcon={<Send size={16} />}>Submit Application</Button>
-          </div>
-        </form>
+            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-2)' }}>
+              <Button variant="secondary" type="button" onClick={() => setApplyModalOpen(false)}>Cancel</Button>
+              <Button variant="primary" type="submit" loading={isSubmitting} leftIcon={<Send size={16} />}>Submit Application</Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

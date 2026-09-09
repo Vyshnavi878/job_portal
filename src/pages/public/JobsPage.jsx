@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import {
   Search, MapPin, SlidersHorizontal, X, RotateCcw, Briefcase,
   DollarSign, Clock, Building2, GraduationCap, Sparkles, AlertCircle,
@@ -11,6 +11,7 @@ import Button from '../../components/ui/Button';
 import Select from '../../components/ui/Select';
 import ApplyModal from '../../components/ui/ApplyModal';
 import { useToast } from '../../context/ToastContext';
+import { useCandidate } from '../../context/CandidateContext';
 import { useAdmin, DEFAULT_JOBS_PAGE_CONTENT } from '../../context/AdminContext';
 import { INDIAN_STATES, INDIAN_UNION_TERRITORIES } from '../../data/indiaLocations';
 import {
@@ -449,7 +450,9 @@ const EXTENDED_MOCK_JOBS = [
 ];
 
 export default function JobsPage() {
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { isLoggedIn } = useCandidate();
   const { jobsPageContent } = useAdmin();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -499,6 +502,16 @@ export default function JobsPage() {
   };
 
   const handleOpenApply = (job) => {
+    if (!isLoggedIn) {
+      navigate('/login', {
+        state: {
+          redirectTo: `/jobs/${job.id}?apply=true`,
+          jobId: job.id,
+          jobTitle: job.title
+        }
+      });
+      return;
+    }
     setSelectedJobToApply(job);
     setApplyModalOpen(true);
   };

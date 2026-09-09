@@ -1,9 +1,50 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
+export const calculateProfileCompletion = (c) => {
+  if (!c) return 0;
+  let score = 0;
+  // 1. Five Signup/Personal fields: 5% each = 25% total
+  if (c.name && c.name.trim()) score += 5;
+  if (c.email && c.email.trim()) score += 5;
+  if (c.phone && c.phone.trim()) score += 5;
+  if (c.location && c.location.trim()) score += 5;
+  if (c.aadhaarNumber && c.aadhaarNumber.trim()) score += 5;
+
+  // 2. Profile Details (Headline & Bio): 10% each = 20% total
+  // (Note: signup fields 25% + headline 10% + bio 10% = exactly 45%)
+  if (c.headline && c.headline.trim().length >= 3) score += 10;
+  if (c.bio && c.bio.trim().length >= 10) score += 10;
+
+  // 3. Resume: 20%
+  if (c.resume?.fileName && c.resume.fileName.trim()) score += 20;
+
+  // 4. Skills: 15% (at least 3 skills)
+  if (c.skillsPreferences?.skills && c.skillsPreferences.skills.length >= 3) score += 15;
+
+  // 5. Work Experience: 10%
+  if (
+    (c.experienceList && c.experienceList.length > 0) ||
+    (c.skillsPreferences?.experience && c.skillsPreferences.experience !== 'Fresher (0-1 yr)' && c.skillsPreferences.experience !== 'Fresher')
+  ) {
+    score += 10;
+  }
+
+  // 6. Education: 10%
+  if (
+    (c.educationList && c.educationList.length > 0) ||
+    (c.skillsPreferences?.educationLevel && c.skillsPreferences.educationLevel.trim())
+  ) {
+    score += 10;
+  }
+
+  return Math.min(score, 100);
+};
+
 const CANDIDATE_1_DATA = {
   id: 'cand-1',
   email: 'candidate1@ntrvikasa.com',
   name: 'Priya Sharma',
+  aadhaarNumber: '4532 8901 2345',
   role: 'candidate',
   headline: 'Senior React & Frontend Developer | 4+ Years Experience',
   phone: '+91 98765 43210',
@@ -11,7 +52,7 @@ const CANDIDATE_1_DATA = {
   bio: 'Passionate frontend engineer specializing in performant React architectures, design systems, TypeScript, and micro-frontend state management with 4+ years of industry experience across enterprise web applications.',
   avatar: '/candidate_avatar.jpg',
   verified: true,
-  profileCompletion: 80,
+  profileCompletion: 100,
   linkedin: 'https://linkedin.com/in/priyasharma-dev',
   github: 'https://github.com/priyasharma-frontend',
   portfolio: 'https://priyasharma.dev',
@@ -356,6 +397,7 @@ const CANDIDATE_2_DATA = {
   id: 'cand-2',
   email: 'candidate2@ntrvikasa.com',
   name: 'Rahul Kumar',
+  aadhaarNumber: '8912 3456 7890',
   role: 'candidate',
   headline: 'Senior Python & Cloud Backend Developer | 3.5 Years Experience',
   phone: '+91 91234 56789',
@@ -631,8 +673,14 @@ export function CandidateProvider({ children }) {
             };
           });
         }
-        if (parsed['cand-1'] && (parsed['cand-1'].avatar === 'P' || !parsed['cand-1'].avatar)) {
+        if (parsed['cand-1'] && parsed['cand-1'].avatar !== 'REMOVED' && (parsed['cand-1'].avatar === 'P' || !parsed['cand-1'].avatar)) {
           parsed['cand-1'].avatar = CANDIDATE_1_DATA.avatar;
+        }
+        if (parsed['cand-1'] && !parsed['cand-1'].aadhaarNumber) {
+          parsed['cand-1'].aadhaarNumber = CANDIDATE_1_DATA.aadhaarNumber;
+        }
+        if (parsed['cand-2'] && !parsed['cand-2'].aadhaarNumber) {
+          parsed['cand-2'].aadhaarNumber = CANDIDATE_2_DATA.aadhaarNumber;
         }
         return parsed;
       }
@@ -660,9 +708,9 @@ export function CandidateProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     try {
       const stored = localStorage.getItem('ntr_candidate_logged_in');
-      return stored !== 'false'; // default logged in for seamless demo
+      return stored === 'true';
     } catch (e) {
-      return true;
+      return false;
     }
   });
 
@@ -677,7 +725,11 @@ export function CandidateProvider({ children }) {
     }
   }, [candidatesData, activeCandidateId, isLoggedIn]);
 
-  const candidate = candidatesData[activeCandidateId] || CANDIDATE_1_DATA;
+  const rawCandidate = candidatesData[activeCandidateId] || CANDIDATE_1_DATA;
+  const candidate = {
+    ...rawCandidate,
+    profileCompletion: calculateProfileCompletion(rawCandidate)
+  };
 
   // Helper to update active candidate state
   const updateCandidate = (updater) => {
@@ -691,13 +743,90 @@ export function CandidateProvider({ children }) {
     });
   };
 
+  // Candidate Registration handler
+  const registerCandidate = (signupData) => {
+    const newCandidateId = `cand-${Date.now()}`;
+    const newCandidate = {
+      id: newCandidateId,
+      email: signupData.email || 'candidate@ntrvikasa.com',
+      name: signupData.fullName || 'Candidate',
+      aadhaarNumber: signupData.aadhaarNumber || '',
+      phone: signupData.phone || '',
+      location: signupData.location || '',
+      role: 'candidate',
+      headline: '',
+      bio: '',
+      avatar: signupData.fullName ? signupData.fullName[0].toUpperCase() : 'C',
+      verified: true,
+      linkedin: '',
+      github: '',
+      portfolio: '',
+      resume: {
+        fileName: '',
+        uploadedDate: '',
+        fileSize: '',
+        atsScore: 0,
+        fileType: '',
+      },
+      skillsPreferences: {
+        skills: [],
+        preferredRoles: [],
+        preferredLocations: signupData.location ? [signupData.location] : [],
+        expectedSalary: '',
+        currentSalary: '',
+        workMode: 'Hybrid',
+        jobType: 'Full-time',
+        industries: [],
+        experience: 'Fresher (0-1 yr)',
+        educationLevel: '',
+      },
+      experienceList: [],
+      educationList: [],
+      certificationsList: [],
+      projectsList: [],
+      languages: [],
+      applications: [],
+      savedJobIds: [],
+      interviews: [],
+      notifications: [
+        {
+          id: `n-${Date.now()}`,
+          title: 'Welcome to NTR VIKASA!',
+          message: 'Complete at least 70% of your profile to start applying for jobs.',
+          category: 'ACCOUNT',
+          read: false,
+          time: 'Just now',
+          link: '/candidate/profile'
+        }
+      ]
+    };
+
+    setCandidatesData((prev) => ({
+      ...prev,
+      [newCandidateId]: newCandidate
+    }));
+    setActiveCandidateId(newCandidateId);
+    setIsLoggedIn(true);
+    return newCandidate;
+  };
+
   // Login handler
   const login = (email) => {
-    if (email?.toLowerCase().includes('candidate2') || email?.toLowerCase().includes('rahul')) {
-      setActiveCandidateId('cand-2');
-    } else {
-      setActiveCandidateId('cand-1');
+    if (email) {
+      const emailLower = email.toLowerCase();
+      const foundEntry = Object.entries(candidatesData).find(([_, c]) => c.email?.toLowerCase() === emailLower);
+      if (foundEntry) {
+        setActiveCandidateId(foundEntry[0]);
+        setIsLoggedIn(true);
+        return;
+      }
+      if (emailLower.includes('candidate2') || emailLower.includes('rahul')) {
+        setActiveCandidateId('cand-2');
+        setIsLoggedIn(true);
+        return;
+      }
     }
+    setActiveCandidateId('cand-1');
     setIsLoggedIn(true);
   };
 
@@ -749,7 +878,7 @@ export function CandidateProvider({ children }) {
       status: 'APPLIED',
       coverLetter: applicationDetails.coverLetter || '',
       additionalInfo: applicationDetails.additionalInfo || '',
-      resumeName: applicationDetails.resumeName || candidate.resume.fileName,
+      resumeName: applicationDetails.resumeName || candidate.resume?.fileName || 'Candidate_Resume.pdf',
       timeline: [
         { stage: 'Applied', date: 'Today (Just now)', completed: true, current: true },
         { stage: 'Screening', date: 'Pending Review', completed: false, current: false },
@@ -761,7 +890,7 @@ export function CandidateProvider({ children }) {
 
     updateCandidate((prev) => ({
       ...prev,
-      applications: [newApp, ...prev.applications.filter(a => String(a.jobId) !== String(job.id))],
+      applications: [newApp, ...(prev.applications || []).filter(a => String(a.jobId) !== String(job.id))],
       notifications: [
         {
           id: `n-${Date.now()}`,
@@ -772,7 +901,7 @@ export function CandidateProvider({ children }) {
           time: 'Just now',
           link: '/candidate/applications'
         },
-        ...prev.notifications
+        ...(prev.notifications || [])
       ]
     }));
 
@@ -783,10 +912,10 @@ export function CandidateProvider({ children }) {
   const saveJob = (jobId) => {
     updateCandidate((prev) => {
       const idStr = String(jobId);
-      if (prev.savedJobIds.includes(idStr)) return prev;
+      if ((prev.savedJobIds || []).includes(idStr)) return prev;
       return {
         ...prev,
-        savedJobIds: [...prev.savedJobIds, idStr]
+        savedJobIds: [...(prev.savedJobIds || []), idStr]
       };
     });
   };
@@ -796,13 +925,13 @@ export function CandidateProvider({ children }) {
       const idStr = String(jobId);
       return {
         ...prev,
-        savedJobIds: prev.savedJobIds.filter(id => id !== idStr)
+        savedJobIds: (prev.savedJobIds || []).filter(id => id !== idStr)
       };
     });
   };
 
   const isJobSaved = (jobId) => {
-    return candidate.savedJobIds.includes(String(jobId));
+    return (candidate.savedJobIds || []).includes(String(jobId));
   };
 
   // Update Resume
@@ -810,7 +939,7 @@ export function CandidateProvider({ children }) {
     updateCandidate((prev) => ({
       ...prev,
       resume: {
-        ...prev.resume,
+        ...(prev.resume || {}),
         ...resumeData,
         uploadedDate: 'Just now (Today)'
       },
@@ -818,13 +947,13 @@ export function CandidateProvider({ children }) {
         {
           id: `n-${Date.now()}`,
           title: 'Resume Updated Successfully',
-          message: `Your active resume ${resumeData.fileName || prev.resume.fileName} has been updated. Recruiters will now receive your newest version.`,
+          message: `Your active resume ${resumeData.fileName || prev.resume?.fileName} has been updated. Recruiters will now receive your newest version.`,
           category: 'ACCOUNT',
           read: false,
           time: 'Just now',
           link: '/candidate/resume'
         },
-        ...prev.notifications
+        ...(prev.notifications || [])
       ]
     }));
   };
@@ -842,7 +971,7 @@ export function CandidateProvider({ children }) {
     updateCandidate((prev) => ({
       ...prev,
       skillsPreferences: {
-        ...prev.skillsPreferences,
+        ...(prev.skillsPreferences || {}),
         ...prefData
       }
     }));
@@ -852,23 +981,23 @@ export function CandidateProvider({ children }) {
   const markNotificationRead = (notifId) => {
     updateCandidate((prev) => ({
       ...prev,
-      notifications: prev.notifications.map(n => n.id === notifId ? { ...n, read: true } : n)
+      notifications: (prev.notifications || []).map(n => n.id === notifId ? { ...n, read: true } : n)
     }));
   };
 
   const markAllNotificationsRead = () => {
     updateCandidate((prev) => ({
       ...prev,
-      notifications: prev.notifications.map(n => ({ ...n, read: true }))
+      notifications: (prev.notifications || []).map(n => ({ ...n, read: true }))
     }));
   };
 
   // Derived metrics for current candidate
   const stats = {
-    applied: candidate.applications.length,
-    shortlisted: candidate.applications.filter(a => a.status === 'SHORTLISTED').length,
-    interviews: candidate.interviews.filter(i => i.status === 'UPCOMING').length,
-    savedJobs: candidate.savedJobIds.length,
+    applied: (candidate.applications || []).length,
+    shortlisted: (candidate.applications || []).filter(a => a.status === 'SHORTLISTED').length,
+    interviews: (candidate.interviews || []).filter(i => i.status === 'UPCOMING').length,
+    savedJobs: (candidate.savedJobIds || []).length,
   };
 
   return (
@@ -880,6 +1009,8 @@ export function CandidateProvider({ children }) {
         stats,
         login,
         logout,
+        registerCandidate,
+        calculateProfileCompletion,
         switchCandidate,
         updateCandidate,
         applyJob,

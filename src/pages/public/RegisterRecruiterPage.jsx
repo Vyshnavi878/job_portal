@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2, User, Mail, Phone, Lock, Globe, MapPin,
-  FileText, ShieldCheck, CheckCircle2, ArrowRight, UploadCloud, Briefcase, ArrowLeft
+  FileText, ShieldCheck, CheckCircle2, ArrowRight, UploadCloud, Briefcase, ArrowLeft, AlertCircle
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import FormField from '../../components/ui/FormField';
@@ -10,6 +10,7 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import FileUpload from '../../components/ui/FileUpload';
+import OtpVerificationModal from '../../components/ui/OtpVerificationModal';
 import { useToast } from '../../context/ToastContext';
 import { INDUSTRIES, COMPANY_SIZES, LOCATIONS } from '../../data/mockData';
 
@@ -20,6 +21,9 @@ export default function RegisterRecruiterPage() {
   const { toast } = useToast();
   const [section, setSection] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [consentError, setConsentError] = useState(false);
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
 
   const [form, setForm] = useState({
     // Recruiter info
@@ -58,17 +62,38 @@ export default function RegisterRecruiterPage() {
         });
         return;
       }
-      setLoading(true);
-      setTimeout(() => {
-        setLoading(false);
+      if (!agreedToTerms) {
+        setConsentError(true);
         toast({
-          type: 'success',
-          title: 'Registration Application Submitted!',
-          message: 'Your recruiter account application has been submitted for admin verification.',
+          type: 'error',
+          title: 'Consent Required',
+          message: 'Please agree to the Terms & Conditions and Privacy Policy to continue.',
         });
-        navigate('/register/recruiter/pending');
-      }, 1500);
+        return;
+      }
+
+      // Trigger Email OTP Verification
+      setOtpModalOpen(true);
+      toast({
+        type: 'info',
+        title: 'Verification Code Sent',
+        message: `A verification OTP has been sent to ${form.email}. (Demo code: 123456)`,
+      });
     }
+  };
+
+  const handleOtpVerified = () => {
+    setOtpModalOpen(false);
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      toast({
+        type: 'success',
+        title: 'Registration Application Submitted!',
+        message: 'Your recruiter account application has been submitted for admin verification.',
+      });
+      navigate('/register/recruiter/pending');
+    }, 1000);
   };
 
   return (
@@ -340,6 +365,63 @@ export default function RegisterRecruiterPage() {
                   <FormField label="3. Company Official Logo" hint="PNG or SVG format (Square 500x500 recommended)">
                     <FileUpload accept=".png,.svg,.jpg" maxSize="2 MB" />
                   </FormField>
+
+                  {/* Mandatory Terms & Conditions and Privacy Policy Consent */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', padding: 'var(--space-1) 0' }}>
+                      <input
+                        id="recruiter-agree-terms"
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => {
+                          setAgreedToTerms(e.target.checked);
+                          if (e.target.checked) setConsentError(false);
+                        }}
+                        aria-required="true"
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          marginTop: '2px',
+                          accentColor: 'var(--color-primary-600)',
+                          cursor: 'pointer',
+                          flexShrink: 0
+                        }}
+                      />
+                      <label
+                        htmlFor="recruiter-agree-terms"
+                        style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', lineHeight: 'var(--leading-relaxed)', cursor: 'pointer', userSelect: 'none' }}
+                      >
+                        I agree to the{' '}
+                        <Link
+                          to="/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ color: 'var(--color-primary-600)', fontWeight: 600, textDecoration: 'underline' }}
+                        >
+                          Terms & Conditions
+                        </Link>{' '}
+                        and{' '}
+                        <Link
+                          to="/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ color: 'var(--color-primary-600)', fontWeight: 600, textDecoration: 'underline' }}
+                        >
+                          Privacy Policy
+                        </Link>
+                        .<span style={{ color: 'var(--color-danger-500)', marginLeft: '2px' }}>*</span>
+                      </label>
+                    </div>
+
+                    {consentError && (
+                      <p className="form-error" role="alert" style={{ marginTop: '-4px', marginLeft: '30px' }}>
+                        <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                        <span>Please agree to the Terms & Conditions and Privacy Policy to continue.</span>
+                      </p>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -358,6 +440,20 @@ export default function RegisterRecruiterPage() {
           </form>
         </div>
       </div>
+
+      {/* Email OTP Verification Modal */}
+      <OtpVerificationModal
+        open={otpModalOpen}
+        onClose={() => setOtpModalOpen(false)}
+        email={form.email}
+        flowId="recruiter_reg"
+        onVerified={handleOtpVerified}
+        onChangeEmail={() => {
+          setOtpModalOpen(false);
+          setSection(0);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
     </div>
   );
 }

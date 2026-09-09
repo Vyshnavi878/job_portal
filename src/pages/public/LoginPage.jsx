@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Briefcase, Mail, Lock, Building2, User, ArrowLeft, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import FormField from '../../components/ui/FormField';
@@ -13,9 +13,13 @@ import { useAdmin } from '../../context/AdminContext';
 export default function LoginPage() {
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login: loginCandidate } = useCandidate();
   const { loginRecruiter } = useRecruiter();
   const { loginAdmin } = useAdmin();
+
+  const redirectTarget = location.state?.redirectTo || searchParams.get('redirect') || '/candidate/dashboard';
 
   const [email, setEmail] = useState('candidate1@ntrvikasa.com');
   const [password, setPassword] = useState('password123');
@@ -57,7 +61,7 @@ export default function LoginPage() {
 
       // Candidate login fallback
       loginCandidate(loginEmail);
-      navigate('/candidate/dashboard');
+      navigate(redirectTarget);
       const candidateName = loginEmail.includes('candidate2') || loginEmail.includes('rahul') ? 'Rahul Kumar' : 'Priya Sharma';
       addToast(`Welcome back, ${candidateName}! Logged into Candidate Workspace.`, 'success');
     }, 400);
@@ -167,6 +171,24 @@ export default function LoginPage() {
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', textAlign: 'center', marginBottom: 'var(--space-4)' }}>
             Select a demo account below or enter your credentials to access your workspace.
           </p>
+
+          {location.state?.jobTitle && (
+            <div style={{
+              background: 'var(--color-primary-50)',
+              border: '1px solid var(--color-primary-300)',
+              borderRadius: 'var(--radius-xl)',
+              padding: 'var(--space-3) var(--space-4)',
+              marginBottom: 'var(--space-4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-3)'
+            }}>
+              <Briefcase size={20} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-primary-900)', margin: 0, lineHeight: 1.4 }}>
+                Sign in to complete your application for <strong>{location.state.jobTitle}</strong>
+              </p>
+            </div>
+          )}
 
           {/* Quick Demo Credentials Switchers */}
           <div style={{
@@ -360,7 +382,7 @@ export default function LoginPage() {
               New to NTR VIKASA Job Portal? Create an account:
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
-              <Link to="/register/candidate" style={{ textDecoration: 'none' }}>
+              <Link to="/register/candidate" state={location.state} style={{ textDecoration: 'none' }}>
                 <Button variant="outline" size="sm" fullWidth leftIcon={<User size={14} />}>
                   Candidate Sign Up
                 </Button>

@@ -249,6 +249,45 @@ export default function AdminWebsiteContentPage() {
     reader.readAsDataURL(file);
   };
 
+  // Welcome Popup Poster Date Helpers
+  const getTodayDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDisplayDate = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [y, m, d] = parts.map(Number);
+    if (!y || !m || !d) return dateStr;
+    const dt = new Date(y, m - 1, d);
+    return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const getPopupScheduleStatusInfo = (popup) => {
+    if (!popup || !popup.imageUrl) {
+      return { status: 'NOT_CONFIGURED', label: 'Not Configured', color: '#64748b', bg: '#f1f5f9', border: '#e2e8f0' };
+    }
+    if (!popup.enabled) {
+      return { status: 'HIDDEN', label: '● Hidden', color: '#b45309', bg: '#fffbeb', border: '#fde68a' };
+    }
+    if (!popup.startDate || !popup.endDate) {
+      return { status: 'INCOMPLETE', label: '● Incomplete Schedule', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+    }
+    const today = getTodayDateString();
+    if (today < popup.startDate) {
+      return { status: 'SCHEDULED', label: '● Scheduled', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' };
+    }
+    if (today > popup.endDate) {
+      return { status: 'EXPIRED', label: '● Expired', color: '#64748b', bg: '#f8fafc', border: '#cbd5e1' };
+    }
+    return { status: 'ACTIVE', label: '● Active', color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' };
+  };
+
   // Welcome Popup Poster State & Handlers
   const curWelcomePopup = curHome.welcomePopup || DEFAULT_HOME_CONTENT.welcomePopup;
   const [welcomePopupModal, setWelcomePopupModal] = useState(false);
@@ -256,6 +295,8 @@ export default function AdminWebsiteContentPage() {
     enabled: curWelcomePopup.enabled || false,
     imageUrl: curWelcomePopup.imageUrl || '',
     redirectUrl: curWelcomePopup.redirectUrl || '',
+    startDate: curWelcomePopup.startDate || '',
+    endDate: curWelcomePopup.endDate || '',
   });
 
   const handleOpenWelcomePopup = () => {
@@ -265,6 +306,8 @@ export default function AdminWebsiteContentPage() {
       enabled: wp.enabled || false,
       imageUrl: wp.imageUrl || '',
       redirectUrl: wp.redirectUrl || '',
+      startDate: wp.startDate || '',
+      endDate: wp.endDate || '',
     });
     setWelcomePopupModal(true);
   };
@@ -287,13 +330,26 @@ export default function AdminWebsiteContentPage() {
         imageUrl: reader.result,
         enabled: true,
       }));
-      addToast('Popup poster selected. Set status & click Save Changes to publish.', 'info');
+      addToast('Popup poster selected. Configure schedule & click Save Changes to publish.', 'info');
     };
     reader.readAsDataURL(file);
   };
 
   const handleSaveWelcomePopup = (e) => {
     e.preventDefault();
+
+    // Required date validation when poster image is configured
+    if (welcomePopupForm.imageUrl) {
+      if (!welcomePopupForm.startDate || !welcomePopupForm.endDate) {
+        addToast('Please select both Display Start Date and Display End Date.', 'error');
+        return;
+      }
+      if (welcomePopupForm.endDate < welcomePopupForm.startDate) {
+        addToast('End Date must be on or after Start Date.', 'error');
+        return;
+      }
+    }
+
     if (welcomePopupForm.redirectUrl) {
       const trimmed = welcomePopupForm.redirectUrl.trim();
       if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
@@ -301,6 +357,7 @@ export default function AdminWebsiteContentPage() {
         return;
       }
     }
+
     setSavingHome(true);
     setTimeout(() => {
       updateHomeContent({
@@ -308,6 +365,8 @@ export default function AdminWebsiteContentPage() {
           enabled: welcomePopupForm.enabled,
           imageUrl: welcomePopupForm.imageUrl,
           redirectUrl: (welcomePopupForm.redirectUrl || '').trim(),
+          startDate: welcomePopupForm.startDate || '',
+          endDate: welcomePopupForm.endDate || '',
         }
       });
       setSavingHome(false);
@@ -329,6 +388,8 @@ export default function AdminWebsiteContentPage() {
       enabled: false,
       imageUrl: '',
       redirectUrl: '',
+      startDate: '',
+      endDate: '',
     });
     addToast('Poster removed. Click Save Changes to confirm.', 'info');
   };
@@ -976,56 +1037,34 @@ export default function AdminWebsiteContentPage() {
                 <div className="cms-section-card-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                   <h3 className="cms-section-title">Welcome Popup Poster</h3>
                   <span className="cms-section-badge">Initial Visitor Modal</span>
-                  {curWelcomePopup.enabled && curWelcomePopup.imageUrl ? (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      background: '#ecfdf5',
-                      color: '#047857',
-                      border: '1px solid #a7f3d0',
-                      padding: '2px 8px',
-                      borderRadius: 'var(--radius-full)'
-                    }}>
-                      ● Active
-                    </span>
-                  ) : curWelcomePopup.imageUrl ? (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      background: '#fffbeb',
-                      color: '#b45309',
-                      border: '1px solid #fde68a',
-                      padding: '2px 8px',
-                      borderRadius: 'var(--radius-full)'
-                    }}>
-                      ● Hidden
-                    </span>
-                  ) : (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      background: '#f1f5f9',
-                      color: '#64748b',
-                      border: '1px solid #e2e8f0',
-                      padding: '2px 8px',
-                      borderRadius: 'var(--radius-full)'
-                    }}>
-                      Not Configured
-                    </span>
-                  )}
+                  {(() => {
+                    const statusInfo = getPopupScheduleStatusInfo(curWelcomePopup);
+                    return (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        background: statusInfo.bg,
+                        color: statusInfo.color,
+                        border: `1px solid ${statusInfo.border}`,
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-full)'
+                      }}>
+                        {statusInfo.label}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <p className="cms-section-desc">
                   Manage the image and redirect link shown in the welcome popup when visitors first arrive on the website.
                 </p>
+                {curWelcomePopup.startDate && curWelcomePopup.endDate && (
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
+                    <strong>Scheduled Display:</strong> {formatDisplayDate(curWelcomePopup.startDate)} – {formatDisplayDate(curWelcomePopup.endDate)}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -1803,7 +1842,36 @@ export default function AdminWebsiteContentPage() {
             </FormField>
           </div>
 
-          {/* Section 3: Current Active Poster */}
+          {/* Section 3: Popup Display Schedule */}
+          <div className="cms-form-section">
+            <h4 className="cms-form-section-title">Popup Display Schedule</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <FormField label="Display Start Date*" htmlFor="popupStartDate" hint="From Date (inclusive)">
+                <Input
+                  id="popupStartDate"
+                  type="date"
+                  value={welcomePopupForm.startDate}
+                  onChange={(e) => setWelcomePopupForm({ ...welcomePopupForm, startDate: e.target.value })}
+                  required={Boolean(welcomePopupForm.imageUrl)}
+                />
+              </FormField>
+
+              <FormField label="Display End Date*" htmlFor="popupEndDate" hint="To Date (inclusive)">
+                <Input
+                  id="popupEndDate"
+                  type="date"
+                  value={welcomePopupForm.endDate}
+                  onChange={(e) => setWelcomePopupForm({ ...welcomePopupForm, endDate: e.target.value })}
+                  required={Boolean(welcomePopupForm.imageUrl)}
+                />
+              </FormField>
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', margin: 'var(--space-2) 0 0 0' }}>
+              The poster will only be shown to visitors between the Start Date and End Date (inclusive). After the End Date, it automatically stops appearing.
+            </p>
+          </div>
+
+          {/* Section 4: Current Active Poster */}
           <div className="cms-form-section">
             <h4 className="cms-form-section-title">Current Active Poster</h4>
             {welcomePopupForm.imageUrl ? (
@@ -1812,17 +1880,22 @@ export default function AdminWebsiteContentPage() {
                   <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-text)' }}>
                     Poster Preview
                   </span>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 'var(--radius-full)',
-                    background: welcomePopupForm.enabled ? '#ecfdf5' : '#fffbeb',
-                    color: welcomePopupForm.enabled ? '#047857' : '#b45309',
-                    border: welcomePopupForm.enabled ? '1px solid #a7f3d0' : '1px solid #fde68a'
-                  }}>
-                    {welcomePopupForm.enabled ? '● Status: Active (Visible to Visitors)' : '● Status: Hidden (Disabled)'}
-                  </span>
+                  {(() => {
+                    const statusInfo = getPopupScheduleStatusInfo(welcomePopupForm);
+                    return (
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        background: statusInfo.bg,
+                        color: statusInfo.color,
+                        border: `1px solid ${statusInfo.border}`
+                      }}>
+                        {statusInfo.label}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div style={{
@@ -1844,6 +1917,35 @@ export default function AdminWebsiteContentPage() {
                       boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
                     }}
                   />
+                </div>
+
+                {/* Scheduled Display details */}
+                <div style={{
+                  background: 'var(--color-bg)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: 'var(--space-3)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  fontSize: 'var(--text-xs)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                    <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Scheduled Display:</span>
+                    {welcomePopupForm.startDate && welcomePopupForm.endDate ? (
+                      <strong style={{ color: 'var(--color-text)' }}>
+                        {formatDisplayDate(welcomePopupForm.startDate)} – {formatDisplayDate(welcomePopupForm.endDate)}
+                      </strong>
+                    ) : (
+                      <span style={{ color: '#dc2626', fontStyle: 'italic' }}>Dates not configured</span>
+                    )}
+                  </div>
+                  {welcomePopupForm.startDate && welcomePopupForm.endDate && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                      <span>Start: {welcomePopupForm.startDate}</span>
+                      <span>End: {welcomePopupForm.endDate}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', wordBreak: 'break-all' }}>
@@ -1896,7 +1998,13 @@ export default function AdminWebsiteContentPage() {
 
           <div className="cms-modal-footer">
             <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-              {welcomePopupForm.imageUrl ? (welcomePopupForm.enabled ? 'Poster is set to Active' : 'Poster is set to Hidden') : 'No poster uploaded'}
+              {welcomePopupForm.imageUrl
+                ? (welcomePopupForm.enabled
+                    ? (welcomePopupForm.startDate && welcomePopupForm.endDate
+                        ? `Status: ${getPopupScheduleStatusInfo(welcomePopupForm).label.replace('● ', '')}`
+                        : 'Schedule incomplete')
+                    : 'Poster is set to Hidden')
+                : 'No poster uploaded'}
             </div>
             <div className="cms-modal-footer-actions">
               <Button type="button" variant="outline" onClick={() => setWelcomePopupModal(false)}>

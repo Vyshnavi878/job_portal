@@ -26,14 +26,30 @@ export default function CandidateProfilePage() {
 
   // ── CANDIDATE PROFILE AVATAR STATE & REFS ──
   const fileInputRef = useRef(null);
+  const avatarContainerRef = useRef(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [dpModalOpen, setDpModalOpen] = useState(false);
 
   useEffect(() => {
     setAvatarError(false);
   }, [candidate.avatar]);
 
+  // Close WhatsApp DP action menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (avatarContainerRef.current && !avatarContainerRef.current.contains(e.target)) {
+        setAvatarMenuOpen(false);
+      }
+    };
+    if (avatarMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [avatarMenuOpen]);
+
   const avatarUrl = candidate.avatar || candidate.profileImage;
-  const isImageString = avatarUrl && typeof avatarUrl === 'string' && (
+  const isImageString = avatarUrl && typeof avatarUrl === 'string' && avatarUrl !== 'REMOVED' && avatarUrl !== 'P' && (
     avatarUrl.startsWith('data:image/') ||
     avatarUrl.startsWith('http://') ||
     avatarUrl.startsWith('https://') ||
@@ -41,7 +57,7 @@ export default function CandidateProfilePage() {
     avatarUrl.startsWith('blob:')
   );
   const showImage = Boolean(isImageString && !avatarError);
-  const initialFallback = candidate.avatar?.length === 1 ? candidate.avatar : (candidate.name?.[0]?.toUpperCase() || 'P');
+  const initialFallback = candidate.name?.[0]?.toUpperCase() || 'P';
 
   const handleAvatarFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -70,6 +86,8 @@ export default function CandidateProfilePage() {
       const dataUrl = reader.result;
       setAvatarError(false);
       updateProfile({ avatar: dataUrl });
+      setAvatarMenuOpen(false);
+      setDpModalOpen(false);
       toast({
         type: 'success',
         title: 'Profile Photo Updated',
@@ -78,6 +96,18 @@ export default function CandidateProfilePage() {
     };
     reader.readAsDataURL(file);
     e.target.value = '';
+  };
+
+  const handleRemovePhoto = () => {
+    updateProfile({ avatar: 'REMOVED' });
+    setAvatarError(false);
+    setAvatarMenuOpen(false);
+    setDpModalOpen(false);
+    toast({
+      type: 'info',
+      title: 'Profile Photo Removed',
+      message: 'Your profile photo has been removed and reset to default avatar.'
+    });
   };
 
   // ── 1. PERSONAL INFORMATION STATE ──
@@ -459,24 +489,32 @@ export default function CandidateProfilePage() {
         <div className="card-body" style={{ padding: 'var(--space-6)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-              {/* Circular Candidate Profile Image / Avatar */}
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <div style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: 'var(--radius-full)',
-                  background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-accent-600))',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: 'var(--text-xl)',
-                  boxShadow: 'var(--shadow-md)',
-                  flexShrink: 0,
-                  overflow: 'hidden',
-                  border: '2px solid #fff'
-                }}>
+              {/* Circular Candidate Profile Image / Avatar (WhatsApp DP Style) */}
+              <div ref={avatarContainerRef} style={{ position: 'relative', flexShrink: 0 }}>
+                <div
+                  title="Click to view or manage profile photo"
+                  onClick={() => setDpModalOpen(true)}
+                  style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 'var(--radius-full)',
+                    background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-accent-600))',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: 'var(--text-xl)',
+                    boxShadow: 'var(--shadow-md)',
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                    border: '2px solid #fff',
+                    cursor: 'pointer',
+                    transition: 'transform var(--transition-fast)'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.04)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                >
                   {showImage ? (
                     <img
                       src={avatarUrl}
@@ -495,10 +533,14 @@ export default function CandidateProfilePage() {
                   )}
                 </div>
 
-                {/* Change Photo / Upload Trigger */}
-                <label
-                  htmlFor="candidate-avatar-file-input"
-                  title="Change Photo / Upload"
+                {/* WhatsApp DP Style Camera Action Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAvatarMenuOpen(prev => !prev);
+                  }}
+                  title="Profile photo options"
                   style={{
                     position: 'absolute',
                     bottom: -2,
@@ -514,21 +556,129 @@ export default function CandidateProfilePage() {
                     cursor: 'pointer',
                     boxShadow: 'var(--shadow-sm)',
                     border: '2px solid #fff',
+                    padding: 0,
                     transition: 'transform var(--transition-fast)'
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.15)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                 >
                   <Camera size={11} />
-                  <input
-                    id="candidate-avatar-file-input"
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png, image/jpeg, image/webp, image/gif"
-                    onChange={handleAvatarFileChange}
-                    style={{ display: 'none' }}
-                  />
-                </label>
+                </button>
+
+                {/* WhatsApp-style Popover Menu */}
+                {avatarMenuOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      marginTop: 8,
+                      background: 'var(--color-surface, #fff)',
+                      borderRadius: 'var(--radius-xl)',
+                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.18), 0 8px 10px -6px rgba(0,0,0,0.1)',
+                      border: '1px solid var(--color-gray-200)',
+                      padding: 4,
+                      minWidth: 160,
+                      zIndex: 60,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatarMenuOpen(false);
+                        setDpModalOpen(true);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 12px',
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 600,
+                        color: 'var(--color-text)',
+                        background: 'none',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        width: '100%'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-gray-100)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                    >
+                      <Eye size={13} style={{ color: 'var(--color-primary-600)' }} />
+                      <span>View Photo</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAvatarMenuOpen(false);
+                        fileInputRef.current?.click();
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 12px',
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 600,
+                        color: 'var(--color-text)',
+                        background: 'none',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        width: '100%'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-gray-100)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                    >
+                      <Camera size={13} style={{ color: 'var(--color-primary-600)' }} />
+                      <span>{showImage ? 'Change Photo' : 'Upload Photo'}</span>
+                    </button>
+
+                    {showImage && (
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '8px 12px',
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 600,
+                          color: 'var(--color-danger-600)',
+                          background: 'none',
+                          border: 'none',
+                          borderRadius: 'var(--radius-md)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          width: '100%'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-danger-50)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                      >
+                        <Trash2 size={13} />
+                        <span>Remove Photo</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Hidden File Input */}
+                <input
+                  id="candidate-avatar-file-input"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp, image/gif"
+                  onChange={handleAvatarFileChange}
+                  style={{ display: 'none' }}
+                />
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
@@ -644,10 +794,7 @@ export default function CandidateProfilePage() {
                         variant="ghost"
                         leftIcon={<Trash2 size={13} />}
                         style={{ color: 'var(--color-danger-600)' }}
-                        onClick={() => {
-                          updateProfile({ avatar: 'P' });
-                          toast({ type: 'info', title: 'Photo Removed', message: 'Profile photo reset to default avatar.' });
-                        }}
+                        onClick={handleRemovePhoto}
                       >
                         Remove Photo
                       </Button>
@@ -1507,6 +1654,126 @@ export default function CandidateProfilePage() {
             <div style={{ padding: 'var(--space-4) var(--space-6)', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
               <Button size="sm" variant="outline" onClick={handleDownloadResume} leftIcon={<Download size={14} />}>Download</Button>
               <Button size="sm" variant="primary" onClick={() => setPreviewModalOpen(false)}>Close Preview</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════
+          WHATSAPP DP STYLE PROFILE PHOTO MODAL
+      ════════════════════════════════════════════════════════════════════ */}
+      {dpModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 'var(--space-4)'
+          }}
+          onClick={() => setDpModalOpen(false)}
+        >
+          <div
+            style={{
+              background: 'var(--color-surface, #fff)',
+              borderRadius: 'var(--radius-2xl)',
+              maxWidth: 400,
+              width: '100%',
+              padding: 'var(--space-6)',
+              boxShadow: 'var(--shadow-2xl)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setDpModalOpen(false)}
+              style={{
+                position: 'absolute',
+                top: 14,
+                right: 14,
+                background: 'var(--color-gray-100)',
+                border: 'none',
+                borderRadius: 'var(--radius-full)',
+                width: 32,
+                height: 32,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--color-gray-600)'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, margin: 0, color: 'var(--color-text)' }}>
+              Profile Photo
+            </h3>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', margin: '4px 0 var(--space-6) 0' }}>
+              {showImage ? 'Manage or remove your display photo' : 'No custom photo added yet'}
+            </p>
+
+            {/* Circular DP Preview */}
+            <div style={{
+              width: 150,
+              height: 150,
+              borderRadius: 'var(--radius-full)',
+              overflow: 'hidden',
+              background: 'linear-gradient(135deg, var(--color-primary-600), var(--color-accent-600))',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 10px 25px -5px rgba(0,0,0,0.25)',
+              border: '4px solid #fff',
+              marginBottom: 'var(--space-6)'
+            }}>
+              {showImage ? (
+                <img
+                  src={avatarUrl}
+                  alt={personal.fullName || 'Profile Photo'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span style={{ fontSize: '54px', fontWeight: 800 }}>{initialFallback}</span>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: 'var(--space-3)', width: '100%', justifyContent: 'center' }}>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                leftIcon={<Camera size={15} />}
+                onClick={() => {
+                  setDpModalOpen(false);
+                  fileInputRef.current?.click();
+                }}
+              >
+                {showImage ? 'Change Photo' : 'Upload Photo'}
+              </Button>
+
+              {showImage && (
+                <Button
+                  type="button"
+                  variant="outline-danger"
+                  size="sm"
+                  leftIcon={<Trash2 size={15} />}
+                  onClick={handleRemovePhoto}
+                >
+                  Remove Photo
+                </Button>
+              )}
             </div>
           </div>
         </div>

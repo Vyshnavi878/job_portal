@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   CalendarDays, MapPin, Clock, Building2, QrCode, Download,
   CheckCircle2, ArrowRight, Sparkles, ExternalLink, Ticket, Users, X,
   Briefcase, FileText, Check, Send, User, Mail, Phone, ShieldCheck,
-  ChevronRight, ArrowLeft, Search, Filter, DollarSign, Award, Layers
+  ChevronRight, ArrowLeft, Search, Filter, DollarSign, Award, Layers,
+  AlertCircle
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -16,8 +17,10 @@ import { MOCK_JOB_MELAS } from '../../data/mockData';
 import ApplicationDetailsModal from '../../components/ui/ApplicationDetailsModal';
 
 export default function CandidateJobMelaPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
-  const { candidate, updateCandidate } = useCandidate();
+  const { candidate, updateCandidate, isLoggedIn } = useCandidate();
 
   // Navigation state: null = Browse/Main Listing, object = Specific Job Mela Details
   const [selectedMela, setSelectedMela] = useState(null);
@@ -236,6 +239,16 @@ export default function CandidateJobMelaPage() {
 
   // Event Registration Handlers
   const handleOpenEventRegistration = (mela) => {
+    if (!isLoggedIn) {
+      navigate('/login', {
+        state: {
+          redirectTo: `/candidate/job-mela?melaId=${mela.id}&register=true`,
+          melaId: mela.id,
+          jobTitle: `Entry Pass for ${mela.title}`
+        }
+      });
+      return;
+    }
     if (registeredEvents.some(e => e.id === mela.id)) {
       toast({ type: 'info', title: 'Already Registered', message: 'You already have an active entry pass for this event.' });
       return;
@@ -278,6 +291,19 @@ export default function CandidateJobMelaPage() {
 
   // Company-Specific Apply Handlers
   const handleOpenCompanyApply = (mela, companyName, role, salary, location) => {
+    if (!isLoggedIn) {
+      navigate('/login', {
+        state: {
+          redirectTo: `/candidate/job-melas?melaId=${mela.id}&company=${encodeURIComponent(companyName)}&role=${encodeURIComponent(role || '')}&salary=${encodeURIComponent(salary || '')}&loc=${encodeURIComponent(location || '')}&apply=true`,
+          melaId: mela.id,
+          companyName,
+          role,
+          jobTitle: `${role || 'Walk-in Role'} at ${companyName}`
+        }
+      });
+      return;
+    }
+
     const compJob = {
       melaId: mela.id,
       melaTitle: mela.title,
@@ -300,6 +326,33 @@ export default function CandidateJobMelaPage() {
     });
     setCompanyApplyModalOpen(true);
   };
+
+  // If user returned from login with ?apply=true or ?register=true
+  useEffect(() => {
+    const shouldApply = searchParams.get('apply') === 'true';
+    const shouldRegister = searchParams.get('register') === 'true';
+    const melaId = searchParams.get('melaId');
+    const company = searchParams.get('company');
+    const role = searchParams.get('role');
+    const salary = searchParams.get('salary');
+    const loc = searchParams.get('loc');
+
+    if (shouldApply && melaId && company && isLoggedIn) {
+      const targetMela = MOCK_JOB_MELAS.find(m => String(m.id) === String(melaId));
+      if (targetMela) {
+        setSelectedMela(targetMela);
+        handleOpenCompanyApply(targetMela, company, role, salary, loc);
+        setSearchParams({}, { replace: true });
+      }
+    } else if (shouldRegister && melaId && isLoggedIn) {
+      const targetMela = MOCK_JOB_MELAS.find(m => String(m.id) === String(melaId));
+      if (targetMela) {
+        setSelectedMela(targetMela);
+        handleOpenEventRegistration(targetMela);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, isLoggedIn]);
 
   // Generate NTR-{EVENT_NO}-{COMPANY_NO}-{APPLICATION_NO} format
   // EVENT_NO   = 1-based index of mela in MOCK_JOB_MELAS list
@@ -383,6 +436,16 @@ export default function CandidateJobMelaPage() {
   const handleSubmitCompanyApplication = (e) => {
     e.preventDefault();
     if (!selectedCompanyJob) return;
+
+    const completion = candidate?.profileCompletion ?? 0;
+    if (completion < 70) {
+      toast({
+        type: 'error',
+        title: 'Profile Incomplete',
+        message: `Your profile is currently ${completion}% complete. Please complete at least 70% of your profile before applying for jobs.`,
+      });
+      return;
+    }
 
     // Compute NTR app ID using current appliedCompanyJobs state before the update
     const ntrAppId = generateNtrAppId(
@@ -1368,110 +1431,179 @@ export default function CandidateJobMelaPage() {
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmitCompanyApplication} style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', flex: 1 }}>
-              <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                {/* Notice */}
-                <div style={{ background: '#f8fafc', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-3)' }}>
-                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', lineHeight: 1.4 }}>
-                    🎯 <strong>Target Employer:</strong> You are submitting a dedicated job application to <strong>{selectedCompanyJob.companyName}</strong> for the position of <strong>{selectedCompanyJob.role}</strong>.
-                  </p>
+            {/* Profile Completion Gate vs Application Form */}
+            {(candidate?.profileCompletion ?? 0) < 70 ? (
+              <div style={{ padding: 'var(--space-8) var(--space-6)', textAlign: 'center' }}>
+                <div style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  background: '#fef3c7',
+                  color: '#d97706',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto var(--space-4)'
+                }}>
+                  <AlertCircle size={36} />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Full Name</label>
-                    <input
-                      className="input"
-                      value={companyApplyForm.name}
-                      onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Email Address</label>
-                    <input
-                      type="email"
-                      className="input"
-                      value={companyApplyForm.email}
-                      onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, email: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
+                <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: 'var(--color-text)', marginBottom: 'var(--space-2)' }}>
+                  Complete your profile to apply
+                </h3>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', maxWidth: 440, margin: '0 auto var(--space-5)', lineHeight: 'var(--leading-relaxed)' }}>
+                  Your profile is currently {candidate?.profileCompletion ?? 0}% complete. Please complete at least 70% of your profile before applying for jobs.
+                </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Phone Number</label>
-                    <input
-                      type="tel"
-                      className="input"
-                      value={companyApplyForm.phone}
-                      onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, phone: e.target.value })}
-                      required
-                    />
+                <div style={{
+                  background: 'var(--color-bg)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: 'var(--space-4)',
+                  marginBottom: 'var(--space-6)',
+                  border: '1px solid var(--color-border)',
+                  textAlign: 'left'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                      Profile Completion:
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#d97706' }}>
+                      {candidate?.profileCompletion ?? 0}% <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-text-muted)' }}>/ 70% Required</span>
+                    </span>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Experience</label>
-                    <input
-                      className="input"
-                      value={companyApplyForm.experience}
-                      onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, experience: e.target.value })}
-                      required
-                    />
+                  <div style={{ height: 8, background: 'var(--color-gray-200)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${Math.min(candidate?.profileCompletion ?? 0, 100)}%`,
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                      borderRadius: 'var(--radius-full)',
+                      transition: 'width 0.4s ease'
+                    }} />
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Education Qualification</label>
-                  <input
-                    className="input"
-                    value={companyApplyForm.education}
-                    onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, education: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Key Technical Skills</label>
-                  <input
-                    className="input"
-                    value={companyApplyForm.skills}
-                    onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, skills: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Selected Resume</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
-                    <FileText size={18} style={{ color: 'var(--color-primary-600)' }} />
-                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, flex: 1 }}>{companyApplyForm.resume}</span>
-                    <span className="badge badge-success" style={{ fontSize: '10px' }}>Attached</span>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Cover Note / Message to Recruiter</label>
-                  <textarea
-                    className="input"
-                    rows={3}
-                    value={companyApplyForm.coverNote}
-                    onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, coverNote: e.target.value })}
-                  />
+                <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setCompanyApplyModalOpen(false);
+                      navigate('/candidate/profile');
+                    }}
+                    rightIcon={<ArrowRight size={15} />}
+                  >
+                    Complete Profile
+                  </Button>
+                  <Button variant="secondary" onClick={() => setCompanyApplyModalOpen(false)}>
+                    Cancel
+                  </Button>
                 </div>
               </div>
+            ) : (
+              /* Form */
+              <form onSubmit={handleSubmitCompanyApplication} style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', flex: 1 }}>
+                <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                  {/* Notice */}
+                  <div style={{ background: '#f8fafc', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-3)' }}>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)', lineHeight: 1.4 }}>
+                      🎯 <strong>Target Employer:</strong> You are submitting a dedicated job application to <strong>{selectedCompanyJob.companyName}</strong> for the position of <strong>{selectedCompanyJob.role}</strong>.
+                    </p>
+                  </div>
 
-              {/* Footer */}
-              <div style={{ padding: 'var(--space-4) var(--space-6)', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', background: 'var(--color-bg)' }}>
-                <Button type="button" variant="secondary" onClick={() => setCompanyApplyModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" leftIcon={<Send size={15} />}>
-                  Submit Application
-                </Button>
-              </div>
-            </form>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Full Name</label>
+                      <input
+                        className="input"
+                        value={companyApplyForm.name}
+                        onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Email Address</label>
+                      <input
+                        type="email"
+                        className="input"
+                        value={companyApplyForm.email}
+                        onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Phone Number</label>
+                      <input
+                        type="tel"
+                        className="input"
+                        value={companyApplyForm.phone}
+                        onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, phone: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Experience</label>
+                      <input
+                        className="input"
+                        value={companyApplyForm.experience}
+                        onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, experience: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Education Qualification</label>
+                    <input
+                      className="input"
+                      value={companyApplyForm.education}
+                      onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, education: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Key Technical Skills</label>
+                    <input
+                      className="input"
+                      value={companyApplyForm.skills}
+                      onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, skills: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Selected Resume</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+                      <FileText size={18} style={{ color: 'var(--color-primary-600)' }} />
+                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, flex: 1 }}>{companyApplyForm.resume}</span>
+                      <span className="badge badge-success" style={{ fontSize: '10px' }}>Attached</span>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontSize: 'var(--text-xs)', fontWeight: 700 }}>Cover Note / Message to Recruiter</label>
+                    <textarea
+                      className="input"
+                      rows={3}
+                      value={companyApplyForm.coverNote}
+                      onChange={(e) => setCompanyApplyForm({ ...companyApplyForm, coverNote: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div style={{ padding: 'var(--space-4) var(--space-6)', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', background: 'var(--color-bg)' }}>
+                  <Button type="button" variant="secondary" onClick={() => setCompanyApplyModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" leftIcon={<Send size={15} />}>
+                    Submit Application
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

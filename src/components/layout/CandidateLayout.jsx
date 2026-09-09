@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Search, BookOpen, Building2, Bookmark,
   FileText, CalendarDays, User, Video,
@@ -55,7 +55,11 @@ function getPageTitle(pathname) {
 export default function CandidateLayout() {
   const location = useLocation();
   const title = getPageTitle(location.pathname);
-  const { candidate } = useCandidate();
+  const { candidate, isLoggedIn } = useCandidate();
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" state={{ redirectTo: location.pathname + location.search }} replace />;
+  }
 
   const currentUser = {
     name: candidate.name,

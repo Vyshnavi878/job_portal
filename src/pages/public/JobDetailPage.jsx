@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MapPin, Clock, Briefcase, Banknote, Building2, Calendar, Users,
   Share2, Bookmark, BookmarkCheck, ArrowLeft, CheckCircle2, Flag,
@@ -15,11 +15,15 @@ import Textarea from '../../components/ui/Textarea';
 import { JobCard } from '../../components/ui/EntityCards';
 import ApplyModal from '../../components/ui/ApplyModal';
 import { useToast } from '../../context/ToastContext';
+import { useCandidate } from '../../context/CandidateContext';
 import { MOCK_JOBS, MOCK_COMPANIES } from '../../data/mockData';
 
 export default function JobDetailPage() {
   const { jobId } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
+  const { isLoggedIn } = useCandidate();
 
   const [saved, setSaved] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
@@ -45,6 +49,31 @@ export default function JobDetailPage() {
   const similarJobs = useMemo(() => {
     return MOCK_JOBS.filter((j) => j.id !== job.id && (j.industry === job.industry || j.type === job.type)).slice(0, 3);
   }, [job]);
+
+  // If user returned from login with ?apply=true, automatically open the apply modal
+  useEffect(() => {
+    if (searchParams.get('apply') === 'true' && isLoggedIn) {
+      setApplyModalOpen(true);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('apply');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, isLoggedIn, setSearchParams]);
+
+  const handleApplyClick = () => {
+    if (applied) return;
+    if (!isLoggedIn) {
+      navigate('/login', {
+        state: {
+          redirectTo: `/jobs/${job.id}?apply=true`,
+          jobId: job.id,
+          jobTitle: job.title
+        }
+      });
+      return;
+    }
+    setApplyModalOpen(true);
+  };
 
   const handleReportSubmit = (e) => {
     e.preventDefault();
@@ -139,7 +168,7 @@ export default function JobDetailPage() {
                 <Button
                   variant={applied ? 'secondary' : 'primary'}
                   size="md"
-                  onClick={() => !applied && setApplyModalOpen(true)}
+                  onClick={handleApplyClick}
                   disabled={applied}
                 >
                   {applied ? '✓ Applied' : 'Apply Now'}
@@ -389,7 +418,7 @@ export default function JobDetailPage() {
                       variant="primary"
                       size="lg"
                       fullWidth
-                      onClick={() => setApplyModalOpen(true)}
+                      onClick={handleApplyClick}
                       style={{ marginBottom: 'var(--space-3)' }}
                     >
                       Apply for this Position
@@ -501,7 +530,7 @@ export default function JobDetailPage() {
           <Button
             variant={applied ? 'secondary' : 'primary'}
             size="sm"
-            onClick={() => !applied && setApplyModalOpen(true)}
+            onClick={handleApplyClick}
             disabled={applied}
           >
             {applied ? '✓ Applied' : 'Apply Now'}

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   CalendarDays, MapPin, Clock, Building2, Users, CheckCircle2,
   AlertCircle, Share2, Sparkles, Send, ShieldCheck, FileText,
@@ -14,21 +14,26 @@ import Input from '../../components/ui/Input';
 import FileUpload from '../../components/ui/FileUpload';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { useCandidate } from '../../context/CandidateContext';
 import { MOCK_JOB_MELAS } from '../../data/mockData';
 
 export default function JobMelaDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { jobMelas } = useAdmin();
+  const { candidate, isLoggedIn } = useCandidate();
 
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
 
-  // Form inputs
-  const [candidateName, setCandidateName] = useState('');
-  const [candidateEmail, setCandidateEmail] = useState('');
-  const [candidatePhone, setCandidatePhone] = useState('');
+  // Form inputs - prepopulate from candidate profile if logged in
+  const [candidateName, setCandidateName] = useState(candidate?.name || '');
+  const [candidateEmail, setCandidateEmail] = useState(candidate?.email || '');
+  const [candidatePhone, setCandidatePhone] = useState(candidate?.phone || '');
   const [qualification, setQualification] = useState("Bachelor's Degree (B.Tech, B.E, B.Sc, B.Com, BCA)");
   const [experience, setExperience] = useState('Fresher (0-1 yr)');
 
@@ -55,6 +60,47 @@ export default function JobMelaDetailPage() {
     return MOCK_JOB_MELAS.find((m) => m.id === id) || MOCK_JOB_MELAS[0];
   }, [id, jobMelas]);
 
+  // Prepopulate candidate fields when candidate context updates
+  useEffect(() => {
+    if (candidate) {
+      if (candidate.name) setCandidateName(candidate.name);
+      if (candidate.email) setCandidateEmail(candidate.email);
+      if (candidate.phone) setCandidatePhone(candidate.phone);
+    }
+  }, [candidate]);
+
+  // Auto-open modal if returning from login / register with ?apply=true
+  useEffect(() => {
+    const shouldApply = searchParams.get('apply') === 'true' || searchParams.get('register') === 'true';
+    if (shouldApply && isLoggedIn) {
+      const comp = searchParams.get('company');
+      if (comp) {
+        setSelectedCompany(comp);
+      }
+      setRegisterModalOpen(true);
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('apply');
+      newParams.delete('register');
+      newParams.delete('company');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, isLoggedIn, setSearchParams]);
+
+  const handleApplyClick = (companyName = null, position = null) => {
+    if (!isLoggedIn) {
+      navigate('/login', {
+        state: {
+          redirectTo: `/job-melas/${mela.id}?apply=true${companyName ? `&company=${encodeURIComponent(companyName)}` : ''}`,
+          jobId: mela.id,
+          jobTitle: companyName ? `${position || 'Role'} at ${companyName} (${mela.title})` : `Free Entry for ${mela.title}`,
+        }
+      });
+      return;
+    }
+    setSelectedCompany(companyName);
+    setRegisterModalOpen(true);
+  };
+
   const handleRegisterSubmit = (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -64,8 +110,10 @@ export default function JobMelaDetailPage() {
       setRegisterModalOpen(false);
       toast({
         type: 'success',
-        title: 'Registration Successful!',
-        message: `You are registered for ${mela.title}. Your Fast-Track Entry QR Code has been generated.`,
+        title: selectedCompany ? 'Application & Registration Confirmed!' : 'Registration Successful!',
+        message: selectedCompany
+          ? `You have registered for ${selectedCompany} at ${mela.title}. Your Fast-Track Entry QR Code has been generated.`
+          : `You are registered for ${mela.title}. Your Fast-Track Entry QR Code has been generated.`,
       });
     }, 1200);
   };
@@ -268,7 +316,7 @@ export default function JobMelaDetailPage() {
                               {c.vacancies ? `${c.vacancies} Vacancies` : (c.openJobs || 'Walk-in Hiring')}
                             </span>
                             {isRegistrationOpen && (
-                              <Button size="xs" variant="primary" onClick={() => setRegisterModalOpen(true)}>
+                              <Button size="xs" variant="primary" onClick={() => handleApplyClick(companyName, positionTitle)}>
                                 Apply / Attend
                               </Button>
                             )}
@@ -397,7 +445,7 @@ export default function JobMelaDetailPage() {
                     variant="primary"
                     size="lg"
                     fullWidth
-                    onClick={() => setRegisterModalOpen(true)}
+                    onClick={() => handleApplyClick()}
                     style={{ marginBottom: 'var(--space-3)' }}
                   >
                     Register for Free Entry
@@ -445,10 +493,19 @@ export default function JobMelaDetailPage() {
       </div>
 
       {/* Register Modal */}
-      <Modal open={registerModalOpen} onClose={() => setRegisterModalOpen(false)} title={`Register: ${mela.title}`} size="md">
+      <Modal
+        open={registerModalOpen}
+        onClose={() => { setRegisterModalOpen(false); setSelectedCompany(null); }}
+        title={selectedCompany ? `Apply: ${selectedCompany} (${mela.title})` : `Register: ${mela.title}`}
+        size="md"
+      >
         <form onSubmit={handleRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
-            Free registration for walk-in interviews at <strong>{mela.venue}</strong>.
+            {selectedCompany ? (
+              <>Walk-in interview application for <strong>{selectedCompany}</strong> at <strong>{mela.venue}</strong>.</>
+            ) : (
+              <>Free registration for walk-in interviews at <strong>{mela.venue}</strong>.</>
+            )}
           </p>
 
           <FormField label="Full Name" htmlFor="candName" required>
@@ -488,8 +545,10 @@ export default function JobMelaDetailPage() {
           </FormField>
 
           <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', marginTop: 'var(--space-2)' }}>
-            <Button variant="secondary" type="button" onClick={() => setRegisterModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" type="submit" loading={isSubmitting} leftIcon={<Send size={16} />}>Confirm Free Registration</Button>
+            <Button variant="secondary" type="button" onClick={() => { setRegisterModalOpen(false); setSelectedCompany(null); }}>Cancel</Button>
+            <Button variant="primary" type="submit" loading={isSubmitting} leftIcon={<Send size={16} />}>
+              {selectedCompany ? 'Confirm Walk-in Application' : 'Confirm Free Registration'}
+            </Button>
           </div>
         </form>
       </Modal>

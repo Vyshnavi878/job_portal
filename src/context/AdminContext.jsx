@@ -2081,6 +2081,8 @@ export const DEFAULT_HOME_CONTENT = {
     enabled: false,
     imageUrl: '',
     redirectUrl: '',
+    startDate: '',
+    endDate: '',
   },
 };
 

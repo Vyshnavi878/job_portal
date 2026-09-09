@@ -36,7 +36,17 @@ export default function HomePage() {
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
 
   useEffect(() => {
-    if (welcomePopup?.enabled && welcomePopup?.imageUrl) {
+    if (welcomePopup?.enabled && welcomePopup?.imageUrl && welcomePopup?.startDate && welcomePopup?.endDate) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
+
+      // Show only when current date is within the configured schedule (inclusive)
+      const isWithinSchedule = todayStr >= welcomePopup.startDate && todayStr <= welcomePopup.endDate;
+      if (!isWithinSchedule) return;
+
       const dismissed = sessionStorage.getItem('ntr_welcome_popup_dismissed');
       if (!dismissed) {
         const timer = setTimeout(() => {

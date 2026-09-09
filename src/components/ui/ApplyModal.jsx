@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   FileText, CheckCircle2, Upload, AlertCircle, ArrowRight, X,
   Building2, Briefcase, MapPin, Sparkles, Check
@@ -14,8 +14,12 @@ export default function ApplyModal({
   job,
   onAppliedSuccess
 }) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { candidate, applyJob } = useCandidate();
+
+  const completion = candidate?.profileCompletion ?? 0;
+  const isProfileIncomplete = completion < 70;
 
   const [selectedResume, setSelectedResume] = useState(candidate?.resume?.fileName || 'Vyshnavi_Resume.pdf');
   const [coverLetter, setCoverLetter] = useState('');
@@ -47,6 +51,10 @@ export default function ApplyModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (isProfileIncomplete) {
+      setValidationError(`Your profile is currently ${completion}% complete. Please complete at least 70% of your profile before applying for jobs.`);
+      return;
+    }
     if (!confirmed) {
       setValidationError('Please confirm that the information provided is correct.');
       return;
@@ -214,6 +222,72 @@ export default function ApplyModal({
                 </Link>
                 <Button variant="outline" onClick={handleClose}>
                   Browse More Jobs
+                </Button>
+              </div>
+            </div>
+          ) : isProfileIncomplete ? (
+            <div style={{ textAlign: 'center', padding: 'var(--space-6) 0' }}>
+              <div style={{
+                width: 64,
+                height: 64,
+                borderRadius: '50%',
+                background: '#fef3c7',
+                color: '#d97706',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto var(--space-4)'
+              }}>
+                <AlertCircle size={36} />
+              </div>
+
+              <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: 'var(--color-text)', marginBottom: 'var(--space-2)' }}>
+                Complete your profile to apply
+              </h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', maxWidth: 440, margin: '0 auto var(--space-5)', lineHeight: 'var(--leading-relaxed)' }}>
+                Your profile is currently {completion}% complete. Please complete at least 70% of your profile before applying for jobs.
+              </p>
+
+              <div style={{
+                background: 'var(--color-bg)',
+                borderRadius: 'var(--radius-xl)',
+                padding: 'var(--space-4)',
+                marginBottom: 'var(--space-6)',
+                border: '1px solid var(--color-border)',
+                textAlign: 'left'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                    Profile Completion:
+                  </span>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#d97706' }}>
+                    {completion}% <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--color-text-muted)' }}>/ 70% Required</span>
+                  </span>
+                </div>
+                <div style={{ height: 8, background: 'var(--color-gray-200)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${Math.min(completion, 100)}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                    borderRadius: 'var(--radius-full)',
+                    transition: 'width 0.4s ease'
+                  }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    handleClose();
+                    navigate('/candidate/profile');
+                  }}
+                  rightIcon={<ArrowRight size={15} />}
+                >
+                  Complete Profile
+                </Button>
+                <Button variant="outline" onClick={handleClose}>
+                  Cancel
                 </Button>
               </div>
             </div>

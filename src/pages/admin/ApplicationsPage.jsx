@@ -3,7 +3,7 @@ import {
   FileText, Search, Filter, Eye, Building2, User,
   Calendar, CheckCircle2, Clock, XCircle, Briefcase, DollarSign,
   Mail, Phone, MapPin, GraduationCap, Download, FileSpreadsheet,
-  ShieldCheck, Info, ExternalLink, Sparkles
+  ShieldCheck, Info, ExternalLink, Sparkles, Ticket
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -15,10 +15,23 @@ import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, exportToCSV, generatePDFBlob, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { useCandidate } from '../../context/CandidateContext';
+import {
+  isJobMelaApplication,
+  getApplicationNumber,
+  getApplicationType,
+  getJobMelaDetails,
+  normalizeApplication,
+  formatJobId,
+  formatInternshipId,
+  formatMelaId,
+  formatRegistrationId
+} from '../../utils/applicationUtils';
 
 export default function AdminApplicationsPage() {
   const { addToast } = useToast();
   const { applications, candidates = [], jobs = [], recruiters = [] } = useAdmin();
+  const { allCandidateApplications = [] } = useCandidate();
 
   const PAGE_SIZE = 10;
   const [search, setSearch] = useState('');
@@ -37,6 +50,76 @@ export default function AdminApplicationsPage() {
   const [candidateModalOpen, setCandidateModalOpen] = useState(false);
   const [activeCandProfile, setActiveCandProfile] = useState(null);
 
+  // Merge admin applications with candidate applications to guarantee consistent Application No and Job Mela details
+  const allApplications = useMemo(() => {
+    const list = [];
+    const seenIds = new Set();
+    const seenAppNumbers = new Set();
+
+    // 1. Process admin applications, enriched with candidate application numbers and details
+    (applications || []).forEach((adminApp) => {
+      const matchedCandApp = allCandidateApplications.find((ca) =>
+        ca.id === adminApp.id ||
+        (ca.candidateEmail?.toLowerCase() === (adminApp.candidateEmail || '').toLowerCase() &&
+         (ca.jobId === adminApp.jobId || ca.title?.toLowerCase() === (adminApp.job || adminApp.jobTitle || '').toLowerCase()))
+      );
+
+      const isMela = matchedCandApp ? isJobMelaApplication(matchedCandApp) : isJobMelaApplication(adminApp);
+      const melaDetails = matchedCandApp ? getJobMelaDetails(matchedCandApp) : getJobMelaDetails(adminApp);
+      const normCand = matchedCandApp ? normalizeApplication(matchedCandApp) : null;
+      const normAdmin = normalizeApplication(adminApp);
+
+      const merged = matchedCandApp
+        ? {
+            ...adminApp,
+            ...normCand,
+            appNumber: matchedCandApp.appNumber || getApplicationNumber(matchedCandApp),
+            applicationType: matchedCandApp.applicationType || getApplicationType(matchedCandApp),
+            isMela,
+            melaDetails,
+            melaTitle: matchedCandApp.melaTitle || melaDetails?.melaTitle || adminApp.melaTitle,
+            passId: matchedCandApp.passId || melaDetails?.passId || adminApp.passId || normCand.passId,
+            melaIdFormatted: normCand.melaIdFormatted || (isMela ? formatMelaId(melaDetails?.melaId || adminApp.melaId || 1) : null),
+            jobIdFormatted: normCand.jobIdFormatted || (adminApp.isIntern || adminApp.type === 'Internship' ? formatInternshipId(adminApp.jobId || adminApp.id) : formatJobId(adminApp.jobId || adminApp.id)),
+            company: matchedCandApp.company || adminApp.company,
+            candidate: adminApp.candidate || adminApp.candidateName || normCand.candidateName || 'Candidate',
+            job: adminApp.job || adminApp.jobTitle || normCand.jobTitle || 'Position',
+          }
+        : {
+            ...normAdmin,
+            candidate: adminApp.candidate || adminApp.candidateName || 'Candidate',
+            job: adminApp.job || adminApp.jobTitle || 'Position',
+            company: adminApp.company,
+            jobIdFormatted: normAdmin.jobIdFormatted || (adminApp.isIntern || adminApp.type === 'Internship' ? formatInternshipId(adminApp.jobId || adminApp.id) : formatJobId(adminApp.jobId || adminApp.id)),
+            melaIdFormatted: normAdmin.melaIdFormatted || (isMela ? formatMelaId(melaDetails?.melaId || adminApp.melaId || 1) : null),
+          };
+
+      list.push(merged);
+      seenIds.add(merged.id);
+      if (merged.appNumber) seenAppNumbers.add(merged.appNumber);
+    });
+
+    // 2. Include candidate applications (such as Job Mela applications NTR-01-04-0001, NTR-01-02-0024)
+    allCandidateApplications.forEach((candApp) => {
+      const norm = normalizeApplication(candApp);
+      if (!seenIds.has(norm.id) && !seenAppNumbers.has(norm.appNumber)) {
+        list.push({
+          ...candApp,
+          ...norm,
+          candidate: candApp.candidateName || candApp.candidate || 'Candidate',
+          job: candApp.jobTitle || candApp.title || 'Position',
+          jobIdFormatted: norm.jobIdFormatted || (candApp.type === 'Internship' ? formatInternshipId(candApp.jobId || candApp.id) : formatJobId(candApp.jobId || candApp.id)),
+          melaIdFormatted: norm.melaIdFormatted || (norm.isMela ? formatMelaId(candApp.melaId || norm.melaDetails?.melaId || 1) : null),
+          passId: norm.passId || candApp.passId || norm.melaDetails?.passId,
+        });
+        seenIds.add(norm.id);
+        if (norm.appNumber) seenAppNumbers.add(norm.appNumber);
+      }
+    });
+
+    return list;
+  }, [applications, allCandidateApplications]);
+
   const filterTabs = [
     { key: 'ALL', label: 'All Applications' },
     { key: 'APPLIED', label: 'Applied' },
@@ -48,20 +131,26 @@ export default function AdminApplicationsPage() {
   ];
 
   const filtered = useMemo(() => {
-    return applications.filter((app) => {
+    return allApplications.filter((app) => {
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesCand = app.candidate?.toLowerCase().includes(q) || app.candidateName?.toLowerCase().includes(q);
         const matchesJob = app.job?.toLowerCase().includes(q) || app.jobTitle?.toLowerCase().includes(q);
+        const matchesJobId = (app.jobIdFormatted || app.jobId)?.toLowerCase().includes(q);
         const matchesCompany = app.company?.toLowerCase().includes(q);
-        if (!matchesCand && !matchesJob && !matchesCompany) return false;
+        const matchesAppNo = app.appNumber?.toLowerCase().includes(q);
+        const matchesType = app.applicationType?.toLowerCase().includes(q);
+        const matchesMela = (app.melaTitle || app.melaDetails?.melaTitle)?.toLowerCase().includes(q);
+        const matchesMelaId = (app.melaIdFormatted)?.toLowerCase().includes(q);
+        const matchesPass = (app.passId || app.melaDetails?.passId)?.toLowerCase().includes(q);
+        if (!matchesCand && !matchesJob && !matchesJobId && !matchesCompany && !matchesAppNo && !matchesType && !matchesMela && !matchesMelaId && !matchesPass) return false;
       }
       if (statusFilter !== 'ALL') {
         if (app.status !== statusFilter) return false;
       }
       return true;
     });
-  }, [applications, search, statusFilter]);
+  }, [allApplications, search, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginatedApplications = useMemo(() => {
@@ -217,12 +306,16 @@ export default function AdminApplicationsPage() {
     const salary = selectedApp.salary || matchedJob?.salary || 'Market Standards';
 
     const headers = [
+      'Application No',
+      'Application Type',
       'Application ID',
       'Candidate Name',
       'Candidate Email',
       'Candidate Phone',
       'Job Title',
       'Company',
+      'Job Mela Event',
+      'Registration Pass ID',
       'Recruiter Lead',
       'Date Applied',
       'Current Stage',
@@ -235,12 +328,16 @@ export default function AdminApplicationsPage() {
 
     const rows = [
       [
+        selectedApp.appNumber || getApplicationNumber(selectedApp),
+        selectedApp.applicationType || (selectedApp.isMela ? 'Job Mela Application' : 'Direct Job Application'),
         selectedApp.id,
         candName,
         candEmail,
         candPhone,
         jobTitle,
         selectedApp.company || 'N/A',
+        selectedApp.isMela ? (selectedApp.melaTitle || selectedApp.melaDetails?.melaTitle || 'AP Mega IT & ITES Job Mela 2026') : 'N/A',
+        selectedApp.isMela ? (selectedApp.passId || selectedApp.melaDetails?.passId || 'N/A') : 'N/A',
         recruiterLead,
         selectedApp.appliedDate ? new Date(selectedApp.appliedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '20 Aug 2026',
         selectedApp.status || 'APPLIED',
@@ -253,7 +350,7 @@ export default function AdminApplicationsPage() {
     ];
 
     exportToExcel({
-      filename: `application_${selectedApp.id}_audit_record.xlsx`,
+      filename: `application_${selectedApp.appNumber || selectedApp.id}_audit_record.xlsx`,
       sheetName: 'Application Audit',
       headers,
       rows
@@ -263,7 +360,7 @@ export default function AdminApplicationsPage() {
 
   const handleExportSingleAppCsv = () => {
     if (!selectedApp) return;
-    addToast(`Exporting Application ${selectedApp.id} to CSV...`, 'info');
+    addToast(`Exporting Application ${selectedApp.appNumber || selectedApp.id} to CSV...`, 'info');
     const candName = selectedApp.candidate || selectedApp.candidateName || matchedCand?.name || 'N/A';
     const candEmail = selectedApp.candidateEmail || matchedCand?.email || 'N/A';
     const candPhone = selectedApp.candidatePhone || matchedCand?.phone || '+91 98765 43210';
@@ -276,12 +373,16 @@ export default function AdminApplicationsPage() {
     const salary = selectedApp.salary || matchedJob?.salary || 'Market Standards';
 
     const headers = [
+      'Application No',
+      'Application Type',
       'Application ID',
       'Candidate Name',
       'Candidate Email',
       'Candidate Phone',
       'Job Title',
       'Company',
+      'Job Mela Event',
+      'Registration Pass ID',
       'Recruiter Lead',
       'Date Applied',
       'Current Stage',
@@ -294,12 +395,16 @@ export default function AdminApplicationsPage() {
 
     const rows = [
       [
+        selectedApp.appNumber || getApplicationNumber(selectedApp),
+        selectedApp.applicationType || (selectedApp.isMela ? 'Job Mela Application' : 'Direct Job Application'),
         selectedApp.id,
         candName,
         candEmail,
         candPhone,
         jobTitle,
         selectedApp.company || 'N/A',
+        selectedApp.isMela ? (selectedApp.melaTitle || selectedApp.melaDetails?.melaTitle || 'AP Mega IT & ITES Job Mela 2026') : 'N/A',
+        selectedApp.isMela ? (selectedApp.passId || selectedApp.melaDetails?.passId || 'N/A') : 'N/A',
         recruiterLead,
         selectedApp.appliedDate ? new Date(selectedApp.appliedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '20 Aug 2026',
         selectedApp.status || 'APPLIED',
@@ -312,7 +417,7 @@ export default function AdminApplicationsPage() {
     ];
 
     exportToCSV({
-      filename: `application_${selectedApp.id}_audit_record.csv`,
+      filename: `application_${selectedApp.appNumber || selectedApp.id}_audit_record.csv`,
       headers,
       rows
     });
@@ -321,7 +426,7 @@ export default function AdminApplicationsPage() {
 
   const handleExportSingleAppPdf = () => {
     if (!selectedApp) return;
-    addToast(`Exporting Application ${selectedApp.id} to PDF...`, 'info');
+    addToast(`Exporting Application ${selectedApp.appNumber || selectedApp.id} to PDF...`, 'info');
     const candName = selectedApp.candidate || selectedApp.candidateName || matchedCand?.name || 'N/A';
     const jobTitle = selectedApp.job || selectedApp.jobTitle || matchedJob?.title || 'N/A';
     const recruiterLead = selectedApp.recruiter || matchedJob?.recruiter || 'Talent Acquisition Team';
@@ -333,12 +438,18 @@ export default function AdminApplicationsPage() {
 
     const headers = ['Audit Field', 'Details'];
     const rows = [
+      ['Application No', selectedApp.appNumber || getApplicationNumber(selectedApp)],
+      ['Application Type', selectedApp.applicationType || (selectedApp.isMela ? 'Job Mela Application' : 'Direct Job Application')],
       ['Application ID', selectedApp.id],
       ['Candidate Name', candName],
       ['Candidate Email', selectedApp.candidateEmail || matchedCand?.email || 'N/A'],
       ['Candidate Phone', selectedApp.candidatePhone || matchedCand?.phone || '+91 98765 43210'],
       ['Applying For Position', jobTitle],
       ['Hiring Enterprise / Company', selectedApp.company || 'N/A'],
+      ...(selectedApp.isMela ? [
+        ['Job Mela Event', selectedApp.melaTitle || selectedApp.melaDetails?.melaTitle || 'AP Mega IT & ITES Job Mela 2026'],
+        ['Registration ID / Pass ID', selectedApp.passId || selectedApp.melaDetails?.passId || 'N/A']
+      ] : []),
       ['Recruiter Lead', recruiterLead],
       ['Date Applied', selectedApp.appliedDate ? new Date(selectedApp.appliedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '20 Aug 2026'],
       ['Current Application Stage', selectedApp.status || 'APPLIED'],
@@ -351,11 +462,12 @@ export default function AdminApplicationsPage() {
     ];
 
     exportToPDF({
-      filename: `application_${selectedApp.id}_audit_record.pdf`,
-      title: `Application Record Audit Dossier - ${selectedApp.id}`,
+      filename: `application_${selectedApp.appNumber || selectedApp.id}_audit_record.pdf`,
+      title: `Application Record Audit Dossier - ${selectedApp.appNumber || selectedApp.id}`,
       subtitle: `${candName}  |  ${jobTitle} at ${selectedApp.company}`,
       metadata: {
-        'Application ID': selectedApp.id,
+        'Application No': selectedApp.appNumber || getApplicationNumber(selectedApp),
+        'Application Type': selectedApp.applicationType || (selectedApp.isMela ? 'Job Mela' : 'Direct'),
         'Candidate': candName,
         'Company': selectedApp.company,
         'Current Stage': selectedApp.status || 'APPLIED',
@@ -375,18 +487,30 @@ export default function AdminApplicationsPage() {
     }
     addToast('Exporting applications list to Excel...', 'info');
     const headers = [
+      'Application No',
+      'Application Type',
+      'Job / Internship ID',
       'Candidate Name',
       'Candidate Email',
       'Job Title',
       'Company',
+      'Job Mela ID',
+      'Job Mela Event',
+      'Registration Pass ID',
       'Applied Date',
       'Application Status'
     ];
     const rows = filtered.map((app) => [
+      app.appNumber || getApplicationNumber(app),
+      app.applicationType || (app.isMela ? 'Job Mela Application' : 'Direct Job Application'),
+      app.jobIdFormatted || (app.applicationType === 'Internship' ? formatInternshipId(app.jobId || app.id) : formatJobId(app.jobId || app.id)) || 'N/A',
       app.candidate || app.candidateName || 'N/A',
       app.candidateEmail || 'N/A',
       app.job || app.jobTitle || 'Role',
       app.company || 'N/A',
+      app.isMela ? (app.melaIdFormatted || formatMelaId(app.melaId || app.melaDetails?.melaId || 1)) : 'N/A',
+      app.isMela ? (app.melaTitle || app.melaDetails?.melaTitle || 'AP Mega IT & ITES Job Mela 2026') : 'N/A',
+      app.isMela ? (app.passId || app.melaDetails?.passId || 'N/A') : 'N/A',
       app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
       app.status || 'APPLIED'
     ]);
@@ -406,10 +530,12 @@ export default function AdminApplicationsPage() {
       return;
     }
     addToast('Exporting applications list to PDF...', 'info');
-    const headers = ['Candidate Name', 'Candidate Email', 'Job Title', 'Company', 'Applied Date', 'Status'];
+    const headers = ['App No', 'Type', 'Job ID', 'Candidate Name', 'Job Title', 'Company', 'Applied Date', 'Status'];
     const rows = filtered.map((app) => [
+      app.appNumber || getApplicationNumber(app),
+      app.isMela ? 'Job Mela' : 'Direct',
+      app.jobIdFormatted || (app.applicationType === 'Internship' ? formatInternshipId(app.jobId || app.id) : formatJobId(app.jobId || app.id)) || 'N/A',
       app.candidate || app.candidateName || 'N/A',
-      app.candidateEmail || 'N/A',
       app.job || app.jobTitle || 'Role',
       app.company || 'N/A',
       app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
@@ -435,6 +561,39 @@ export default function AdminApplicationsPage() {
   };
 
   const columns = [
+    {
+      key: 'appNumber',
+      label: 'Application No',
+      sortable: true,
+      render: (_, row) => (
+        <div>
+          <span style={{
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            fontSize: 'var(--text-xs)',
+            background: row.isMela ? '#f5f3ff' : '#eff6ff',
+            color: row.isMela ? '#6d28d9' : '#1d4ed8',
+            border: `1px solid ${row.isMela ? '#ddd6fe' : '#bfdbfe'}`,
+            padding: '2px 7px',
+            borderRadius: '4px',
+            display: 'inline-block',
+            whiteSpace: 'nowrap',
+            letterSpacing: '0.03em'
+          }}>
+            {row.appNumber || getApplicationNumber(row)}
+          </span>
+          <span style={{
+            display: 'block',
+            fontSize: '10px',
+            marginTop: '3px',
+            color: row.isMela ? '#047857' : 'var(--color-text-muted)',
+            fontWeight: 600
+          }}>
+            {row.applicationType || (row.isMela ? 'Job Mela Application' : 'Direct Job Application')}
+          </span>
+        </div>
+      )
+    },
     {
       key: 'candidate',
       label: 'Candidate',
@@ -472,10 +631,52 @@ export default function AdminApplicationsPage() {
       sortable: true,
       render: (_, row) => {
         const title = row.job || row.jobTitle || 'Role';
+        const formattedJobId = row.jobIdFormatted || (row.applicationType === 'Internship' ? formatInternshipId(row.jobId || row.id) : formatJobId(row.jobId || row.id));
+        const formattedMelaId = row.melaIdFormatted || (row.isMela ? formatMelaId(row.melaId || row.melaDetails?.melaId || 1) : null);
         return (
           <div>
-            <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{title}</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{title}</strong>
+              {formattedJobId && (
+                <span style={{
+                  fontFamily: 'monospace',
+                  fontSize: '9.5px',
+                  fontWeight: 700,
+                  background: '#eff6ff',
+                  color: '#1d4ed8',
+                  border: '1px solid #bfdbfe',
+                  padding: '1px 5px',
+                  borderRadius: '3px'
+                }}>
+                  {formattedJobId}
+                </span>
+              )}
+            </div>
             <span style={{ fontSize: '10px', color: 'var(--color-primary-600)', display: 'block', fontWeight: 600 }}>{row.company}</span>
+            {row.isMela && (
+              <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: '9.5px',
+                  background: '#fdf4ff',
+                  color: '#7c3aed',
+                  border: '1px solid #f0abfc',
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}>
+                  {formattedMelaId && <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{formattedMelaId}</span>}
+                  <span>🎪 {row.melaTitle || row.melaDetails?.melaTitle || 'Job Mela'}</span>
+                </span>
+                {(row.passId || row.melaDetails?.passId) && (
+                  <span style={{ fontSize: '9.5px', color: '#047857', fontWeight: 600, fontFamily: 'monospace' }}>
+                    Pass: {row.passId || row.melaDetails?.passId}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         );
       }
@@ -662,39 +863,145 @@ export default function AdminApplicationsPage() {
               gap: 'var(--space-2)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                <span style={{
-                  fontSize: '11px',
-                  color: '#c7d2fe',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Application ID: {selectedApp.id}
-                </span>
-                <span style={{
-                  fontSize: '11px',
-                  background: 'rgba(255,255,255,0.15)',
-                  color: '#fff',
-                  padding: '3px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  fontWeight: 700
-                }}>
-                  Official Audit Dossier
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: '12px',
+                    color: '#fff',
+                    background: 'rgba(255,255,255,0.2)',
+                    fontWeight: 800,
+                    fontFamily: 'monospace',
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-md)',
+                    letterSpacing: '0.04em'
+                  }}>
+                    Application No: {selectedApp.appNumber || getApplicationNumber(selectedApp)}
+                  </span>
+                  <span style={{
+                    fontSize: '11px',
+                    background: selectedApp.isMela ? '#10b981' : 'rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontWeight: 700
+                  }}>
+                    {selectedApp.applicationType || (selectedApp.isMela ? 'Job Mela Application' : 'Direct Job Application')}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <span style={{
+                    fontSize: '11px',
+                    color: '#c7d2fe',
+                    fontWeight: 700
+                  }}>
+                    ID: {selectedApp.id}
+                  </span>
+                  <span style={{
+                    fontSize: '11px',
+                    background: 'rgba(255,255,255,0.15)',
+                    color: '#fff',
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontWeight: 700
+                  }}>
+                    Official Audit Dossier
+                  </span>
+                </div>
               </div>
 
               <div>
-                <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, margin: '2px 0 0 0', color: '#fff' }}>
+                <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, margin: '6px 0 0 0', color: '#fff' }}>
                   {selectedApp.candidate || selectedApp.candidateName || matchedCand?.name || 'Candidate'}
                 </h3>
                 <p style={{ fontSize: 'var(--text-sm)', color: '#c7d2fe', margin: '4px 0 0 0' }}>
                   <strong>Applying for:</strong> {selectedApp.job || selectedApp.jobTitle || matchedJob?.title || 'Position'}
+                  {(selectedApp.jobIdFormatted || selectedApp.jobId) && (
+                    <span style={{
+                      fontFamily: 'monospace',
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      background: 'rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      marginLeft: '6px'
+                    }}>
+                      {selectedApp.jobIdFormatted || (selectedApp.applicationType === 'Internship' ? formatInternshipId(selectedApp.jobId || selectedApp.id) : formatJobId(selectedApp.jobId || selectedApp.id))}
+                    </span>
+                  )}
                 </p>
                 <p style={{ fontSize: 'var(--text-xs)', color: '#e0e7ff', margin: '2px 0 0 0' }}>
                   <strong>Company:</strong> {selectedApp.company}
                 </p>
               </div>
             </div>
+
+            {/* Job Mela Event Identification (if applicable) */}
+            {selectedApp.isMela && (
+              <div style={{
+                background: 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)',
+                border: '1px solid #d8b4fe',
+                borderRadius: 'var(--radius-xl)',
+                padding: 'var(--space-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#6b21a8' }}>
+                    <Sparkles size={16} />
+                    <h4 style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Job Mela Application Identification
+                    </h4>
+                  </div>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    background: '#6b21a8',
+                    color: '#fff',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {selectedApp.melaIdFormatted || formatMelaId(selectedApp.melaId || selectedApp.melaDetails?.melaId || 1)}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
+                  <div>
+                    <span style={{ fontSize: '10px', color: '#7e22ce', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Job Mela Event</span>
+                    <strong style={{ color: '#581c87', fontSize: 'var(--text-sm)' }}>{selectedApp.melaTitle || selectedApp.melaDetails?.melaTitle || 'AP Mega IT & ITES Job Mela 2026'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '10px', color: '#7e22ce', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Participating Company</span>
+                    <strong style={{ color: '#581c87', fontSize: 'var(--text-sm)' }}>{selectedApp.company}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '10px', color: '#7e22ce', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Applied Position</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: 2 }}>
+                      <strong style={{ color: '#581c87', fontSize: 'var(--text-sm)' }}>{selectedApp.job || selectedApp.jobTitle}</strong>
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
+                        border: '1px solid #bfdbfe',
+                        padding: '1px 6px',
+                        borderRadius: '4px'
+                      }}>
+                        {selectedApp.jobIdFormatted || (selectedApp.applicationType === 'Internship' ? formatInternshipId(selectedApp.jobId || selectedApp.id) : formatJobId(selectedApp.jobId || selectedApp.id))}
+                      </span>
+                    </div>
+                  </div>
+                  {(selectedApp.passId || selectedApp.melaDetails?.passId) && (
+                    <div>
+                      <span style={{ fontSize: '10px', color: '#047857', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Registration ID / Pass ID</span>
+                      <strong style={{ color: '#065f46', fontSize: 'var(--text-sm)', fontFamily: 'monospace' }}>{selectedApp.passId || selectedApp.melaDetails?.passId}</strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* ── Section 2: Application Status Summary ── */}
             <div style={{

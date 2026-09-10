@@ -10,6 +10,7 @@ import ApplyModal from '../../components/ui/ApplyModal';
 import { useCandidate } from '../../context/CandidateContext';
 import { useToast } from '../../context/ToastContext';
 import { MOCK_JOBS } from '../../data/mockData';
+import { formatJobId } from '../../utils/applicationUtils';
 
 export default function CandidateJobDetailPage() {
   const { id } = useParams();
@@ -77,6 +78,18 @@ export default function CandidateJobDetailPage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                 <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>{job.title}</h1>
+                <span style={{
+                  fontFamily: 'monospace',
+                  fontWeight: 800,
+                  fontSize: '11px',
+                  color: 'var(--color-primary-700)',
+                  background: 'var(--color-primary-50)',
+                  border: '1px solid var(--color-primary-200)',
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-md)'
+                }}>
+                  {formatJobId(job.id)}
+                </span>
                 <span className="badge badge-success" style={{ fontSize: '11px' }}>
                   <ShieldCheck size={12} style={{ marginRight: 2 }} /> Verified Employer
                 </span>
@@ -92,6 +105,7 @@ export default function CandidateJobDetailPage() {
 
               {/* Meta pills */}
               <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', marginTop: 'var(--space-4)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-primary-700)' }}><Briefcase size={14} /> {formatJobId(job.id)}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={14} /> {job.location}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Banknote size={14} /> {job.salary}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={14} /> {job.experience}</span>

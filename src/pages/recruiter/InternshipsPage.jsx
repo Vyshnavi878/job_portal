@@ -15,6 +15,7 @@ import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
 import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
+import { formatInternshipId } from '../../utils/applicationUtils';
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -113,6 +114,7 @@ export default function RecruiterInternshipsPage() {
     }
     addToast('Exporting internships list to Excel...', 'info');
     const headers = [
+      'Internship ID',
       'Internship Title',
       'Department',
       'Location',
@@ -125,6 +127,7 @@ export default function RecruiterInternshipsPage() {
       'Applicants Count'
     ];
     const rows = filtered.map(i => [
+      formatInternshipId(i.id),
       i.title || 'N/A',
       i.department || 'Engineering',
       i.location || 'Bengaluru',
@@ -151,8 +154,9 @@ export default function RecruiterInternshipsPage() {
       return;
     }
     addToast('Exporting internships list to PDF...', 'info');
-    const headers = ['Internship Title', 'Location', 'Duration', 'Stipend', 'Work Mode', 'Openings', 'Status', 'Applicants'];
+    const headers = ['Internship ID', 'Internship Title', 'Location', 'Duration', 'Stipend', 'Work Mode', 'Openings', 'Status', 'Applicants'];
     const rows = filtered.map(i => [
+      formatInternshipId(i.id),
       i.title || 'N/A',
       i.location || 'Bengaluru',
       i.duration || '3 Months',
@@ -307,7 +311,21 @@ export default function RecruiterInternshipsPage() {
                     <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-gray-900)' }}>
                       {item.title}
                     </h3>
-                    <StatusBadge status={item.status} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontWeight: 800,
+                        fontSize: '0.74rem',
+                        color: 'var(--color-primary-700)',
+                        background: 'var(--color-primary-50)',
+                        border: '1px solid var(--color-primary-200)',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px'
+                      }}>
+                        {formatInternshipId(item.id)}
+                      </span>
+                      <StatusBadge status={item.status} />
+                    </div>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--color-gray-600)', marginBottom: '0.85rem' }}>

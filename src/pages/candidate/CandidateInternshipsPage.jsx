@@ -20,6 +20,7 @@ import {
   INTERNSHIP_DURATIONS,
   SKILL_OPTIONS
 } from '../../data/mockData';
+import { formatInternshipId } from '../../utils/applicationUtils';
 
 export default function CandidateInternshipsPage() {
   const { isJobSaved, saveJob, unsaveJob } = useCandidate();
@@ -424,9 +425,23 @@ export default function CandidateInternshipsPage() {
                         border: '1px solid var(--color-gray-200)',
                         marginBottom: '0.45rem'
                       }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-                          <CheckCircle2 size={11} style={{ color: 'var(--color-success-600)' }} /> Verified Employer
-                        </span>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{
+                            fontFamily: 'monospace',
+                            fontWeight: 700,
+                            fontSize: '0.68rem',
+                            color: 'var(--color-primary-700)',
+                            background: 'var(--color-primary-50)',
+                            border: '1px solid var(--color-primary-200)',
+                            padding: '0.08rem 0.35rem',
+                            borderRadius: '4px'
+                          }}>
+                            {formatInternshipId(item.id)}
+                          </span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                            <CheckCircle2 size={11} style={{ color: 'var(--color-success-600)' }} /> Verified Employer
+                          </span>
+                        </div>
                         {item.isFeatured && (
                           <span style={{
                             background: '#ecfdf5',

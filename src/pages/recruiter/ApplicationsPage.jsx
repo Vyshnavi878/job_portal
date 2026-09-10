@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import {
   Users, Search, Filter, Eye, CheckCircle2, XCircle, CalendarCheck,
   FileText, Download, Mail, Phone, MapPin, Briefcase, GraduationCap,
-  Sparkles, Clock, DollarSign, ChevronRight, Check, X, AlertCircle
+  Sparkles, Clock, DollarSign, ChevronRight, Check, X, AlertCircle,
+  Building2, Ticket
 } from 'lucide-react';
 import { useRecruiter } from '../../context/RecruiterContext';
+import { useCandidate } from '../../context/CandidateContext';
 import { useToast } from '../../context/ToastContext';
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
@@ -18,6 +20,17 @@ import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
 import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, generatePDFBlob, getExportFilename } from '../../utils/exportUtils';
+import {
+  isJobMelaApplication,
+  getApplicationNumber,
+  getApplicationType,
+  getJobMelaDetails,
+  normalizeApplication,
+  formatJobId,
+  formatInternshipId,
+  formatMelaId,
+  formatRegistrationId
+} from '../../utils/applicationUtils';
 
 const PAGE_SIZE = 9;
 
@@ -28,6 +41,7 @@ export default function ApplicationsPage() {
     rejectCandidate,
     scheduleInterview
   } = useRecruiter();
+  const { allCandidateApplications = [] } = useCandidate();
   const { addToast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,8 +73,74 @@ export default function ApplicationsPage() {
   });
   const [interviewErrors, setInterviewErrors] = useState({});
 
-  const allApplicants = recruiter?.applicants || recruiter?.applications || [];
+  const rawApplicants = recruiter?.applicants || recruiter?.applications || [];
   const allJobs = recruiter?.jobs || [];
+
+  // Merge recruiter applications with candidate applications to guarantee consistent Application No and Job Mela details
+  const allApplicants = useMemo(() => {
+    const list = [];
+    const seenIds = new Set();
+    const seenAppNumbers = new Set();
+
+    // 1. Process recruiter's native applications, enriched from allCandidateApplications
+    rawApplicants.forEach((rawApp) => {
+      const matchedCandApp = allCandidateApplications.find((ca) =>
+        ca.id === rawApp.id ||
+        (ca.candidateEmail?.toLowerCase() === rawApp.candidateEmail?.toLowerCase() &&
+         (ca.jobId === rawApp.jobId || ca.title?.toLowerCase() === rawApp.jobTitle?.toLowerCase()))
+      );
+
+      const isMela = matchedCandApp ? isJobMelaApplication(matchedCandApp) : isJobMelaApplication(rawApp);
+      const melaDetails = matchedCandApp ? getJobMelaDetails(matchedCandApp) : getJobMelaDetails(rawApp);
+      const normCand = matchedCandApp ? normalizeApplication(matchedCandApp) : null;
+      const normRaw = normalizeApplication(rawApp);
+
+      const merged = matchedCandApp
+        ? {
+            ...rawApp,
+            ...normCand,
+            appNumber: matchedCandApp.appNumber || getApplicationNumber(matchedCandApp),
+            applicationType: matchedCandApp.applicationType || getApplicationType(matchedCandApp),
+            isMela,
+            melaDetails,
+            melaTitle: matchedCandApp.melaTitle || melaDetails?.melaTitle || rawApp.melaTitle,
+            passId: matchedCandApp.passId || melaDetails?.passId || rawApp.passId || normCand.passId,
+            melaIdFormatted: normCand.melaIdFormatted || (isMela ? formatMelaId(melaDetails?.melaId || rawApp.melaId || 1) : null),
+            jobIdFormatted: normCand.jobIdFormatted || (rawApp.isIntern ? formatInternshipId(rawApp.jobId || rawApp.id) : formatJobId(rawApp.jobId || rawApp.id)),
+            company: matchedCandApp.company || rawApp.company || recruiter?.company?.name || 'ABC Technologies Pvt Ltd',
+          }
+        : {
+            ...normRaw,
+            company: rawApp.company || recruiter?.company?.name || 'ABC Technologies Pvt Ltd',
+            jobIdFormatted: normRaw.jobIdFormatted || (rawApp.isIntern ? formatInternshipId(rawApp.jobId || rawApp.id) : formatJobId(rawApp.jobId || rawApp.id)),
+            melaIdFormatted: normRaw.melaIdFormatted || (isMela ? formatMelaId(melaDetails?.melaId || rawApp.melaId || 1) : null),
+          };
+
+      list.push(merged);
+      seenIds.add(merged.id);
+      if (merged.appNumber) seenAppNumbers.add(merged.appNumber);
+    });
+
+    // 2. Include candidate applications (such as Job Mela applications NTR-01-04-0001, NTR-01-02-0024)
+    allCandidateApplications.forEach((candApp) => {
+      const norm = normalizeApplication(candApp);
+      if (!seenIds.has(norm.id) && !seenAppNumbers.has(norm.appNumber)) {
+        list.push({
+          ...norm,
+          jobIdFormatted: norm.jobIdFormatted || (candApp.type === 'Internship' ? formatInternshipId(candApp.jobId || candApp.id) : formatJobId(candApp.jobId || candApp.id)),
+          melaIdFormatted: norm.melaIdFormatted || (norm.isMela ? formatMelaId(candApp.melaId || norm.melaDetails?.melaId || 1) : null),
+          passId: norm.passId || candApp.passId || norm.melaDetails?.passId,
+          candidateHeadline: candApp.headline || candApp.candidateHeadline || `Candidate for ${norm.jobTitle}`,
+          matchScore: candApp.matchScore || 94,
+          appliedDate: candApp.appliedDate || '02 Sept 2026',
+        });
+        seenIds.add(norm.id);
+        if (norm.appNumber) seenAppNumbers.add(norm.appNumber);
+      }
+    });
+
+    return list;
+  }, [rawApplicants, allCandidateApplications, recruiter?.company?.name]);
 
   // Filtered applicants
   const filteredApplicants = useMemo(() => {
@@ -95,8 +175,15 @@ export default function ApplicationsPage() {
         const matchName = app.candidateName?.toLowerCase().includes(q);
         const matchEmail = app.candidateEmail?.toLowerCase().includes(q);
         const matchRole = app.jobTitle?.toLowerCase().includes(q);
+        const matchJobId = (app.jobIdFormatted || app.jobId)?.toLowerCase().includes(q);
+        const matchCompany = app.company?.toLowerCase().includes(q);
+        const matchAppNo = app.appNumber?.toLowerCase().includes(q);
+        const matchType = app.applicationType?.toLowerCase().includes(q);
+        const matchMela = (app.melaTitle || app.melaDetails?.melaTitle)?.toLowerCase().includes(q);
+        const matchMelaId = (app.melaIdFormatted)?.toLowerCase().includes(q);
+        const matchPass = (app.passId || app.melaDetails?.passId)?.toLowerCase().includes(q);
         const matchSkills = app.skills?.some(s => s.toLowerCase().includes(q));
-        if (!matchName && !matchEmail && !matchRole && !matchSkills) return false;
+        if (!matchName && !matchEmail && !matchRole && !matchJobId && !matchCompany && !matchAppNo && !matchType && !matchMela && !matchMelaId && !matchPass && !matchSkills) return false;
       }
 
       return true;
@@ -358,9 +445,16 @@ export default function ApplicationsPage() {
     }
     addToast('Exporting applications list to Excel...', 'info');
     const headers = [
+      'Application No',
+      'Application Type',
+      'Job / Internship ID',
       'Candidate Name',
       'Candidate Email',
       'Job Title',
+      'Company',
+      'Job Mela ID',
+      'Job Mela Event',
+      'Registration Pass ID',
       'Applied Date',
       'Application Status',
       'Experience',
@@ -370,9 +464,16 @@ export default function ApplicationsPage() {
       'Notice Period'
     ];
     const rows = filteredApplicants.map(app => [
+      app.appNumber || 'N/A',
+      app.applicationType || (app.isMela ? 'Job Mela Application' : 'Direct Job Application'),
+      app.jobIdFormatted || (app.applicationType === 'Internship' ? formatInternshipId(app.jobId) : formatJobId(app.jobId)) || 'N/A',
       app.candidateName || 'N/A',
       app.candidateEmail || 'N/A',
       app.jobTitle || 'Role',
+      app.company || 'N/A',
+      app.isMela ? (app.melaIdFormatted || formatMelaId(app.melaId || app.melaDetails?.melaId || 1)) : 'N/A',
+      app.isMela ? (app.melaTitle || app.melaDetails?.melaTitle || 'AP Mega IT & ITES Job Mela 2026') : 'N/A',
+      app.isMela ? (app.passId || app.melaDetails?.passId || 'N/A') : 'N/A',
       app.appliedDate || 'Aug 2026',
       app.status || 'UNDER_REVIEW',
       app.experience || '3+ Years',
@@ -397,15 +498,17 @@ export default function ApplicationsPage() {
       return;
     }
     addToast('Exporting applications list to PDF...', 'info');
-    const headers = ['Candidate Name', 'Candidate Email', 'Job Title', 'Applied Date', 'Status', 'Match Score', 'Experience'];
+    const headers = ['App No', 'Type', 'Job ID', 'Candidate Name', 'Job Title', 'Company', 'Applied Date', 'Status', 'Match'];
     const rows = filteredApplicants.map(app => [
+      app.appNumber || 'N/A',
+      app.isMela ? 'Job Mela' : 'Direct',
+      app.jobIdFormatted || (app.applicationType === 'Internship' ? formatInternshipId(app.jobId) : formatJobId(app.jobId)) || 'N/A',
       app.candidateName || 'N/A',
-      app.candidateEmail || 'N/A',
       app.jobTitle || 'Role',
+      app.company || 'N/A',
       app.appliedDate || 'Aug 2026',
       app.status || 'UNDER_REVIEW',
-      app.matchScore ? `${app.matchScore}%` : 'N/A',
-      app.experience || '3+ Years'
+      app.matchScore ? `${app.matchScore}%` : 'N/A'
     ]);
     const tabObj = [
       { id: 'ALL', label: 'All Applications' },
@@ -616,60 +719,113 @@ export default function ApplicationsPage() {
                   key={app.id}
                   className={`card recruiter-job-card ${isShortlisted ? 'is-published' : ''}`}
                 >
-                  {/* Top: Candidate Avatar, Name, Email, Status */}
+                  {/* Top: Application No & Type Header Strip */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.4rem',
+                    marginBottom: '0.45rem',
+                    paddingBottom: '0.4rem',
+                    borderBottom: '1px solid var(--color-gray-100)',
+                    flexWrap: 'wrap'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontWeight: 800,
+                        fontSize: '0.76rem',
+                        background: app.isMela ? '#f5f3ff' : '#eff6ff',
+                        color: app.isMela ? '#6d28d9' : '#1d4ed8',
+                        border: `1px solid ${app.isMela ? '#ddd6fe' : '#bfdbfe'}`,
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px',
+                        letterSpacing: '0.03em'
+                      }}>
+                        {app.appNumber}
+                      </span>
+                      <span style={{
+                        fontSize: '0.66rem',
+                        fontWeight: 700,
+                        padding: '0.12rem 0.45rem',
+                        borderRadius: '10px',
+                        background: app.isMela ? '#ecfdf5' : '#f8fafc',
+                        color: app.isMela ? '#047857' : 'var(--color-gray-600)',
+                        border: `1px solid ${app.isMela ? '#a7f3d0' : 'var(--color-gray-200)'}`
+                      }}>
+                        {app.applicationType || (app.isMela ? 'Job Mela Application' : 'Direct Job Application')}
+                      </span>
+                    </div>
+                    <StatusBadge status={app.status || 'UNDER_REVIEW'} />
+                  </div>
+
+                  {/* Candidate Avatar, Name, Email */}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                        <div style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, var(--color-primary-600), #7c3aed)',
-                          color: '#fff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          flexShrink: 0
-                        }}>
-                          {app.candidateName?.[0]?.toUpperCase() || 'C'}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <h3
-                            title={app.candidateName}
-                            style={{
-                              margin: 0,
-                              fontSize: '0.98rem',
-                              fontWeight: 700,
-                              color: 'var(--color-gray-900)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            {app.candidateName}
-                          </h3>
-                          <span style={{ fontSize: '0.74rem', color: 'var(--color-gray-500)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {app.candidateEmail || 'Candidate'}
-                          </span>
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem', minWidth: 0 }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, var(--color-primary-600), #7c3aed)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        flexShrink: 0
+                      }}>
+                        {app.candidateName?.[0]?.toUpperCase() || 'C'}
                       </div>
-                      <StatusBadge status={app.status || 'UNDER_REVIEW'} />
+                      <div style={{ minWidth: 0 }}>
+                        <h3
+                          title={app.candidateName}
+                          style={{
+                            margin: 0,
+                            fontSize: '0.98rem',
+                            fontWeight: 700,
+                            color: 'var(--color-gray-900)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {app.candidateName}
+                        </h3>
+                        <span style={{ fontSize: '0.74rem', color: 'var(--color-gray-500)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {app.candidateEmail || 'Candidate'}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Applied Job & Match Badge */}
+                    {/* Applied Job & Company & Match Badge */}
                     <div style={{
-                      background: 'var(--color-gray-50)',
-                      padding: '0.4rem 0.55rem',
+                      background: app.isMela ? '#fbf8ff' : 'var(--color-gray-50)',
+                      padding: '0.45rem 0.55rem',
                       borderRadius: '6px',
-                      border: '1px solid var(--color-gray-200)',
+                      border: `1px solid ${app.isMela ? '#e9d5ff' : 'var(--color-gray-200)'}`,
                       marginBottom: '0.45rem'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--color-gray-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          Role: <strong style={{ color: 'var(--color-primary-700)', fontWeight: 600 }}>{app.jobTitle}</strong>
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', minWidth: 0 }}>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--color-gray-700)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            Role: <strong style={{ color: 'var(--color-primary-700)', fontWeight: 600 }}>{app.jobTitle}</strong>
+                          </span>
+                          {(app.jobIdFormatted || app.jobId) && (
+                            <span style={{
+                              fontFamily: 'monospace',
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              background: '#eff6ff',
+                              color: '#1d4ed8',
+                              padding: '0.08rem 0.35rem',
+                              borderRadius: '4px',
+                              border: '1px solid #bfdbfe'
+                            }}>
+                              {app.jobIdFormatted || (app.applicationType === 'Internship' ? formatInternshipId(app.jobId) : formatJobId(app.jobId))}
+                            </span>
+                          )}
+                        </div>
                         {app.matchScore && (
                           <span style={{
                             display: 'inline-flex',
@@ -689,6 +845,40 @@ export default function ApplicationsPage() {
                           </span>
                         )}
                       </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginTop: '0.25rem', fontSize: '0.74rem', color: 'var(--color-gray-600)' }}>
+                        <Building2 size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          Company: <strong style={{ color: 'var(--color-gray-900)' }}>{app.company}</strong>
+                        </span>
+                      </div>
+                      {app.isMela && (
+                        <div style={{ marginTop: '0.35rem', paddingTop: '0.35rem', borderTop: '1px dashed #ddd6fe', display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.71rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#6d28d9', fontWeight: 600, flexWrap: 'wrap' }}>
+                            <Sparkles size={11} style={{ flexShrink: 0 }} />
+                            <span style={{
+                              fontFamily: 'monospace',
+                              fontSize: '0.66rem',
+                              fontWeight: 700,
+                              background: '#f5f3ff',
+                              color: '#6d28d9',
+                              padding: '0.08rem 0.35rem',
+                              borderRadius: '4px',
+                              border: '1px solid #ddd6fe'
+                            }}>
+                              {app.melaIdFormatted || formatMelaId(app.melaId || app.melaDetails?.melaId || 1)}
+                            </span>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              Mela: {app.melaTitle || app.melaDetails?.melaTitle || 'AP Mega IT & ITES Job Mela 2026'}
+                            </span>
+                          </div>
+                          {(app.passId || app.melaDetails?.passId) && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#047857', fontWeight: 600 }}>
+                              <Ticket size={11} style={{ flexShrink: 0 }} />
+                              <span>Registration Pass ID: <span style={{ fontFamily: 'monospace' }}>{app.passId || app.melaDetails?.passId}</span></span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Metadata: Experience, Location, Applied Date */}
@@ -823,7 +1013,120 @@ export default function ApplicationsPage() {
           title={`Applicant Review — ${selectedApplicant.candidateName}`}
           size="lg"
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Application Identification Bar */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.6rem',
+              background: selectedApplicant.isMela ? 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)' : '#eff6ff',
+              border: `1px solid ${selectedApplicant.isMela ? '#c4b5fd' : '#bfdbfe'}`,
+              borderRadius: '8px',
+              padding: '0.65rem 1rem',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--color-gray-600)', fontWeight: 600 }}>
+                  Application No:
+                </span>
+                <span style={{
+                  fontFamily: 'monospace',
+                  fontWeight: 800,
+                  fontSize: '0.95rem',
+                  color: selectedApplicant.isMela ? '#5b21b6' : '#1e40af',
+                  background: '#fff',
+                  padding: '0.15rem 0.55rem',
+                  borderRadius: '4px',
+                  border: `1px solid ${selectedApplicant.isMela ? '#ddd6fe' : '#dbeafe'}`,
+                  letterSpacing: '0.04em'
+                }}>
+                  {selectedApplicant.appNumber}
+                </span>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '12px',
+                  background: selectedApplicant.isMela ? '#10b981' : '#3b82f6',
+                  color: '#fff'
+                }}>
+                  {selectedApplicant.applicationType || (selectedApplicant.isMela ? 'Job Mela Application' : 'Direct Job Application')}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-600)' }}>
+                Applied Date: <strong>{selectedApplicant.appliedDate}</strong>
+              </div>
+            </div>
+
+            {/* Job Mela Event Identification (if applicable) */}
+            {selectedApplicant.isMela && (
+              <div style={{
+                background: '#faf5ff',
+                border: '1px solid #d8b4fe',
+                borderRadius: '8px',
+                padding: '0.75rem 1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.45rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#6b21a8' }}>
+                    <Sparkles size={15} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      Job Mela Application Identification
+                    </span>
+                  </div>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    background: '#6b21a8',
+                    color: '#fff',
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '4px'
+                  }}>
+                    {selectedApplicant.melaIdFormatted || formatMelaId(selectedApplicant.melaId || selectedApplicant.melaDetails?.melaId || 1)}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem', fontSize: '0.8rem' }}>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#7e22ce', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Job Mela</span>
+                    <strong style={{ color: '#581c87' }}>{selectedApplicant.melaTitle || selectedApplicant.melaDetails?.melaTitle || 'AP Mega IT & ITES Job Mela 2026'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#7e22ce', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Employer / Company</span>
+                    <strong style={{ color: '#581c87' }}>{selectedApplicant.company}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#7e22ce', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Position</span>
+                    <strong style={{ color: '#581c87' }}>
+                      {selectedApplicant.jobTitle}
+                      <span style={{
+                        marginLeft: '0.35rem',
+                        fontFamily: 'monospace',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
+                        padding: '0.1rem 0.35rem',
+                        borderRadius: '4px',
+                        border: '1px solid #bfdbfe'
+                      }}>
+                        {selectedApplicant.jobIdFormatted || (selectedApplicant.applicationType === 'Internship' ? formatInternshipId(selectedApplicant.jobId || selectedApplicant.id) : formatJobId(selectedApplicant.jobId || selectedApplicant.id))}
+                      </span>
+                    </strong>
+                  </div>
+                  {(selectedApplicant.passId || selectedApplicant.melaDetails?.passId) && (
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#047857', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>Registration ID / Pass ID</span>
+                      <strong style={{ color: '#065f46', fontFamily: 'monospace' }}>{selectedApplicant.passId || selectedApplicant.melaDetails?.passId}</strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Header info */}
             <div style={{
               display: 'flex',
@@ -869,8 +1172,30 @@ export default function ApplicationsPage() {
                   <StatusBadge status={selectedApplicant.status} />
                 </div>
                 <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>
-                  {selectedApplicant.candidateHeadline || `Candidate for ${selectedApplicant.jobTitle}`}
+                  {selectedApplicant.candidateHeadline || `Candidate for ${selectedApplicant.jobTitle} at ${selectedApplicant.company}`}
                 </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-700)', fontWeight: 600 }}>
+                    🏢 Company: <strong>{selectedApplicant.company}</strong>
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-700)', fontWeight: 600 }}>
+                    💼 Role: <strong>{selectedApplicant.jobTitle}</strong>
+                  </span>
+                  {(selectedApplicant.jobIdFormatted || selectedApplicant.jobId) && (
+                    <span style={{
+                      fontFamily: 'monospace',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      background: '#eff6ff',
+                      color: '#1d4ed8',
+                      padding: '0.1rem 0.4rem',
+                      borderRadius: '4px',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      {selectedApplicant.jobIdFormatted || (selectedApplicant.applicationType === 'Internship' ? formatInternshipId(selectedApplicant.jobId || selectedApplicant.id) : formatJobId(selectedApplicant.jobId || selectedApplicant.id))}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 

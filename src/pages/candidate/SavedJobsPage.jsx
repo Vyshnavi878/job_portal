@@ -11,6 +11,7 @@ import ApplyModal from '../../components/ui/ApplyModal';
 import { useCandidate } from '../../context/CandidateContext';
 import { useToast } from '../../context/ToastContext';
 import { MOCK_JOBS } from '../../data/mockData';
+import { formatJobId } from '../../utils/applicationUtils';
 
 export default function CandidateSavedJobsPage() {
   const { candidate, unsaveJob } = useCandidate();
@@ -160,7 +161,19 @@ export default function CandidateSavedJobsPage() {
                           {job.title}
                         </h2>
                       </Link>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <span style={{
+                          fontFamily: 'monospace',
+                          fontWeight: 700,
+                          fontSize: '10px',
+                          color: 'var(--color-primary-700)',
+                          background: 'var(--color-primary-50)',
+                          border: '1px solid var(--color-primary-200)',
+                          padding: '1px 5px',
+                          borderRadius: '3px'
+                        }}>
+                          {formatJobId(job.id)}
+                        </span>
                         <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-primary-600)' }}>
                           {job.company}
                         </span>

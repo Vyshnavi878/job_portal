@@ -16,6 +16,14 @@ import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, exportToCSV, generatePDFBlob, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { useCandidate } from '../../context/CandidateContext';
+import {
+  isJobMelaApplication,
+  getApplicationNumber,
+  getApplicationType,
+  getJobMelaDetails,
+  normalizeApplication
+} from '../../utils/applicationUtils';
 
 // Consolidated Pages
 import AdminApplicationsPage from './ApplicationsPage';
@@ -24,6 +32,7 @@ import AdminRegistrationsPage from './RegistrationsPage';
 export default function AdminCandidatesPage() {
   const { addToast } = useToast();
   const { candidates, suspendCandidate, activateCandidate } = useAdmin();
+  const { allCandidateApplications = [] } = useCandidate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tabParam = searchParams.get('tab');
@@ -64,6 +73,28 @@ export default function AdminCandidatesPage() {
 
   // Suspend Dialog
   const [suspendTarget, setSuspendTarget] = useState(null);
+
+  // Derive all submitted applications for the selected candidate
+  const candidateAppsList = useMemo(() => {
+    if (!selectedCand) return [];
+    // Match in allCandidateApplications
+    const matches = allCandidateApplications.filter(ca =>
+      (ca.candidateId && ca.candidateId === selectedCand.id) ||
+      (ca.candidateEmail && ca.candidateEmail.toLowerCase() === selectedCand.email?.toLowerCase()) ||
+      (ca.candidateName && ca.candidateName.toLowerCase() === selectedCand.name?.toLowerCase())
+    );
+
+    if (matches.length > 0) {
+      return matches.map(app => normalizeApplication(app));
+    }
+
+    // Fallback: check selectedCand.applications if present
+    if (Array.isArray(selectedCand.applications)) {
+      return selectedCand.applications.map(app => normalizeApplication(app, selectedCand));
+    }
+
+    return [];
+  }, [selectedCand, allCandidateApplications]);
 
   const filtered = useMemo(() => {
     return candidates.filter((c) => {
@@ -865,6 +896,96 @@ export default function AdminCandidatesPage() {
                       </span>
                     ))}
                   </div>
+                </div>
+
+                {/* Submitted Applications History */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', margin: 0 }}>
+                      Submitted Applications ({candidateAppsList.length})
+                    </h4>
+                  </div>
+
+                  {candidateAppsList.length === 0 ? (
+                    <div style={{ padding: 'var(--space-4)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-lg)', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>
+                      No active job applications found for this candidate.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                      {candidateAppsList.map((app) => (
+                        <div
+                          key={app.id || app.appNumber}
+                          style={{
+                            background: app.isMela ? '#fbf8ff' : 'var(--color-surface)',
+                            border: `1px solid ${app.isMela ? '#e9d5ff' : 'var(--color-border)'}`,
+                            borderRadius: 'var(--radius-lg)',
+                            padding: 'var(--space-3)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 'var(--space-2)'
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                              <span style={{
+                                fontFamily: 'monospace',
+                                fontWeight: 800,
+                                fontSize: 'var(--text-xs)',
+                                background: app.isMela ? '#f5f3ff' : '#eff6ff',
+                                color: app.isMela ? '#6d28d9' : '#1d4ed8',
+                                border: `1px solid ${app.isMela ? '#ddd6fe' : '#bfdbfe'}`,
+                                padding: '2px 7px',
+                                borderRadius: '4px',
+                                letterSpacing: '0.03em'
+                              }}>
+                                {app.appNumber || getApplicationNumber(app)}
+                              </span>
+                              <span style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                padding: '1px 6px',
+                                borderRadius: '10px',
+                                background: app.isMela ? '#ecfdf5' : '#f1f5f9',
+                                color: app.isMela ? '#047857' : 'var(--color-text-muted)',
+                                border: `1px solid ${app.isMela ? '#a7f3d0' : '#e2e8f0'}`
+                              }}>
+                                {app.applicationType || (app.isMela ? 'Job Mela Application' : 'Direct Job Application')}
+                              </span>
+                              <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                                Applied: {app.appliedDate || 'Aug 2026'}
+                              </span>
+                            </div>
+                            <div style={{ marginTop: 4 }}>
+                              <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>
+                                {app.jobTitle || app.title || app.job || 'Position'}
+                              </strong>
+                              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginLeft: 6 }}>
+                                at <strong style={{ color: 'var(--color-text)' }}>{app.company}</strong>
+                              </span>
+                            </div>
+                            {app.isMela && (
+                              <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap', fontSize: '11px' }}>
+                                <span style={{ color: '#7c3aed', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  <Sparkles size={11} />
+                                  Job Mela: {app.melaTitle || app.melaDetails?.melaTitle || 'AP Mega IT & ITES Job Mela 2026'}
+                                </span>
+                                {(app.passId || app.melaDetails?.passId) && (
+                                  <span style={{ color: '#047857', fontWeight: 600, fontFamily: 'monospace' }}>
+                                    Pass: {app.passId || app.melaDetails?.passId}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <StatusBadge status={app.status || 'APPLIED'} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Modal Actions */}

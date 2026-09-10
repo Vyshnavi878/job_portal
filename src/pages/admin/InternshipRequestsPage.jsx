@@ -12,6 +12,7 @@ import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { formatInternshipId } from '../../utils/applicationUtils';
 
 export default function AdminInternshipRequestsPage() {
   const { addToast } = useToast();
@@ -30,7 +31,12 @@ export default function AdminInternshipRequestsPage() {
   const filtered = pendingInternships.filter(r => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return r.title?.toLowerCase().includes(q) || r.company?.toLowerCase().includes(q);
+    return (
+      r.title?.toLowerCase().includes(q) ||
+      (formatInternshipId(r.id) || '').toLowerCase().includes(q) ||
+      String(r.id || '').toLowerCase().includes(q) ||
+      r.company?.toLowerCase().includes(q)
+    );
   });
 
   const handleApprove = (item) => {
@@ -66,7 +72,21 @@ export default function AdminInternshipRequestsPage() {
       sortable: true,
       render: (_, row) => (
         <div>
-          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{row.title}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{row.title}</strong>
+            <span style={{
+              fontFamily: 'monospace',
+              fontSize: '10px',
+              fontWeight: 700,
+              background: '#eff6ff',
+              color: '#1d4ed8',
+              border: '1px solid #bfdbfe',
+              padding: '1px 6px',
+              borderRadius: '4px'
+            }}>
+              {formatInternshipId(row.id)}
+            </span>
+          </div>
           <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.company}</span>
         </div>
       )
@@ -253,7 +273,21 @@ export default function AdminInternshipRequestsPage() {
                 <GraduationCap size={28} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedReq.title}</h3>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span>{selectedReq.title}</span>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    background: 'rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {formatInternshipId(selectedReq.id)}
+                  </span>
+                </h3>
                 <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '2px 0 0 0' }}>{selectedReq.company} • 📍 {selectedReq.location}</p>
                 <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#cbd5e1' }}>
                   <span>💰 Stipend: {selectedReq.stipend}</span>
@@ -269,6 +303,9 @@ export default function AdminInternshipRequestsPage() {
                 <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
                   Employer & Location
                 </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                  <strong>Internship ID:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-primary-600)' }}>{formatInternshipId(selectedReq.id)}</span>
+                </p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Company:</strong> {selectedReq.company}</p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Location:</strong> {selectedReq.location}</p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Submitted Date:</strong> {selectedReq.submittedDate || 'Aug 2026'}</p>

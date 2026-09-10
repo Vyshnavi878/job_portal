@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 export const calculateProfileCompletion = (c) => {
   if (!c) return 0;
@@ -158,6 +158,37 @@ const CANDIDATE_1_DATA = {
         { stage: 'Applied', date: '22 Aug 2026', completed: true, current: false },
         { stage: 'Screening', date: '24 Aug 2026', completed: true, current: false },
         { stage: 'Shortlisted', date: '26 Aug 2026', completed: true, current: true },
+        { stage: 'Interview', date: 'Spot Interview at Event (28 Sept)', completed: false, current: false },
+        { stage: 'Selected', date: 'TBD', completed: false, current: false },
+      ]
+    },
+    {
+      id: 'app-mela-2',
+      jobId: 'mela-1-comp-7',
+      melaId: '1',
+      melaTitle: 'AP Mega IT & ITES Job Mela 2026',
+      eventNumber: '01',
+      companySequence: '04',
+      applicationSequence: '0001',
+      appNumber: 'NTR-01-04-0001',
+      applicationType: 'Job Mela Application',
+      title: 'TCS Digital Software Developer',
+      company: 'TCS',
+      companyLogo: null,
+      location: 'Visakhapatnam',
+      salary: '₹7.0 - ₹9.0 LPA',
+      type: 'Full-time',
+      mode: 'On-site',
+      appliedDate: '28 Aug 2026',
+      status: 'APPLIED',
+      melaDate: '28 Sept 2026',
+      melaVenue: 'AU Convention Center, Beach Road, Visakhapatnam',
+      passId: 'PASS-AP-849201',
+      passStatus: 'Confirmed / Active Pass (Gate 3)',
+      timeline: [
+        { stage: 'Applied', date: '28 Aug 2026', completed: true, current: true },
+        { stage: 'Screening', date: 'Pending Review', completed: false, current: false },
+        { stage: 'Shortlisted', date: 'Pending', completed: false, current: false },
         { stage: 'Interview', date: 'Spot Interview at Event (28 Sept)', completed: false, current: false },
         { stage: 'Selected', date: 'TBD', completed: false, current: false },
       ]
@@ -652,23 +683,34 @@ export function CandidateProvider({ children }) {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed['cand-1']?.applications) {
-          // Check if app-mela-1 or Job Mela application is present
-          const hasMelaApp = parsed['cand-1'].applications.some(
-            a => a.id === 'app-mela-1' || a.melaId || a.appNumber === 'NTR-01-02-0024' || a.applicationType === 'Job Mela Application'
+          // Check if app-mela-1 and app-mela-2 Job Mela applications are present
+          const hasMela1 = parsed['cand-1'].applications.some(
+            a => a.id === 'app-mela-1' || a.appNumber === 'NTR-01-02-0024'
           );
-          if (!hasMelaApp) {
-            const melaApp = CANDIDATE_1_DATA.applications.find(a => a.id === 'app-mela-1');
-            if (melaApp) {
-              parsed['cand-1'].applications = [melaApp, ...parsed['cand-1'].applications];
+          if (!hasMela1) {
+            const melaApp1 = CANDIDATE_1_DATA.applications.find(a => a.id === 'app-mela-1');
+            if (melaApp1) {
+              parsed['cand-1'].applications = [melaApp1, ...parsed['cand-1'].applications];
             }
           }
+
+          const hasMela2 = parsed['cand-1'].applications.some(
+            a => a.id === 'app-mela-2' || a.appNumber === 'NTR-01-04-0001' || a.title === 'TCS Digital Software Developer'
+          );
+          if (!hasMela2) {
+            const melaApp2 = CANDIDATE_1_DATA.applications.find(a => a.id === 'app-mela-2');
+            if (melaApp2) {
+              parsed['cand-1'].applications = [melaApp2, ...parsed['cand-1'].applications];
+            }
+          }
+
           // Ensure each application has its own distinct appNumber and applicationType
           parsed['cand-1'].applications = parsed['cand-1'].applications.map((app, idx) => {
             const fallback = CANDIDATE_1_DATA.applications.find(a => a.id === app.id);
             const isMela = Boolean(app.melaId || app.applicationType === 'Job Mela Application' || (app.appNumber && app.appNumber.startsWith('NTR-')));
             return {
               ...app,
-              appNumber: app.appNumber || fallback?.appNumber || (isMela ? 'NTR-01-02-0024' : `APP-${String(app.id || idx + 1).replace(/\D/g, '').padStart(6, '0')}`),
+              appNumber: app.appNumber || fallback?.appNumber || (isMela ? (app.appId || 'NTR-01-02-0024') : `APP-${String(app.id || idx + 1).replace(/\D/g, '').padStart(6, '0')}`),
               applicationType: app.applicationType || fallback?.applicationType || (isMela ? 'Job Mela Application' : 'Direct Job Application')
             };
           });
@@ -1000,10 +1042,34 @@ export function CandidateProvider({ children }) {
     savedJobs: (candidate.savedJobIds || []).length,
   };
 
+  // All applications across all candidates in the system
+  const allCandidateApplications = useMemo(() => {
+    const list = [];
+    Object.values(candidatesData || {}).forEach((cand) => {
+      (cand.applications || []).forEach((app) => {
+        list.push({
+          ...app,
+          candidateId: cand.id,
+          candidateName: cand.name,
+          candidateEmail: cand.email,
+          candidatePhone: cand.phone,
+          candidateLocation: cand.location,
+          experience: cand.skillsPreferences?.experience || cand.experience || '3+ Years',
+          education: cand.skillsPreferences?.educationLevel || cand.education || 'Graduate',
+          skills: cand.skillsPreferences?.skills || cand.skills || [],
+          resumeName: app.resumeName || cand.resume?.fileName || `${(cand.name || 'Candidate').replace(/\s+/g, '_')}_Resume.pdf`,
+        });
+      });
+    });
+    return list;
+  }, [candidatesData]);
+
   return (
     <CandidateContext.Provider
       value={{
         candidate,
+        candidatesData,
+        allCandidateApplications,
         activeCandidateId,
         isLoggedIn,
         stats,

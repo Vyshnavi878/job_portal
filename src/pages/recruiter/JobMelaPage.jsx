@@ -14,6 +14,7 @@ import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
 import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
+import { formatMelaId } from '../../utils/applicationUtils';
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -273,7 +274,21 @@ export default function RecruiterJobMelaPage() {
                   {/* Top: Status & Booth */}
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
-                      <StatusBadge status={isApproved ? 'APPROVED' : 'PENDING'} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{
+                          fontFamily: 'monospace',
+                          fontWeight: 800,
+                          fontSize: '0.74rem',
+                          color: '#7c3aed',
+                          background: '#f5f3ff',
+                          border: '1px solid #ddd6fe',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '4px'
+                        }}>
+                          {formatMelaId(event.id)}
+                        </span>
+                        <StatusBadge status={isApproved ? 'APPROVED' : 'PENDING'} />
+                      </div>
                       <span style={{
                         fontSize: '0.72rem',
                         fontWeight: 600,

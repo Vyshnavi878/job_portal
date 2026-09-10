@@ -15,6 +15,7 @@ import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { formatInternshipId } from '../../utils/applicationUtils';
 
 export default function AdminInternshipsPage() {
   const { addToast } = useToast();
@@ -72,8 +73,7 @@ export default function AdminInternshipsPage() {
   const filterTabs = [
     { key: 'ALL', label: 'All Internships' },
     { key: 'ACTIVE', label: 'Active' },
-    { key: 'PENDING', label: 'Pending Review' },
-    { key: 'APPROVED', label: 'Approved' },
+    { key: 'PENDING', label: 'Pending Approval' },
     { key: 'REJECTED', label: 'Rejected' },
     { key: 'CLOSED', label: 'Closed' },
   ];
@@ -99,10 +99,11 @@ export default function AdminInternshipsPage() {
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesTitle = item.title?.toLowerCase().includes(q);
+        const matchesIntId = (formatInternshipId(item.id) || '').toLowerCase().includes(q) || String(item.id || '').toLowerCase().includes(q);
         const matchesCompany = item.company?.toLowerCase().includes(q);
         const matchesRecruiter = item.recruiter?.toLowerCase().includes(q);
         const matchesLocation = item.location?.toLowerCase().includes(q);
-        if (!matchesTitle && !matchesCompany && !matchesRecruiter && !matchesLocation) return false;
+        if (!matchesTitle && !matchesIntId && !matchesCompany && !matchesRecruiter && !matchesLocation) return false;
       }
       return true;
     });
@@ -121,6 +122,7 @@ export default function AdminInternshipsPage() {
     }
     addToast('Exporting internships list to Excel...', 'info');
     const headers = [
+      'Internship ID',
       'Internship Title',
       'Company',
       'Duration',
@@ -130,6 +132,7 @@ export default function AdminInternshipsPage() {
       'Status'
     ];
     const rows = filtered.map(i => [
+      formatInternshipId(i.id),
       i.title || 'N/A',
       i.company || 'N/A',
       i.duration || '3 Months',
@@ -156,8 +159,9 @@ export default function AdminInternshipsPage() {
       return;
     }
     addToast('Exporting internships list to PDF...', 'info');
-    const headers = ['Internship Title', 'Company', 'Duration', 'Stipend', 'Location', 'Status'];
+    const headers = ['Internship ID', 'Internship Title', 'Company', 'Duration', 'Stipend', 'Location', 'Status'];
     const rows = filtered.map(i => [
+      formatInternshipId(i.id),
       i.title || 'N/A',
       i.company || 'N/A',
       i.duration || '3 Months',
@@ -223,7 +227,21 @@ export default function AdminInternshipsPage() {
       sortable: true,
       render: (_, row) => (
         <div>
-          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{row.title}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{row.title}</strong>
+            <span style={{
+              fontFamily: 'monospace',
+              fontSize: '10px',
+              fontWeight: 700,
+              background: '#eff6ff',
+              color: '#1d4ed8',
+              border: '1px solid #bfdbfe',
+              padding: '1px 6px',
+              borderRadius: '4px'
+            }}>
+              {formatInternshipId(row.id)}
+            </span>
+          </div>
           <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.company}</span>
         </div>
       )
@@ -525,7 +543,21 @@ export default function AdminInternshipsPage() {
                 <GraduationCap size={28} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedInternship.title}</h3>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span>{selectedInternship.title}</span>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    background: 'rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {formatInternshipId(selectedInternship.id)}
+                  </span>
+                </h3>
                 <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '2px 0 0 0' }}>{selectedInternship.company} • 📍 {selectedInternship.location}</p>
                 <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#cbd5e1' }}>
                   <span>💰 Stipend: {selectedInternship.stipend}</span>
@@ -541,6 +573,9 @@ export default function AdminInternshipsPage() {
                 <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
                   Employer & Location
                 </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                  <strong>Internship ID:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-primary-600)' }}>{formatInternshipId(selectedInternship.id)}</span>
+                </p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Company:</strong> {selectedInternship.company}</p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Location:</strong> {selectedInternship.location}</p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Submitted Date:</strong> {selectedInternship.submittedDate || 'Aug 2026'}</p>

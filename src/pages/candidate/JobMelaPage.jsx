@@ -15,6 +15,7 @@ import { useToast } from '../../context/ToastContext';
 import { useCandidate } from '../../context/CandidateContext';
 import { MOCK_JOB_MELAS } from '../../data/mockData';
 import ApplicationDetailsModal from '../../components/ui/ApplicationDetailsModal';
+import { formatMelaId, formatJobId, formatRegistrationId } from '../../utils/applicationUtils';
 
 export default function CandidateJobMelaPage() {
   const navigate = useNavigate();
@@ -631,6 +632,18 @@ export default function CandidateJobMelaPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-4)' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontWeight: 800,
+                    fontSize: '11px',
+                    color: '#7c3aed',
+                    background: '#f5f3ff',
+                    border: '1px solid #ddd6fe',
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-md)'
+                  }}>
+                    {formatMelaId(selectedMela.id)}
+                  </span>
                   <span className="badge badge-primary" style={{ fontSize: '11px', textTransform: 'uppercase' }}>
                     {selectedMela.status || 'Upcoming'}
                   </span>
@@ -899,6 +912,18 @@ export default function CandidateJobMelaPage() {
                                       <span style={{ color: 'var(--color-text-muted)' }}>Application Type:</span>
                                       <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>Job Mela Application</span>
                                     </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <span style={{ color: 'var(--color-text-muted)' }}>Job ID:</span>
+                                      <span style={{ fontFamily: 'monospace, monospace', fontWeight: 700, color: 'var(--color-primary-700)' }}>
+                                        {formatJobId(appliedApp?.jobId || `mela-${selectedMela.id}-comp-${comp.id || '01'}`)}
+                                      </span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <span style={{ color: 'var(--color-text-muted)' }}>Job Mela ID:</span>
+                                      <span style={{ fontFamily: 'monospace, monospace', fontWeight: 700, color: '#7c3aed' }}>
+                                        {formatMelaId(selectedMela.id)}
+                                      </span>
+                                    </div>
                                     {appliedApp?.appliedDate && (
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={{ color: 'var(--color-text-muted)' }}>Applied Date:</span>
@@ -907,7 +932,7 @@ export default function CandidateJobMelaPage() {
                                     )}
                                     {appliedApp?.passId && (
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ color: 'var(--color-text-muted)' }}>Pass Ref:</span>
+                                        <span style={{ color: 'var(--color-text-muted)' }}>Pass Ref / Registration ID:</span>
                                         <span style={{ color: 'var(--color-primary-600)', fontWeight: 600, fontFamily: 'monospace, monospace' }}>
                                           {appliedApp.passId}
                                         </span>
@@ -1022,10 +1047,21 @@ export default function CandidateJobMelaPage() {
                     }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 2 }}>
+                          <span style={{
+                            fontFamily: 'monospace',
+                            fontWeight: 800,
+                            fontSize: '10px',
+                            background: 'rgba(255,255,255,0.2)',
+                            border: '1px solid rgba(255,255,255,0.35)',
+                            padding: '1px 6px',
+                            borderRadius: '4px'
+                          }}>
+                            {formatMelaId(event.id)}
+                          </span>
                           <span className="badge badge-success" style={{ fontSize: '10px' }}>
                             <CheckCircle2 size={11} style={{ marginRight: 2 }} /> Registration Confirmed
                           </span>
-                          <span style={{ fontSize: 'var(--text-xs)', opacity: 0.85 }}>Pass ID: {event.passId}</span>
+                          <span style={{ fontSize: 'var(--text-xs)', opacity: 0.85 }}>Registration ID: {event.passId}</span>
                         </div>
                         <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: '#ffffff' }}>
                           {event.title}
@@ -1183,9 +1219,23 @@ export default function CandidateJobMelaPage() {
                     >
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-2)' }}>
-                          <span className="badge badge-primary" style={{ fontSize: '10px' }}>
-                            {mela.status || 'Registration Open'}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{
+                              fontFamily: 'monospace',
+                              fontWeight: 800,
+                              fontSize: '10px',
+                              color: '#7c3aed',
+                              background: '#f5f3ff',
+                              border: '1px solid #ddd6fe',
+                              padding: '2px 6px',
+                              borderRadius: '4px'
+                            }}>
+                              {formatMelaId(mela.id)}
+                            </span>
+                            <span className="badge badge-primary" style={{ fontSize: '10px' }}>
+                              {mela.status || 'Registration Open'}
+                            </span>
+                          </div>
 
                           {isRegistered && (
                             <span className="badge badge-success" style={{ fontSize: '10px' }}>
@@ -1720,7 +1770,7 @@ export default function CandidateJobMelaPage() {
 
               <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, marginBottom: 2 }}>{selectedPass.title}</h3>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
-                Candidate: <strong>{candidate.name}</strong> • Pass ID: <strong>{selectedPass.passId}</strong>
+                Candidate: <strong>{candidate.name}</strong> • Event ID: <strong style={{ fontFamily: 'monospace', color: '#7c3aed' }}>{formatMelaId(selectedPass.id)}</strong> • Registration ID: <strong style={{ fontFamily: 'monospace', color: 'var(--color-primary-600)' }}>{selectedPass.passId}</strong>
               </p>
 
               {/* QR placeholder */}

@@ -6,6 +6,7 @@ import {
 import Button from '../../components/ui/Button';
 import { StatusBadge } from '../../components/ui/Badge';
 import { MOCK_JOBS } from '../../data/mockData';
+import { formatJobId } from '../../utils/applicationUtils';
 
 export default function RecruiterJobDetailPage() {
   const { id } = useParams();
@@ -23,12 +24,24 @@ export default function RecruiterJobDetailPage() {
                 <ArrowLeft size={14} /> Back to My Jobs
               </Link>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
               <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800 }}>{job.title}</h1>
+              <span style={{
+                fontFamily: 'monospace',
+                fontWeight: 800,
+                fontSize: '0.85rem',
+                color: 'var(--color-primary-700)',
+                background: 'var(--color-primary-50)',
+                border: '1px solid var(--color-primary-200)',
+                padding: '3px 8px',
+                borderRadius: '4px'
+              }}>
+                {formatJobId(job.id)}
+              </span>
               <StatusBadge status={job.status || 'PUBLISHED'} size="lg" />
             </div>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', marginTop: 2 }}>
-              Job ID: <strong>{job.id}</strong> • Posted on {job.postedDate} • Deadline: {job.deadline}
+              Job ID: <strong style={{ fontFamily: 'monospace', color: 'var(--color-primary-700)' }}>{formatJobId(job.id)}</strong> • Posted on {job.postedDate} • Deadline: {job.deadline}
             </p>
           </div>
 

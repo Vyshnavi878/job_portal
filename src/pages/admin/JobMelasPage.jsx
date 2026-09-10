@@ -20,6 +20,7 @@ import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, exportToCSV, generatePDFBlob, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { formatMelaId, formatJobId } from '../../utils/applicationUtils';
 
 export default function AdminJobMelasPage() {
   const { addToast } = useToast();
@@ -172,7 +173,8 @@ export default function AdminJobMelasPage() {
     const eventCity = e.location || e.city || '';
     if (search.trim()) {
       const q = search.toLowerCase();
-      if (!eventTitle.toLowerCase().includes(q) && !eventCity.toLowerCase().includes(q)) return false;
+      const matchMelaId = (formatMelaId(e.id) || '').toLowerCase().includes(q) || String(e.id || '').toLowerCase().includes(q);
+      if (!eventTitle.toLowerCase().includes(q) && !eventCity.toLowerCase().includes(q) && !matchMelaId) return false;
     }
     if (statusFilter !== 'ALL') {
       if (statusFilter === 'APPROVED' && (e.status !== 'APPROVED' && e.status !== 'UPCOMING')) return false;
@@ -204,7 +206,8 @@ export default function AdminJobMelasPage() {
         const title = (r.event || r.title || '').toLowerCase();
         const organizer = (r.organizer || '').toLowerCase();
         const location = (r.location || r.venue || '').toLowerCase();
-        if (!title.includes(q) && !organizer.includes(q) && !location.includes(q)) {
+        const matchMelaId = (formatMelaId(r.id) || '').toLowerCase().includes(q) || String(r.id || '').toLowerCase().includes(q);
+        if (!title.includes(q) && !organizer.includes(q) && !location.includes(q) && !matchMelaId) {
           return false;
         }
       }
@@ -354,6 +357,7 @@ export default function AdminJobMelasPage() {
     }
     addToast('Exporting Job Melas list to Excel...', 'info');
     const headers = [
+      'Job Mela ID',
       'Job Mela Name',
       'Event Date',
       'Start Time',
@@ -370,6 +374,7 @@ export default function AdminJobMelasPage() {
       const compCount = Array.isArray(m.participatingCompanies) ? m.participatingCompanies.length : (m.companiesCount || 0);
       const regCount = m.registeredCandidatesCount || m.registeredCandidates || 0;
       return [
+        formatMelaId(m.id),
         m.event || m.title || 'Job Mela',
         m.date ? new Date(m.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept 2026',
         times[0]?.trim() || '09:00 AM',
@@ -397,10 +402,11 @@ export default function AdminJobMelasPage() {
       return;
     }
     addToast('Exporting Job Melas list to PDF...', 'info');
-    const headers = ['Event Name', 'Date & Time', 'Venue & Location', 'Companies', 'Status'];
+    const headers = ['Mela ID', 'Event Name', 'Date & Time', 'Venue & Location', 'Companies', 'Status'];
     const rows = filteredAdminMelas.map(m => {
       const compCount = Array.isArray(m.participatingCompanies) ? m.participatingCompanies.length : (m.companiesCount || 0);
       return [
+        formatMelaId(m.id),
         m.event || m.title || 'Job Mela',
         `${m.date ? new Date(m.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Sept'} (${m.time || '09:00 - 17:00'})`,
         `${m.venue || ''}, ${m.location || m.city || ''}`,
@@ -642,7 +648,21 @@ export default function AdminJobMelasPage() {
         const venue = row.venue || row.location || 'State Convention Center';
         return (
           <div>
-            <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{title}</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{title}</strong>
+              <span style={{
+                fontFamily: 'monospace',
+                fontSize: '10px',
+                fontWeight: 700,
+                background: '#f5f3ff',
+                color: '#6d28d9',
+                border: '1px solid #ddd6fe',
+                padding: '1px 6px',
+                borderRadius: '4px'
+              }}>
+                {formatMelaId(row.id)}
+              </span>
+            </div>
             <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>{venue}</span>
           </div>
         );
@@ -766,7 +786,21 @@ export default function AdminJobMelasPage() {
         const venue = row.venue || row.location || 'Proposed Venue';
         return (
           <div>
-            <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{title}</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{title}</strong>
+              <span style={{
+                fontFamily: 'monospace',
+                fontSize: '10px',
+                fontWeight: 700,
+                background: '#f5f3ff',
+                color: '#6d28d9',
+                border: '1px solid #ddd6fe',
+                padding: '1px 6px',
+                borderRadius: '4px'
+              }}>
+                {formatMelaId(row.id)}
+              </span>
+            </div>
             <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>{venue}</span>
           </div>
         );
@@ -1132,8 +1166,17 @@ export default function AdminJobMelasPage() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 4, flexWrap: 'wrap' }}>
                       <StatusBadge status={selectedMela.status || 'UPCOMING'} />
-                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                        ID: {selectedMela.id}
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        background: 'rgba(255,255,255,0.2)',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        {formatMelaId(selectedMela.id)}
                       </span>
                     </div>
                     <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, margin: 0, color: '#fff' }}>
@@ -1493,7 +1536,21 @@ export default function AdminJobMelasPage() {
                                     </div>
                                   </td>
                                   <td style={{ padding: '10px 14px', color: 'var(--color-primary-700)', fontWeight: 700 }}>
-                                    {c.position}
+                                    <div>{c.position}</div>
+                                    {(c.jobId || c.id) && (
+                                      <span style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '9.5px',
+                                        fontWeight: 700,
+                                        background: '#eff6ff',
+                                        color: '#1d4ed8',
+                                        border: '1px solid #bfdbfe',
+                                        padding: '1px 5px',
+                                        borderRadius: '3px'
+                                      }}>
+                                        {formatJobId(c.jobId || c.id)}
+                                      </span>
+                                    )}
                                   </td>
                                   <td style={{ padding: '10px 14px', color: 'var(--color-text-muted)' }}>
                                     {c.qualification || 'Any Degree'}
@@ -1725,7 +1782,23 @@ export default function AdminJobMelasPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', fontSize: 'var(--text-xs)' }}>
                   <div>
                     <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase' }}>Hiring Position</span>
-                    <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{viewingCompany.position}</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{viewingCompany.position}</strong>
+                      {(viewingCompany.jobId || viewingCompany.id) && (
+                        <span style={{
+                          fontFamily: 'monospace',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          padding: '1px 6px',
+                          borderRadius: '4px'
+                        }}>
+                          {formatJobId(viewingCompany.jobId || viewingCompany.id)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '10px', textTransform: 'uppercase' }}>Eligibility / Qualification</span>
@@ -1981,8 +2054,20 @@ export default function AdminJobMelasPage() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                  <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, margin: 0, color: '#fff' }}>
-                    {selectedRequest.event || selectedRequest.title}
+                  <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 800, margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span>{selectedRequest.event || selectedRequest.title}</span>
+                    <span style={{
+                      fontFamily: 'monospace',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      background: 'rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      padding: '2px 8px',
+                      borderRadius: '4px'
+                    }}>
+                      {formatMelaId(selectedRequest.id)}
+                    </span>
                   </h3>
                   <StatusBadge status={selectedRequest.status || 'PENDING'} />
                 </div>
@@ -2162,8 +2247,17 @@ export default function AdminJobMelasPage() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 4, flexWrap: 'wrap' }}>
                       <StatusBadge status={selectedMelaForRegs.status || 'UPCOMING'} />
-                      <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                        Event ID: {selectedMelaForRegs.id}
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        background: 'rgba(255,255,255,0.2)',
+                        color: '#fff',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        padding: '2px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        {formatMelaId(selectedMelaForRegs.id)}
                       </span>
                     </div>
                     <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 800, margin: 0, color: '#fff' }}>

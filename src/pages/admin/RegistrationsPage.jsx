@@ -14,6 +14,7 @@ import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, exportToCSV, generatePDFBlob, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { formatRegistrationId, formatMelaId } from '../../utils/applicationUtils';
 
 export default function AdminRegistrationsPage() {
   const { addToast } = useToast();
@@ -45,11 +46,21 @@ export default function AdminRegistrationsPage() {
       const candName = r.candidate || r.candidateName || '';
       const candEmail = r.email || r.candidateEmail || '';
       const eventName = r.event || r.eventName || '';
-      const passId = r.id || '';
+      const passId = r.id || r.passId || r.entryToken || '';
+      const formattedRegId = formatRegistrationId(passId);
+      const melaId = r.melaId || '';
+      const formattedMelaId = formatMelaId(melaId);
 
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (!candName.toLowerCase().includes(q) && !candEmail.toLowerCase().includes(q) && !passId.toLowerCase().includes(q)) {
+        if (
+          !candName.toLowerCase().includes(q) &&
+          !candEmail.toLowerCase().includes(q) &&
+          !passId.toLowerCase().includes(q) &&
+          !formattedRegId.toLowerCase().includes(q) &&
+          !melaId.toString().toLowerCase().includes(q) &&
+          !formattedMelaId.toLowerCase().includes(q)
+        ) {
           return false;
         }
       }
@@ -206,19 +217,28 @@ export default function AdminRegistrationsPage() {
       'Candidate Name',
       'Phone',
       'Email',
+      'Job Mela ID',
       'Job Mela',
       'Registration Date',
       'Registration Status'
     ];
-    const rows = filtered.map(r => [
-      r.id || 'N/A',
-      r.candidate || r.candidateName || 'N/A',
-      r.phone || r.candidatePhone || 'N/A',
-      r.email || r.candidateEmail || 'N/A',
-      r.event || r.eventName || 'Job Mela',
-      r.registeredDate || r.registrationDate ? new Date(r.registeredDate || r.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
-      r.status || 'CONFIRMED'
-    ]);
+    const rows = filtered.map(r => {
+      const matchedMela = jobMelas.find(m =>
+        (r.melaId && m.id === r.melaId) ||
+        (r.event && (m.event?.toLowerCase() === r.event?.toLowerCase() || m.title?.toLowerCase() === r.event?.toLowerCase())) ||
+        (r.eventName && (m.event?.toLowerCase() === r.eventName?.toLowerCase() || m.title?.toLowerCase() === r.eventName?.toLowerCase()))
+      );
+      return [
+        formatRegistrationId(r.id || r.passId || r.entryToken || 'N/A'),
+        r.candidate || r.candidateName || 'N/A',
+        r.phone || r.candidatePhone || 'N/A',
+        r.email || r.candidateEmail || 'N/A',
+        formatMelaId(r.melaId || matchedMela?.id || 1),
+        r.event || r.eventName || matchedMela?.event || matchedMela?.title || 'Job Mela',
+        r.registeredDate || r.registrationDate ? new Date(r.registeredDate || r.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
+        r.status || 'CONFIRMED'
+      ];
+    });
     exportToExcel({
       filename: getExportFilename('job_mela_registrations', eventFilter === 'ALL' ? 'all' : 'filtered', 'xlsx'),
       sheetName: 'Registrations',
@@ -234,16 +254,24 @@ export default function AdminRegistrationsPage() {
       return;
     }
     addToast('Exporting registrations list to PDF...', 'info');
-    const headers = ['Registration ID', 'Candidate Name', 'Phone', 'Email', 'Job Mela', 'Date', 'Status'];
-    const rows = filtered.map(r => [
-      r.id || 'N/A',
-      r.candidate || r.candidateName || 'N/A',
-      r.phone || r.candidatePhone || 'N/A',
-      r.email || r.candidateEmail || 'N/A',
-      r.event || r.eventName || 'Job Mela',
-      r.registeredDate || r.registrationDate ? new Date(r.registeredDate || r.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
-      r.status || 'CONFIRMED'
-    ]);
+    const headers = ['Registration ID', 'Candidate Name', 'Phone', 'Email', 'Mela ID', 'Job Mela', 'Date', 'Status'];
+    const rows = filtered.map(r => {
+      const matchedMela = jobMelas.find(m =>
+        (r.melaId && m.id === r.melaId) ||
+        (r.event && (m.event?.toLowerCase() === r.event?.toLowerCase() || m.title?.toLowerCase() === r.event?.toLowerCase())) ||
+        (r.eventName && (m.event?.toLowerCase() === r.eventName?.toLowerCase() || m.title?.toLowerCase() === r.eventName?.toLowerCase()))
+      );
+      return [
+        formatRegistrationId(r.id || r.passId || r.entryToken || 'N/A'),
+        r.candidate || r.candidateName || 'N/A',
+        r.phone || r.candidatePhone || 'N/A',
+        r.email || r.candidateEmail || 'N/A',
+        formatMelaId(r.melaId || matchedMela?.id || 1),
+        r.event || r.eventName || matchedMela?.event || matchedMela?.title || 'Job Mela',
+        r.registeredDate || r.registrationDate ? new Date(r.registeredDate || r.registrationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Aug 2026',
+        r.status || 'CONFIRMED'
+      ];
+    });
 
     exportToPDF({
       filename: getExportFilename('job_mela_registrations', eventFilter === 'ALL' ? 'all' : 'filtered', 'pdf'),
@@ -286,7 +314,20 @@ export default function AdminRegistrationsPage() {
               {name[0]}
             </div>
             <div>
-              <span style={{ fontSize: '10px', color: 'var(--color-primary-600)', fontWeight: 800, display: 'block' }}>{row.id}</span>
+              <span style={{
+                fontSize: '10px',
+                color: 'var(--color-primary-700)',
+                background: 'var(--color-primary-50)',
+                border: '1px solid var(--color-primary-200)',
+                padding: '1px 6px',
+                borderRadius: 'var(--radius-sm)',
+                fontWeight: 800,
+                display: 'inline-block',
+                fontFamily: 'monospace',
+                marginBottom: 3
+              }}>
+                {formatRegistrationId(row.id || row.passId || row.entryToken)}
+              </span>
               <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{name}</strong>
               <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{email}</span>
             </div>
@@ -300,9 +341,29 @@ export default function AdminRegistrationsPage() {
       sortable: true,
       render: (_, row) => {
         const eventName = row.event || row.eventName || 'Job Mela Summit';
+        const matched = jobMelas.find(m =>
+          (row.melaId && m.id === row.melaId) ||
+          (row.event && (m.event?.toLowerCase() === row.event?.toLowerCase() || m.title?.toLowerCase() === row.event?.toLowerCase())) ||
+          (row.eventName && (m.event?.toLowerCase() === row.eventName?.toLowerCase() || m.title?.toLowerCase() === row.eventName?.toLowerCase()))
+        );
+        const melaId = formatMelaId(row.melaId || matched?.id || 1);
         return (
           <div>
-            <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{eventName}</strong>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 800,
+                color: '#6366f1',
+                background: '#eef2ff',
+                border: '1px solid #c7d2fe',
+                padding: '1px 6px',
+                borderRadius: 'var(--radius-sm)',
+                fontFamily: 'monospace'
+              }}>
+                {melaId}
+              </span>
+              <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>{eventName}</strong>
+            </div>
             <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>Gate: {row.gateNumber || 'Main Entry'}</span>
           </div>
         );
@@ -474,16 +535,31 @@ export default function AdminRegistrationsPage() {
                 }}>
                   <Ticket size={14} /> NTR VIKASA VERIFIED ENTRY PASS
                 </span>
-                <span style={{
-                  fontSize: '11px',
-                  background: 'rgba(255,255,255,0.18)',
-                  color: '#fff',
-                  padding: '3px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  fontWeight: 700
-                }}>
-                  Registration ID: {selectedPass.id}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <span style={{
+                    fontSize: '11px',
+                    background: 'rgba(255,255,255,0.18)',
+                    color: '#fff',
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontWeight: 700,
+                    fontFamily: 'monospace'
+                  }}>
+                    Reg ID: {formatRegistrationId(selectedPass.id || selectedPass.passId || selectedPass.entryToken)}
+                  </span>
+                  <span style={{
+                    fontSize: '11px',
+                    background: 'rgba(99, 102, 241, 0.4)',
+                    color: '#e0e7ff',
+                    border: '1px solid rgba(199, 210, 254, 0.4)',
+                    padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)',
+                    fontWeight: 700,
+                    fontFamily: 'monospace'
+                  }}>
+                    Mela ID: {formatMelaId(selectedPass.melaId || matchedMela?.id || 1)}
+                  </span>
+                </div>
               </div>
 
               <div>
@@ -520,7 +596,9 @@ export default function AdminRegistrationsPage() {
                 <div style={{ fontSize: 'var(--text-xs)', display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-gray-100)', paddingBottom: 4 }}>
                     <span style={{ color: 'var(--color-text-muted)' }}>Registration ID:</span>
-                    <strong>{selectedPass.id}</strong>
+                    <strong style={{ fontFamily: 'monospace', color: 'var(--color-primary-700)' }}>
+                      {formatRegistrationId(selectedPass.id || selectedPass.passId || selectedPass.entryToken)}
+                    </strong>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--color-gray-100)', paddingBottom: 4 }}>
@@ -572,9 +650,23 @@ export default function AdminRegistrationsPage() {
 
                 <div style={{ fontSize: 'var(--text-xs)', display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div>
-                    <strong style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)', display: 'block' }}>
-                      {matchedMela?.event || matchedMela?.title || selectedPass.event || selectedPass.eventName || 'Job Mela Summit'}
-                    </strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        color: '#6366f1',
+                        background: '#eef2ff',
+                        border: '1px solid #c7d2fe',
+                        padding: '1px 6px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontFamily: 'monospace'
+                      }}>
+                        {formatMelaId(selectedPass.melaId || matchedMela?.id || 1)}
+                      </span>
+                      <strong style={{ color: 'var(--color-text)', fontSize: 'var(--text-sm)', display: 'inline-block' }}>
+                        {matchedMela?.event || matchedMela?.title || selectedPass.event || selectedPass.eventName || 'Job Mela Summit'}
+                      </strong>
+                    </div>
                     <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>
                       {matchedMela?.city ? `📍 ${matchedMela.city}, ${matchedMela.state || 'AP'}` : '📍 State Exhibition Centre'}
                     </span>

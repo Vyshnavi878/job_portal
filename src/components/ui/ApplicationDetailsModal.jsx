@@ -6,6 +6,15 @@ import {
 } from 'lucide-react';
 import Button from './Button';
 import { StatusBadge } from './Badge';
+import {
+  formatJobId,
+  formatInternshipId,
+  formatMelaId,
+  formatRegistrationId,
+  getApplicationNumber,
+  getApplicationType,
+  isJobMelaApplication
+} from '../../utils/applicationUtils';
 
 /**
  * ApplicationDetailsModal
@@ -40,15 +49,15 @@ export default function ApplicationDetailsModal({
 
   if (!isModalOpen || !application) return null;
 
-  const isMela = Boolean(
-    application.melaId ||
-    application.applicationType === 'Job Mela Application' ||
-    (application.appNumber && application.appNumber.startsWith('NTR-')) ||
-    (application.appId && application.appId.startsWith('NTR-'))
-  );
-
-  const appNumber = application.appNumber || application.appId || (isMela ? 'NTR-01-02-0024' : 'APP-000124');
-  const appType = application.applicationType || (isMela ? 'Job Mela Application' : 'Direct Job Application');
+  const isMela = isJobMelaApplication(application);
+  const appNumber = getApplicationNumber(application);
+  const appType = getApplicationType(application);
+  const isIntern = application.type === 'Internship' || (application.jobTitle && application.jobTitle.toLowerCase().includes('intern')) || (application.title && application.title.toLowerCase().includes('intern'));
+  const entityId = isIntern
+    ? formatInternshipId(application.internshipId || application.jobId || application.id)
+    : formatJobId(application.jobId || application.id);
+  const melaId = isMela ? formatMelaId(application.melaId || '1') : null;
+  const registrationId = isMela ? (formatRegistrationId(application) || 'PASS-AP-849201') : null;
   const appliedDate = application.appliedDate || application.appliedAt || '02 Sept 2026';
   const currentStatus = application.status || 'APPLIED';
 
@@ -209,6 +218,46 @@ export default function ApplicationDetailsModal({
 
               <div>
                 <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>
+                  {isIntern ? 'Internship ID:' : 'Job ID:'}
+                </span>
+                <span style={{
+                  fontSize: '12px',
+                  fontFamily: 'monospace, monospace',
+                  fontWeight: 700,
+                  color: 'var(--color-primary-700)',
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)',
+                  padding: '1px 6px',
+                  borderRadius: 'var(--radius-sm)',
+                  display: 'inline-block'
+                }}>
+                  {entityId}
+                </span>
+              </div>
+
+              {isMela && (
+                <div>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>
+                    Job Mela ID:
+                  </span>
+                  <span style={{
+                    fontSize: '12px',
+                    fontFamily: 'monospace, monospace',
+                    fontWeight: 700,
+                    color: '#7c3aed',
+                    background: '#f5f3ff',
+                    border: '1px solid #ddd6fe',
+                    padding: '1px 6px',
+                    borderRadius: 'var(--radius-sm)',
+                    display: 'inline-block'
+                  }}>
+                    {melaId}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block', marginBottom: 2 }}>
                   Applied Date:
                 </span>
                 <strong style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text)' }}>
@@ -259,26 +308,25 @@ export default function ApplicationDetailsModal({
                       borderRadius: '50%',
                       background: isCompleted
                         ? 'var(--color-primary-600)'
-                        : 'var(--color-gray-200)',
-                      color: '#fff',
+                        : isCurrent
+                        ? '#fff'
+                        : 'var(--color-gray-100)',
+                      border: `2px solid ${isCompleted || isCurrent ? 'var(--color-primary-600)' : 'var(--color-gray-300)'}`,
+                      color: isCompleted ? '#fff' : isCurrent ? 'var(--color-primary-600)' : 'var(--color-gray-400)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      fontWeight: 800,
                       fontSize: '11px',
-                      fontWeight: 700,
                       marginBottom: 4,
-                      boxShadow: isCurrent ? '0 0 0 3px var(--color-primary-100)' : 'none'
+                      boxShadow: isCurrent ? '0 0 0 4px var(--color-primary-100)' : 'none'
                     }}>
-                      {isCompleted ? '✓' : idx + 1}
+                      {isCompleted ? <CheckCircle2 size={14} /> : idx + 1}
                     </div>
                     <span style={{
-                      fontSize: '10px',
-                      fontWeight: isCurrent ? 800 : 600,
-                      color: isCurrent
-                        ? 'var(--color-primary-700)'
-                        : isCompleted
-                          ? 'var(--color-text)'
-                          : 'var(--color-text-muted)'
+                      fontSize: '11px',
+                      fontWeight: isCurrent ? 800 : 500,
+                      color: isCurrent ? 'var(--color-primary-700)' : isCompleted ? 'var(--color-text)' : 'var(--color-text-muted)'
                     }}>
                       {stage.label}
                     </span>
@@ -288,7 +336,7 @@ export default function ApplicationDetailsModal({
             </div>
           </div>
 
-          {/* ── 3. Job Information Card ── */}
+          {/* ── 3. Position Details ── */}
           <div style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
@@ -296,14 +344,14 @@ export default function ApplicationDetailsModal({
             padding: 'var(--space-4)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
-              <Building2 size={16} style={{ color: 'var(--color-primary-600)' }} />
-              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 800 }}>Job Details</h3>
+              <Briefcase size={16} style={{ color: 'var(--color-primary-600)' }} />
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 800 }}>Applied Position Details</h3>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-3)', fontSize: 'var(--text-xs)' }}>
               <div>
-                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Job Role</span>
-                <strong>{application.title || application.role}</strong>
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Job / Position Title</span>
+                <strong>{application.title || application.jobTitle || 'Graduate Trainee'}</strong>
               </div>
 
               <div>
@@ -331,12 +379,14 @@ export default function ApplicationDetailsModal({
                 <span>{application.mode || (isMela ? 'On-site / Walk-in' : 'Hybrid')}</span>
               </div>
 
-              {application.jobId && (
-                <div>
-                  <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Job ID</span>
-                  <span style={{ fontFamily: 'monospace, monospace' }}>JOB-{application.jobId}</span>
-                </div>
-              )}
+              <div>
+                <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>
+                  {isIntern ? 'Internship ID' : 'Job ID'}
+                </span>
+                <span style={{ fontFamily: 'monospace, monospace', fontWeight: 700, color: 'var(--color-primary-700)' }}>
+                  {entityId}
+                </span>
+              </div>
 
               {application.postedDate && (
                 <div>
@@ -369,6 +419,13 @@ export default function ApplicationDetailsModal({
                 </div>
 
                 <div>
+                  <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Job Mela / Event ID</span>
+                  <strong style={{ fontFamily: 'monospace, monospace', color: '#7c3aed' }}>
+                    {melaId}
+                  </strong>
+                </div>
+
+                <div>
                   <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Event No</span>
                   <span style={{ fontFamily: 'monospace, monospace', fontWeight: 700 }}>
                     {application.eventNumber || '01'}
@@ -398,6 +455,13 @@ export default function ApplicationDetailsModal({
                 </div>
 
                 <div>
+                  <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Job ID</span>
+                  <span style={{ fontFamily: 'monospace, monospace', fontWeight: 700, color: 'var(--color-primary-700)' }}>
+                    {entityId}
+                  </span>
+                </div>
+
+                <div>
                   <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Application Sequence</span>
                   <span style={{ fontFamily: 'monospace, monospace', fontWeight: 700 }}>
                     {application.applicationSequence || '0024'}
@@ -411,11 +475,11 @@ export default function ApplicationDetailsModal({
                   </strong>
                 </div>
 
-                {(application.passId || true) && (
+                {registrationId && (
                   <div>
-                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Job Mela Pass Ref</span>
+                    <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Registration ID / Pass ID</span>
                     <span style={{ fontFamily: 'monospace, monospace', fontWeight: 700, color: 'var(--color-primary-600)' }}>
-                      {application.passId || 'PASS-AP-849201'}
+                      {registrationId}
                     </span>
                   </div>
                 )}

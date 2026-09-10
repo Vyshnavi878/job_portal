@@ -10,6 +10,7 @@ import Pagination from '../../components/ui/Pagination';
 import { useCandidate } from '../../context/CandidateContext';
 import { useToast } from '../../context/ToastContext';
 import ApplicationDetailsModal from '../../components/ui/ApplicationDetailsModal';
+import { formatJobId, formatInternshipId, formatMelaId, getApplicationNumber, getApplicationType, isJobMelaApplication } from '../../utils/applicationUtils';
 
 export default function CandidateApplicationsPage() {
   const { candidate } = useCandidate();
@@ -241,19 +242,16 @@ export default function CandidateApplicationsPage() {
                     </div>
                   </div>
 
-                  {/* Application Number & Application Type */}
+                  {/* Application Number, Type & Identifier Details */}
                   {(() => {
-                    const isMela = Boolean(
-                      app.melaId ||
-                      app.applicationType === 'Job Mela Application' ||
-                      (app.appNumber && app.appNumber.startsWith('NTR-'))
-                    );
-                    const appNumber = app.appNumber || (
-                      isMela
-                        ? (app.appId || 'NTR-01-02-0024')
-                        : `APP-${String(app.id || app.jobId || '1').replace(/\D/g, '').padStart(6, '0')}`
-                    );
-                    const appType = isMela ? 'Job Mela Application' : 'Direct Job Application';
+                    const isMela = isJobMelaApplication(app);
+                    const appNumber = getApplicationNumber(app);
+                    const appType = getApplicationType(app);
+                    const isIntern = app.type === 'Internship' || (app.jobTitle && app.jobTitle.toLowerCase().includes('intern')) || (app.title && app.title.toLowerCase().includes('intern'));
+                    const entityId = isIntern
+                      ? formatInternshipId(app.internshipId || app.jobId || app.id)
+                      : formatJobId(app.jobId || app.id);
+                    const melaId = isMela ? formatMelaId(app.melaId || '1') : null;
 
                     return (
                       <div style={{
@@ -295,6 +293,44 @@ export default function CandidateApplicationsPage() {
                             {appType}
                           </span>
                         </div>
+
+                        {/* Job ID / Internship ID */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                          <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                            {isIntern ? 'Internship ID:' : 'Job ID:'}
+                          </span>
+                          <span style={{
+                            fontFamily: 'monospace, monospace',
+                            fontWeight: 700,
+                            fontSize: '10.5px',
+                            color: 'var(--color-primary-700)',
+                            background: 'var(--color-primary-50)',
+                            border: '1px solid var(--color-primary-200)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '0 5px'
+                          }}>
+                            {entityId}
+                          </span>
+                        </div>
+
+                        {/* Job Mela ID for Job Mela applications */}
+                        {isMela && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                            <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Job Mela ID:</span>
+                            <span style={{
+                              fontFamily: 'monospace, monospace',
+                              fontWeight: 700,
+                              fontSize: '10.5px',
+                              color: '#7c3aed',
+                              background: '#f5f3ff',
+                              border: '1px solid #ddd6fe',
+                              borderRadius: 'var(--radius-sm)',
+                              padding: '0 5px'
+                            }}>
+                              {melaId}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
@@ -420,19 +456,16 @@ export default function CandidateApplicationsPage() {
                 <StatusBadge status={selectedApp.status} />
               </div>
 
-              {/* Application No. & Type */}
+              {/* Application No., Type & IDs in Timeline Modal */}
               {(() => {
-                const isMela = Boolean(
-                  selectedApp.melaId ||
-                  selectedApp.applicationType === 'Job Mela Application' ||
-                  (selectedApp.appNumber && selectedApp.appNumber.startsWith('NTR-'))
-                );
-                const appNumber = selectedApp.appNumber || (
-                  isMela
-                    ? (selectedApp.appId || 'NTR-01-02-0024')
-                    : `APP-${String(selectedApp.id || selectedApp.jobId || '1').replace(/\D/g, '').padStart(6, '0')}`
-                );
-                const appType = isMela ? 'Job Mela Application' : 'Direct Job Application';
+                const isMela = isJobMelaApplication(selectedApp);
+                const appNumber = getApplicationNumber(selectedApp);
+                const appType = getApplicationType(selectedApp);
+                const isIntern = selectedApp.type === 'Internship' || (selectedApp.jobTitle && selectedApp.jobTitle.toLowerCase().includes('intern')) || (selectedApp.title && selectedApp.title.toLowerCase().includes('intern'));
+                const entityId = isIntern
+                  ? formatInternshipId(selectedApp.internshipId || selectedApp.jobId || selectedApp.id)
+                  : formatJobId(selectedApp.jobId || selectedApp.id);
+                const melaId = isMela ? formatMelaId(selectedApp.melaId || '1') : null;
 
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--color-gray-50)', borderRadius: 'var(--radius-lg)' }}>
@@ -448,6 +481,22 @@ export default function CandidateApplicationsPage() {
                         {appType}
                       </span>
                     </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                        {isIntern ? 'Internship ID:' : 'Job ID:'}
+                      </span>
+                      <span style={{ fontSize: '11px', fontFamily: 'monospace, monospace', fontWeight: 700, color: 'var(--color-primary-700)' }}>
+                        {entityId}
+                      </span>
+                    </div>
+                    {isMela && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Job Mela ID:</span>
+                        <span style={{ fontSize: '11px', fontFamily: 'monospace, monospace', fontWeight: 700, color: '#7c3aed' }}>
+                          {melaId}
+                        </span>
+                      </div>
+                    )}
                     {isMela && selectedApp.melaTitle && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Job Mela:</span>

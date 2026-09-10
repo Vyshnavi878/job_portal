@@ -14,6 +14,7 @@ import { ConfirmDialog } from '../../components/ui/Modal';
 import Pagination from '../../components/ui/Pagination';
 import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
+import { formatJobId } from '../../utils/applicationUtils';
 
 const PAGE_SIZE = 9;
 
@@ -320,7 +321,21 @@ export default function JobsPage() {
                 {/* Header: Status & Work Mode */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                    <StatusBadge status={job.status} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{
+                        fontFamily: 'monospace',
+                        fontWeight: 800,
+                        fontSize: '0.74rem',
+                        color: 'var(--color-primary-700)',
+                        background: 'var(--color-primary-50)',
+                        border: '1px solid var(--color-primary-200)',
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '4px'
+                      }}>
+                        {formatJobId(job.id)}
+                      </span>
+                      <StatusBadge status={job.status} />
+                    </div>
                     <span style={{
                       fontSize: '0.72rem',
                       background: 'var(--color-gray-100)',

@@ -13,6 +13,7 @@ import Textarea from '../../components/ui/Textarea';
 import { EmptyState } from '../../components/ui/States';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { formatJobId } from '../../utils/applicationUtils';
 
 export default function AdminJobRequestsPage() {
   const { addToast } = useToast();
@@ -37,6 +38,8 @@ export default function AdminJobRequestsPage() {
     const q = search.toLowerCase();
     return (
       j.title?.toLowerCase().includes(q) ||
+      (formatJobId(j.id) || '').toLowerCase().includes(q) ||
+      String(j.id || '').toLowerCase().includes(q) ||
       j.company?.toLowerCase().includes(q) ||
       j.recruiter?.toLowerCase().includes(q) ||
       j.location?.toLowerCase().includes(q)
@@ -94,7 +97,21 @@ export default function AdminJobRequestsPage() {
       sortable: true,
       render: (_, row) => (
         <div>
-          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{row.title}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{row.title}</strong>
+            <span style={{
+              fontFamily: 'monospace',
+              fontSize: '10px',
+              fontWeight: 700,
+              background: '#eff6ff',
+              color: '#1d4ed8',
+              border: '1px solid #bfdbfe',
+              padding: '1px 6px',
+              borderRadius: '4px'
+            }}>
+              {formatJobId(row.id)}
+            </span>
+          </div>
           <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.company}</span>
         </div>
       )
@@ -293,7 +310,21 @@ export default function AdminJobRequestsPage() {
                 <Briefcase size={28} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedJob.title}</h3>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span>{selectedJob.title}</span>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    background: 'rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {formatJobId(selectedJob.id)}
+                  </span>
+                </h3>
                 <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '2px 0 0 0' }}>{selectedJob.company} • 📍 {selectedJob.location}</p>
                 <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#cbd5e1' }}>
                   <span>💰 {selectedJob.salary}</span>
@@ -309,6 +340,9 @@ export default function AdminJobRequestsPage() {
                 <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
                   Posting Parameters
                 </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                  <strong>Job ID:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-primary-600)' }}>{formatJobId(selectedJob.id)}</span>
+                </p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Company:</strong> {selectedJob.company}</p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Recruiter Lead:</strong> {selectedJob.recruiter}</p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Submitted Date:</strong> {selectedJob.postedDate || 'Aug 2026'}</p>

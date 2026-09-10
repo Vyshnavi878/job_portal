@@ -17,6 +17,7 @@ import ExportDropdown from '../../components/ui/ExportDropdown';
 import { exportToExcel, exportToPDF, getExportFilename } from '../../utils/exportUtils';
 import { useToast } from '../../context/ToastContext';
 import { useAdmin } from '../../context/AdminContext';
+import { formatJobId } from '../../utils/applicationUtils';
 
 export default function AdminJobsPage() {
   const { addToast } = useToast();
@@ -68,20 +69,19 @@ export default function AdminJobsPage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
   // Reject modal
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectTarget, setRejectTarget] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
   // Request Changes modal
+  const [changesModalOpen, setChangesModalOpen] = useState(false);
   const [changesTarget, setChangesTarget] = useState(null);
   const [changeNotes, setChangeNotes] = useState('');
-  const [changesModalOpen, setChangesModalOpen] = useState(false);
 
   const filterTabs = [
     { key: 'ALL', label: 'All Jobs' },
     { key: 'ACTIVE', label: 'Active' },
-    { key: 'PENDING', label: 'Pending' },
-    { key: 'APPROVED', label: 'Approved' },
+    { key: 'PENDING', label: 'Pending Approval' },
     { key: 'REJECTED', label: 'Rejected' },
     { key: 'CLOSED', label: 'Closed' },
   ];
@@ -107,10 +107,11 @@ export default function AdminJobsPage() {
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchesTitle = j.title?.toLowerCase().includes(q);
+        const matchesJobId = (formatJobId(j.id) || '').toLowerCase().includes(q) || String(j.id || '').toLowerCase().includes(q);
         const matchesCompany = j.company?.toLowerCase().includes(q);
         const matchesRecruiter = j.recruiter?.toLowerCase().includes(q);
         const matchesLocation = j.location?.toLowerCase().includes(q);
-        if (!matchesTitle && !matchesCompany && !matchesRecruiter && !matchesLocation) return false;
+        if (!matchesTitle && !matchesJobId && !matchesCompany && !matchesRecruiter && !matchesLocation) return false;
       }
       return true;
     });
@@ -129,6 +130,7 @@ export default function AdminJobsPage() {
     }
     addToast('Exporting jobs list to Excel...', 'info');
     const headers = [
+      'Job ID',
       'Job Title',
       'Company',
       'Job Type',
@@ -136,10 +138,11 @@ export default function AdminJobsPage() {
       'Experience',
       'Salary',
       'Recruiter',
-      'Created Date',
+      'Posted Date',
       'Status'
     ];
     const rows = filtered.map(j => [
+      formatJobId(j.id),
       j.title || 'N/A',
       j.company || 'N/A',
       j.type || j.workMode || 'Full-time',
@@ -168,8 +171,9 @@ export default function AdminJobsPage() {
       return;
     }
     addToast('Exporting jobs list to PDF...', 'info');
-    const headers = ['Job Title', 'Company', 'Type', 'Location', 'Salary', 'Recruiter', 'Status'];
+    const headers = ['Job ID', 'Job Title', 'Company', 'Type', 'Location', 'Salary', 'Recruiter', 'Status'];
     const rows = filtered.map(j => [
+      formatJobId(j.id),
       j.title || 'N/A',
       j.company || 'N/A',
       j.type || j.workMode || 'Full-time',
@@ -254,7 +258,21 @@ export default function AdminJobsPage() {
       sortable: true,
       render: (_, row) => (
         <div>
-          <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', display: 'block' }}>{row.title}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{row.title}</strong>
+            <span style={{
+              fontFamily: 'monospace',
+              fontSize: '10px',
+              fontWeight: 700,
+              background: '#eff6ff',
+              color: '#1d4ed8',
+              border: '1px solid #bfdbfe',
+              padding: '1px 6px',
+              borderRadius: '4px'
+            }}>
+              {formatJobId(row.id)}
+            </span>
+          </div>
           <span style={{ fontSize: '11px', color: 'var(--color-primary-600)', fontWeight: 600 }}>{row.type || 'Full-time'}</span>
         </div>
       )
@@ -569,7 +587,21 @@ export default function AdminJobsPage() {
                 <Briefcase size={28} />
               </div>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff' }}>{selectedJob.title}</h3>
+                <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 800, margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span>{selectedJob.title}</span>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    background: 'rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {formatJobId(selectedJob.id)}
+                  </span>
+                </h3>
                 <p style={{ fontSize: 'var(--text-sm)', color: '#93c5fd', margin: '2px 0 0 0' }}>{selectedJob.company} • 📍 {selectedJob.location}</p>
                 <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-2)', fontSize: '11px', color: '#cbd5e1' }}>
                   <span>💰 {selectedJob.salary}</span>
@@ -585,6 +617,9 @@ export default function AdminJobsPage() {
                 <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>
                   Posting Parameters
                 </h4>
+                <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}>
+                  <strong>Job ID:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-primary-600)' }}>{formatJobId(selectedJob.id)}</span>
+                </p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Recruiter:</strong> {selectedJob.recruiter || 'Enterprise Talent'}</p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 4 }}><strong>Job Type:</strong> {selectedJob.type || 'Full-time'}</p>
                 <p style={{ fontSize: 'var(--text-xs)', marginBottom: 0 }}><strong>Posted Date:</strong> {selectedJob.postedDate || 'Aug 2026'}</p>

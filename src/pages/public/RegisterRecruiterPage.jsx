@@ -13,6 +13,7 @@ import FileUpload from '../../components/ui/FileUpload';
 import OtpVerificationModal from '../../components/ui/OtpVerificationModal';
 import { useToast } from '../../context/ToastContext';
 import { INDUSTRIES, COMPANY_SIZES, LOCATIONS } from '../../data/mockData';
+import { isDailyOtpLimitReached, recordOtpAttempt } from '../../utils/otpUtils';
 
 const SECTIONS = ['Recruiter Contact', 'Company Details', 'Verification Docs'];
 
@@ -71,6 +72,18 @@ export default function RegisterRecruiterPage() {
         });
         return;
       }
+
+      if (isDailyOtpLimitReached('recruiter_reg')) {
+        toast({
+          type: 'error',
+          title: 'Daily OTP Limit Reached',
+          message: 'You have reached the maximum allowed 3 OTP requests for today. Please try again tomorrow.',
+        });
+        return;
+      }
+
+      // Record OTP request attempt
+      recordOtpAttempt('recruiter_reg');
 
       // Trigger Email OTP Verification
       setOtpModalOpen(true);

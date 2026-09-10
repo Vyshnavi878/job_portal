@@ -2,24 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Mail, Clock, RefreshCw, AlertCircle, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
 import Button from './Button';
 import { useToast } from '../../context/ToastContext';
+import {
+  getDailyOtpAttempts,
+  isDailyOtpLimitReached,
+  recordOtpAttempt,
+  maskEmail
+} from '../../utils/otpUtils';
 
-/**
- * Partially masks an email address (e.g. priya@example.com -> p***@example.com)
- */
-export function maskEmail(email = '') {
-  if (!email || !email.includes('@')) return email || 'your email';
-  const [user, domain] = email.split('@');
-  if (!user) return email;
-  return `${user[0]}***@${domain}`;
-}
-
-/**
- * Gets today's date string YYYY-MM-DD
- */
-function getTodayDateStr() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
+export { maskEmail };
 
 /**
  * Reusable OtpVerificationView
@@ -55,27 +45,12 @@ export default function OtpVerificationView({
   const [cooldown, setCooldown] = useState(30);
 
   // Daily request limit state (maximum 3 requests per day per flow)
-  const dailyStorageKey = `ntr_otp_limit_${flowId}_${getTodayDateStr()}`;
   const [requestCount, setRequestCount] = useState(() => {
-    try {
-      const saved = localStorage.getItem(dailyStorageKey);
-      return saved ? parseInt(saved, 10) : 1;
-    } catch {
-      return 1;
-    }
+    return Math.max(1, getDailyOtpAttempts(flowId));
   });
 
   const isDailyLimitReached = requestCount >= 3;
   const isExpired = timeLeft <= 0;
-
-  // Sync initial request count to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(dailyStorageKey, String(requestCount));
-    } catch (e) {
-      // ignore storage errors
-    }
-  }, [dailyStorageKey, requestCount]);
 
   // Expiry countdown effect
   useEffect(() => {
@@ -182,17 +157,15 @@ export default function OtpVerificationView({
 
   // Resend OTP action
   const handleResendOtp = () => {
-    if (isDailyLimitReached) return;
+    if (isDailyLimitReached || isDailyOtpLimitReached(flowId)) {
+      setErrorMsg('Daily OTP limit reached (3/3). Please try again tomorrow.');
+      return;
+    }
     if (cooldown > 0) return;
 
     // Increment daily request count
-    const nextCount = requestCount + 1;
+    const nextCount = recordOtpAttempt(flowId);
     setRequestCount(nextCount);
-    try {
-      localStorage.setItem(dailyStorageKey, String(nextCount));
-    } catch {
-      // ignore
-    }
 
     // Reset OTP input, timer, and cooldown
     setOtp(['', '', '', '', '', '']);

@@ -9,10 +9,13 @@ import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { useToast } from '../../context/ToastContext';
 import { useRecruiter } from '../../context/RecruiterContext';
+import { useNotifications } from '../../context/NotificationContext';
+import { dispatchRecruiterEvent, RECRUITER_NOTIFICATION_EVENTS } from '../../services/notificationEventService';
 
 export default function RecruiterHelpSupportPage() {
   const { recruiter } = useRecruiter();
   const { toast } = useToast();
+  const { addNotification } = useNotifications();
 
   // Contact Support Ticket State
   const [issueType, setIssueType] = useState('Job Posting Approval & Moderation');
@@ -37,13 +40,29 @@ export default function RecruiterHelpSupportPage() {
 
     setSubmitting(true);
     setTimeout(() => {
+      const ticketId = Math.floor(100000 + Math.random() * 900000);
       setSubmitting(false);
       setSubject('');
       setDescription('');
       toast({
         type: 'success',
         title: 'Support Ticket Submitted',
-        message: `Ticket #${Math.floor(100000 + Math.random() * 900000)} created. Our employer support team will respond within 24 hours.`
+        message: `Ticket #${ticketId} created. Our employer support team will respond within 24 hours.`
+      });
+
+      dispatchRecruiterEvent({
+        eventType: RECRUITER_NOTIFICATION_EVENTS.RECRUITER_SUPPORT_TICKET_CREATED,
+        recruiterEmail,
+        recipientName: recruiterName,
+        addNotification,
+        notification: {
+          category: 'SUPPORT',
+          title: `Support Ticket #${ticketId} Created`,
+          message: `Your query regarding "${issueType}" has been logged. Our employer support desk will follow up.`,
+          link: '/recruiter/help-support',
+          meta: { ticketId, issueType, subject }
+        },
+        meta: { ticketId, issueType, subject }
       });
     }, 800);
   };

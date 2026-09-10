@@ -5,8 +5,13 @@ import {
 import Button from '../../components/ui/Button';
 import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
+import { useAdmin } from '../../context/AdminContext';
+import { useNotifications } from '../../context/NotificationContext';
+import { dispatchAdminEvent, ADMIN_NOTIFICATION_EVENTS } from '../../services/notificationEventService';
 
 export default function AdminChangePasswordPage() {
+  const { currentAdmin } = useAdmin();
+  const { addNotification } = useNotifications();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -49,6 +54,22 @@ export default function AdminChangePasswordPage() {
 
     // Clear validation errors
     setErrors({});
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_PASSWORD_CHANGED,
+      adminEmail: currentAdmin?.email || 'admin1@ntrvikasa.com',
+      recipientName: currentAdmin?.name || 'Platform Administrator',
+      addNotification,
+      notification: {
+        category: 'SECURITY',
+        priority: 'HIGH',
+        title: 'Security Alert: Admin Password Updated',
+        message: 'Your administrator account credentials were updated. If this was not initiated by you, alert cybersecurity operations immediately.',
+        link: '/admin/change-password',
+        meta: { action: 'Admin Password Change', date: new Date().toISOString() }
+      },
+      meta: { action: 'Admin Password Change' }
+    });
 
     // Frontend validation succeeded. Since backend is not designed yet,
     // show a clean info notice that the UI is prepared for future backend integration

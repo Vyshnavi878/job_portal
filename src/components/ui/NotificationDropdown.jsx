@@ -8,7 +8,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell, X, Check, ArrowRight, Briefcase, CalendarDays,
-  User, CheckCircle2, Info, Building2
+  User, CheckCircle2, Info, Building2, LifeBuoy,
+  ShieldCheck, Users, AlertTriangle
 } from 'lucide-react';
 import { useNotifications, NOTIF_CATEGORY } from '../../context/NotificationContext';
 
@@ -25,8 +26,13 @@ function CategoryIcon({ category, size = 16 }) {
     JOB_APPROVAL: <CheckCircle2 size={size} />,
     ACCOUNT:      <User size={size} />,
     SYSTEM:       <Info size={size} />,
+    SUPPORT:      <LifeBuoy size={size} />,
     RECRUITER:    <Building2 size={size} />,
     COMPANY:      <Building2 size={size} />,
+    VERIFICATION: <ShieldCheck size={size} />,
+    TEAM:         <Users size={size} />,
+    REPORT:       <AlertTriangle size={size} />,
+    SECURITY:     <ShieldCheck size={size} />,
   };
   return (
     <div style={{
@@ -315,6 +321,21 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
                           flexShrink: 0,
                         }} />
                         <span style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{notif.title}</span>
+                        {notif.priority && notif.priority !== 'NORMAL' && (
+                          <span style={{
+                            background: notif.priority === 'HIGH' ? '#fef2f2' : '#fffbeb',
+                            color: notif.priority === 'HIGH' ? '#dc2626' : '#d97706',
+                            border: notif.priority === 'HIGH' ? '1px solid #fecaca' : '1px solid #fef3c7',
+                            fontSize: '9px',
+                            fontWeight: 800,
+                            padding: '1px 5px',
+                            borderRadius: 'var(--radius-full)',
+                            textTransform: 'uppercase',
+                            flexShrink: 0,
+                          }}>
+                            {notif.priority}
+                          </span>
+                        )}
                       </p>
                     </div>
 

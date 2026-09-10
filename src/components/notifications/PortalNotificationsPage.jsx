@@ -10,8 +10,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Bell, Check, Trash2, ArrowRight, Briefcase, CalendarDays,
-  User, Info, Building2, CheckCircle2, X,
-  Search,
+  User, Info, Building2, CheckCircle2, X, LifeBuoy,
+  Search, ShieldCheck, Users, AlertTriangle,
 } from 'lucide-react';
 import { useNotifications, NOTIF_CATEGORY } from '../../context/NotificationContext';
 import { useToast } from '../../context/ToastContext';
@@ -29,8 +29,13 @@ const CAT_ICONS = {
   JOB_APPROVAL: <CheckCircle2 size={20} />,
   ACCOUNT:      <User size={20} />,
   SYSTEM:       <Info size={20} />,
+  SUPPORT:      <LifeBuoy size={20} />,
   RECRUITER:    <Building2 size={20} />,
   COMPANY:      <Building2 size={20} />,
+  VERIFICATION: <ShieldCheck size={20} />,
+  TEAM:         <Users size={20} />,
+  REPORT:       <AlertTriangle size={20} />,
+  SECURITY:     <ShieldCheck size={20} />,
 };
 
 function NotifIcon({ category }) {
@@ -338,6 +343,21 @@ export default function PortalNotificationsPage({ portal = 'candidate' }) {
                         }}>
                           {cat.label}
                         </span>
+                        {notif.priority && notif.priority !== 'NORMAL' && (
+                          <span style={{
+                            background: notif.priority === 'HIGH' ? '#fef2f2' : '#fffbeb',
+                            color: notif.priority === 'HIGH' ? '#dc2626' : '#d97706',
+                            border: notif.priority === 'HIGH' ? '1px solid #fecaca' : '1px solid #fef3c7',
+                            fontSize: '9px',
+                            fontWeight: 800,
+                            padding: '1px 6px',
+                            borderRadius: 'var(--radius-full)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                          }}>
+                            {notif.priority}
+                          </span>
+                        )}
                         {!notif.read && (
                           <span style={{
                             width: 7,
@@ -378,6 +398,90 @@ export default function PortalNotificationsPage({ portal = 'candidate' }) {
                     }}>
                       {notif.message}
                     </p>
+
+                    {/* Metadata Badges */}
+                    {notif.meta && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 'var(--space-2)' }}>
+                        {notif.meta.appNumber && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: notif.meta.appNumber.startsWith('NTR-') ? '#fdf2f8' : '#eff6ff',
+                            color: notif.meta.appNumber.startsWith('NTR-') ? '#be185d' : '#1d4ed8',
+                            border: `1px solid ${notif.meta.appNumber.startsWith('NTR-') ? '#fbcfe8' : '#bfdbfe'}`,
+                            fontFamily: 'var(--font-mono, monospace)'
+                          }}>
+                            {notif.meta.appNumber.startsWith('NTR-') ? 'Mela App: ' : 'App No: '}{notif.meta.appNumber}
+                          </span>
+                        )}
+                        {notif.meta.company && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: 'var(--color-gray-100)',
+                            color: 'var(--color-text-muted)'
+                          }}>
+                            {notif.meta.company}
+                          </span>
+                        )}
+                        {notif.meta.status && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: '#f0fdf4',
+                            color: '#15803d',
+                            border: '1px solid #bbf7d0'
+                          }}>
+                            {notif.meta.status}
+                          </span>
+                        )}
+                        {notif.meta.passId && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: '#fdf2f8',
+                            color: '#be185d',
+                            border: '1px solid #fbcfe8'
+                          }}>
+                            Pass: {notif.meta.passId}
+                          </span>
+                        )}
+                        {notif.meta.format && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: '#f5f3ff',
+                            color: '#6d28d9',
+                            border: '1px solid #ddd6fe'
+                          }}>
+                            {notif.meta.format}
+                          </span>
+                        )}
+                        {notif.meta.ticketId && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
+                            background: '#e0f2fe',
+                            color: '#0369a1',
+                            border: '1px solid #bae6fd'
+                          }}>
+                            Ticket #{notif.meta.ticketId}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Actions row */}
                     <div

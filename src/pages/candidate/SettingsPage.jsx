@@ -9,9 +9,14 @@ import Input from '../../components/ui/Input';
 import { Toggle, Checkbox } from '../../components/ui/FormControls';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import { useToast } from '../../context/ToastContext';
+import { useCandidate } from '../../context/CandidateContext';
+import { useNotifications } from '../../context/NotificationContext';
+import { dispatchCandidateEvent, NOTIFICATION_EVENTS } from '../../services/notificationEventService';
 
 export default function CandidateSettingsPage() {
   const { toast } = useToast();
+  const { candidate } = useCandidate();
+  const { addNotification } = useNotifications();
 
   // Password fields
   const [currentPassword, setCurrentPassword] = useState('');
@@ -48,6 +53,22 @@ export default function CandidateSettingsPage() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+
+      // Dispatch Password Changed Notification & Email event
+      dispatchCandidateEvent({
+        eventType: NOTIFICATION_EVENTS.AUTH_PASSWORD_CHANGED,
+        candidateEmail: candidate?.email || 'candidate@ntrvikasa.com',
+        recipientName: candidate?.name || 'Candidate',
+        addNotification,
+        notification: {
+          category: 'ACCOUNT',
+          title: 'Security Alert: Password Updated',
+          message: 'Your candidate account password was updated securely. If you did not make this change, please contact candidate support immediately.',
+          time: 'Just now',
+          link: '/candidate/settings',
+        }
+      });
+
       toast({
         type: 'success',
         title: 'Password Updated',

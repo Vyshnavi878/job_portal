@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useNotifications } from './NotificationContext';
+import { dispatchRecruiterEvent, RECRUITER_NOTIFICATION_EVENTS } from '../services/notificationEventService';
 
 // ─── RECRUITER 1 SEED DATA: Arjun Reddy (ABC Technologies) ─────────────────
 const RECRUITER_1_DATA = {
@@ -2354,6 +2356,8 @@ const SEED_INVITATIONS = [
 const RecruiterContext = createContext(null);
 
 export function RecruiterProvider({ children }) {
+  const { addNotification } = useNotifications();
+
   // 1. Companies Dataset
   const [companiesData, setCompaniesData] = useState(() => {
     try {
@@ -2589,6 +2593,21 @@ export function RecruiterProvider({ children }) {
       },
     }));
 
+    dispatchRecruiterEvent({
+      eventType: RECRUITER_NOTIFICATION_EVENTS.RECRUITER_TEAM_MEMBER_ADDED,
+      recruiterEmail: currentUser.email,
+      recipientName: currentUser.name,
+      addNotification,
+      notification: {
+        category: 'TEAM',
+        title: `Team Invitation Sent: ${memberData.name}`,
+        message: `Invitation sent to ${memberData.name} (${memberData.email}) for role: ${memberData.role || 'Technical Recruiter'}.`,
+        link: '/recruiter/settings',
+        meta: { memberName: memberData.name, email: memberData.email, role: memberData.role }
+      },
+      meta: { memberName: memberData.name, email: memberData.email, role: memberData.role }
+    });
+
     return {
       success: true,
       invitationToken: token,
@@ -2732,6 +2751,20 @@ export function RecruiterProvider({ children }) {
         activeJobsCount: prev.company.activeJobsCount + 1
       }
     }));
+    dispatchRecruiterEvent({
+      eventType: RECRUITER_NOTIFICATION_EVENTS.RECRUITER_JOB_SUBMITTED,
+      recruiterEmail: currentUser.email,
+      recipientName: currentUser.name,
+      addNotification,
+      notification: {
+        category: 'JOB_APPROVAL',
+        title: `Job Submitted: ${newJob.title}`,
+        message: `"${newJob.title}" was submitted for review. It will be live once approved by NTR Vikasa Admin.`,
+        link: '/recruiter/jobs',
+        meta: { jobId: newJob.id, title: newJob.title, status: newJob.status }
+      },
+      meta: { jobId: newJob.id, title: newJob.title }
+    });
     return newJob;
   };
 
@@ -2770,23 +2803,60 @@ export function RecruiterProvider({ children }) {
         internshipsCount: prev.company.internshipsCount + 1
       }
     }));
+    dispatchRecruiterEvent({
+      eventType: RECRUITER_NOTIFICATION_EVENTS.RECRUITER_INTERNSHIP_SUBMITTED,
+      recruiterEmail: currentUser.email,
+      recipientName: currentUser.name,
+      addNotification,
+      notification: {
+        category: 'JOB_APPROVAL',
+        title: `Internship Submitted: ${newIntern.title}`,
+        message: `"${newIntern.title}" was submitted for admin review.`,
+        link: '/recruiter/internships',
+        meta: { internshipId: newIntern.id, title: newIntern.title, status: 'PENDING' }
+      },
+      meta: { internshipId: newIntern.id, title: newIntern.title }
+    });
     return newIntern;
   };
 
   // Shortlist candidate
   const shortlistCandidate = (candidateId, jobId) => {
+    let candidateName = 'Candidate';
     updateRecruiter((prev) => {
-      const updatedCandidates = prev.candidates.map(c =>
-        c.id === candidateId ? { ...c, shortlisted: true, status: 'SHORTLISTED' } : c
-      );
-      const updatedApps = prev.applications.map(a =>
-        a.candidateId === candidateId ? { ...a, status: 'SHORTLISTED' } : a
-      );
+      const updatedCandidates = prev.candidates.map(c => {
+        if (c.id === candidateId) {
+          candidateName = c.name || candidateName;
+          return { ...c, shortlisted: true, status: 'SHORTLISTED' };
+        }
+        return c;
+      });
+      const updatedApps = prev.applications.map(a => {
+        if (a.candidateId === candidateId) {
+          candidateName = a.candidateName || candidateName;
+          return { ...a, status: 'SHORTLISTED' };
+        }
+        return a;
+      });
       return {
         ...prev,
         candidates: updatedCandidates,
         applications: updatedApps
       };
+    });
+    dispatchRecruiterEvent({
+      eventType: RECRUITER_NOTIFICATION_EVENTS.RECRUITER_CANDIDATE_SHORTLISTED,
+      recruiterEmail: currentUser.email,
+      recipientName: currentUser.name,
+      addNotification,
+      notification: {
+        category: 'SHORTLIST',
+        title: `Candidate Shortlisted: ${candidateName}`,
+        message: `${candidateName} was shortlisted for further evaluation and interview scheduling.`,
+        link: '/recruiter/candidates',
+        meta: { candidateId, candidateName }
+      },
+      meta: { candidateId, candidateName }
     });
   };
 
@@ -2818,6 +2888,31 @@ export function RecruiterProvider({ children }) {
           : a
       )
     }));
+    dispatchRecruiterEvent({
+      eventType: RECRUITER_NOTIFICATION_EVENTS.RECRUITER_INTERVIEW_SCHEDULED,
+      recruiterEmail: currentUser.email,
+      recipientName: currentUser.name,
+      addNotification,
+      notification: {
+        category: 'INTERVIEW',
+        title: `Interview Scheduled: ${interviewData.candidateName || 'Candidate'}`,
+        message: `Interview scheduled with ${interviewData.candidateName || 'Candidate'} on ${interviewData.date || 'upcoming date'} at ${interviewData.time || 'scheduled time'}. Format: ${interviewData.type || 'Online'}.`,
+        link: '/recruiter/interviews',
+        meta: {
+          interviewId: newInterview.id,
+          candidateName: interviewData.candidateName,
+          date: interviewData.date,
+          time: interviewData.time,
+          format: interviewData.type || 'Online',
+        }
+      },
+      meta: {
+        interviewId: newInterview.id,
+        candidateName: interviewData.candidateName,
+        date: interviewData.date,
+        time: interviewData.time,
+      }
+    });
     return newInterview;
   };
 

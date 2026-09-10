@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useNotifications } from './NotificationContext';
+import { dispatchCandidateEvent, NOTIFICATION_EVENTS } from '../services/notificationEventService';
 
 export const calculateProfileCompletion = (c) => {
   if (!c) return 0;
@@ -676,6 +678,8 @@ const CANDIDATE_2_DATA = {
 const CandidateContext = createContext(null);
 
 export function CandidateProvider({ children }) {
+  const { addNotification } = useNotifications();
+
   // Store both candidate datasets
   const [candidatesData, setCandidatesData] = useState(() => {
     try {
@@ -947,6 +951,39 @@ export function CandidateProvider({ children }) {
       ]
     }));
 
+    // Dispatch real-time Candidate Notification & Email event
+    dispatchCandidateEvent({
+      eventType: isJobMela ? NOTIFICATION_EVENTS.JOB_MELA_APP_SUBMITTED : NOTIFICATION_EVENTS.APP_SUBMITTED,
+      candidateEmail: candidate.email,
+      recipientName: candidate.name,
+      addNotification,
+      notification: {
+        category: isJobMela ? 'JOB_MELA' : 'APPLICATION',
+        title: isJobMela
+          ? `Job Mela Application Submitted: ${job.title || job.role}`
+          : `Application Submitted: ${job.title || job.role}`,
+        message: isJobMela
+          ? `Your application for "${job.title || job.role}" at ${job.company} for ${newApp.melaTitle || 'Job Mela'} was submitted successfully (Job Mela Application No: ${newApp.appNumber}). Status: Applied.`
+          : `Your application for "${job.title || job.role}" at ${job.company} was submitted successfully (Application No: ${newApp.appNumber}). Status: Applied.`,
+        time: 'Just now',
+        link: '/candidate/applications',
+        meta: {
+          appNumber: newApp.appNumber,
+          company: job.company,
+          role: job.title || job.role,
+          status: 'Applied',
+          melaTitle: newApp.melaTitle,
+          applicationType: isJobMela ? 'Job Mela Application' : 'Direct Job Application',
+        }
+      },
+      meta: {
+        appNumber: newApp.appNumber,
+        company: job.company,
+        role: job.title || job.role,
+        status: 'Applied',
+      }
+    });
+
     return newApp;
   };
 
@@ -998,6 +1035,15 @@ export function CandidateProvider({ children }) {
         ...(prev.notifications || [])
       ]
     }));
+
+    // Add internal notification for resume update
+    addNotification('candidate', {
+      category: 'ACCOUNT',
+      title: `Resume Updated: ${resumeData.fileName || 'Candidate_Resume.pdf'}`,
+      message: `Your active resume "${resumeData.fileName || candidate.resume?.fileName}" has been updated. Recruiters will now receive your newest version.`,
+      time: 'Just now',
+      link: '/candidate/resume',
+    });
   };
 
   // Update Profile

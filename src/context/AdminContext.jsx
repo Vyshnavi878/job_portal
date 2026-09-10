@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useNotifications } from './NotificationContext';
+import { dispatchAdminEvent, ADMIN_NOTIFICATION_EVENTS } from '../services/notificationEventService';
 
 // ─── 1. ADMIN SEED USERS ──────────────────────────────────────────────────
 const SEED_ADMINS = [
@@ -2326,6 +2328,8 @@ export const DEFAULT_ABOUT_CONTENT = {
 const AdminContext = createContext(null);
 
 export function AdminProvider({ children }) {
+  const { addNotification } = useNotifications();
+
   // 1. Admin Users & Auth Session
   const [adminUsers] = useState(SEED_ADMINS);
   const [activeAdminId, setActiveAdminId] = useState(() => {
@@ -2687,6 +2691,21 @@ export function AdminProvider({ children }) {
     );
     const rec = recruiters.find(r => r.id === recruiterId);
     addAuditLog(`Recruiter ${status === 'VERIFIED' ? 'Verified' : 'Rejected'}`, rec?.name || recruiterId, 'RECRUITER');
+
+    dispatchAdminEvent({
+      eventType: status === 'VERIFIED' ? ADMIN_NOTIFICATION_EVENTS.ADMIN_RECRUITER_VERIFIED : ADMIN_NOTIFICATION_EVENTS.ADMIN_RECRUITER_REJECTED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'VERIFICATION',
+        title: `Recruiter ${status === 'VERIFIED' ? 'Verified' : 'Rejected'}: ${rec?.name || 'Recruiter'}`,
+        message: `${rec?.name || 'Recruiter'} (${rec?.company || 'Company'}) verification status updated to ${status}.`,
+        link: '/admin/recruiters',
+        meta: { recruiterId, recruiterName: rec?.name, company: rec?.company, status }
+      },
+      meta: { recruiterId, status }
+    });
   };
 
   const suspendRecruiter = (recruiterId) => {
@@ -2729,6 +2748,21 @@ export function AdminProvider({ children }) {
     );
     const comp = companies.find(c => c.id === companyId);
     addAuditLog('Company Verified & Approved', comp?.name || companyId, 'COMPANY');
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_COMPANY_APPROVED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'COMPANY',
+        title: `Company Approved: ${comp?.name || 'Company'}`,
+        message: `${comp?.name || 'Company'} corporate account verified and granted recruitment privileges.`,
+        link: '/admin/companies',
+        meta: { companyId, companyName: comp?.name, status: 'VERIFIED' }
+      },
+      meta: { companyId, status: 'VERIFIED' }
+    });
   };
 
   const rejectCompany = (companyId, reason = '') => {
@@ -2737,6 +2771,21 @@ export function AdminProvider({ children }) {
     );
     const comp = companies.find(c => c.id === companyId);
     addAuditLog('Company Verification Rejected', comp?.name || companyId, 'COMPANY');
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_COMPANY_REJECTED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'COMPANY',
+        title: `Company Rejected: ${comp?.name || 'Company'}`,
+        message: `${comp?.name || 'Company'} verification request rejected. Reason: ${reason || 'Non-compliant documents'}.`,
+        link: '/admin/companies/requests',
+        meta: { companyId, companyName: comp?.name, status: 'REJECTED' }
+      },
+      meta: { companyId, status: 'REJECTED' }
+    });
   };
 
   const suspendCompany = (companyId) => {
@@ -2762,6 +2811,21 @@ export function AdminProvider({ children }) {
     );
     const job = jobs.find(j => j.id === jobId);
     addAuditLog('Job Approved & Published', job?.title || jobId, 'JOB');
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_JOB_APPROVED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'JOB_APPROVAL',
+        title: `Job Approved & Published: ${job?.title || 'Job'}`,
+        message: `"${job?.title || 'Job'}" by ${job?.company || 'Company'} is now active on the public job board.`,
+        link: '/admin/jobs',
+        meta: { jobId, jobTitle: job?.title, company: job?.company, status: 'ACTIVE' }
+      },
+      meta: { jobId, status: 'ACTIVE' }
+    });
   };
 
   const rejectJob = (jobId, reason = '') => {
@@ -2770,6 +2834,21 @@ export function AdminProvider({ children }) {
     );
     const job = jobs.find(j => j.id === jobId);
     addAuditLog('Job Posting Rejected', job?.title || jobId, 'JOB');
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_JOB_REJECTED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'JOB_APPROVAL',
+        title: `Job Rejected: ${job?.title || 'Job'}`,
+        message: `"${job?.title || 'Job'}" by ${job?.company || 'Company'} was rejected. Reason: ${reason || 'Policy requirements not met'}.`,
+        link: '/admin/jobs/requests',
+        meta: { jobId, jobTitle: job?.title, status: 'REJECTED' }
+      },
+      meta: { jobId, status: 'REJECTED' }
+    });
   };
 
   const requestJobChanges = (jobId, feedback = '') => {
@@ -2787,6 +2866,21 @@ export function AdminProvider({ children }) {
     );
     const intern = internships.find(i => i.id === internshipId);
     addAuditLog('Internship Approved', intern?.title || internshipId, 'INTERNSHIP');
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_INTERNSHIP_APPROVED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'JOB_APPROVAL',
+        title: `Internship Approved: ${intern?.title || 'Internship'}`,
+        message: `"${intern?.title || 'Internship'}" by ${intern?.company || 'Company'} approved for candidate applications.`,
+        link: '/admin/internships',
+        meta: { internshipId, title: intern?.title, status: 'ACTIVE' }
+      },
+      meta: { internshipId, status: 'ACTIVE' }
+    });
   };
 
   const rejectInternship = (internshipId, reason = '') => {
@@ -2795,6 +2889,21 @@ export function AdminProvider({ children }) {
     );
     const intern = internships.find(i => i.id === internshipId);
     addAuditLog('Internship Rejected', intern?.title || internshipId, 'INTERNSHIP');
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_INTERNSHIP_REJECTED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'JOB_APPROVAL',
+        title: `Internship Rejected: ${intern?.title || 'Internship'}`,
+        message: `"${intern?.title || 'Internship'}" was rejected. Reason: ${reason || 'Terms not met'}.`,
+        link: '/admin/internships/requests',
+        meta: { internshipId, status: 'REJECTED' }
+      },
+      meta: { internshipId, status: 'REJECTED' }
+    });
   };
 
   // Job Mela actions
@@ -2911,6 +3020,21 @@ export function AdminProvider({ children }) {
     );
     const mela = jobMelas.find(m => m.id === melaId);
     addAuditLog('Job Mela Event Approved', mela?.event || melaId, 'JOB_MELA');
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_JOB_MELA_APPROVED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'JOB_MELA',
+        title: `Job Mela Approved: ${mela?.event || 'Job Mela'}`,
+        message: `Event "${mela?.event || 'Job Mela'}" confirmed and open for candidate registrations.`,
+        link: '/admin/job-melas',
+        meta: { melaId, eventName: mela?.event, status: 'APPROVED' }
+      },
+      meta: { melaId, status: 'APPROVED' }
+    });
   };
 
   const rejectJobMela = (melaId) => {
@@ -2919,6 +3043,21 @@ export function AdminProvider({ children }) {
     );
     const mela = jobMelas.find(m => m.id === melaId);
     addAuditLog('Job Mela Event Rejected', mela?.event || melaId, 'JOB_MELA');
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_JOB_MELA_REJECTED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'JOB_MELA',
+        title: `Job Mela Rejected: ${mela?.event || 'Job Mela'}`,
+        message: `Event "${mela?.event || 'Job Mela'}" has been rejected.`,
+        link: '/admin/job-melas',
+        meta: { melaId, eventName: mela?.event, status: 'REJECTED' }
+      },
+      meta: { melaId, status: 'REJECTED' }
+    });
   };
 
   // Report actions
@@ -2928,6 +3067,21 @@ export function AdminProvider({ children }) {
     );
     const rep = reports.find(r => r.id === reportId);
     addAuditLog('Report Complaint Resolved', rep?.reportedEntity || reportId, 'REPORT');
+
+    dispatchAdminEvent({
+      eventType: ADMIN_NOTIFICATION_EVENTS.ADMIN_REPORT_RESOLVED,
+      adminEmail: currentAdmin.email,
+      recipientName: currentAdmin.name,
+      addNotification,
+      notification: {
+        category: 'REPORT',
+        title: `Report Resolved: #${reportId}`,
+        message: `Complaint regarding "${rep?.reportedEntity || 'Entity'}" resolved with action: ${resolutionNotes || 'Disciplinary action completed'}.`,
+        link: '/admin/reports',
+        meta: { reportId, status: 'RESOLVED' }
+      },
+      meta: { reportId, status: 'RESOLVED' }
+    });
   };
 
   const rejectReport = (reportId) => {

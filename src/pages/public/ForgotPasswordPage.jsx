@@ -6,6 +6,7 @@ import FormField from '../../components/ui/FormField';
 import Input from '../../components/ui/Input';
 import OtpVerificationView, { maskEmail } from '../../components/ui/OtpVerificationView';
 import { useToast } from '../../context/ToastContext';
+import { isDailyOtpLimitReached, recordOtpAttempt } from '../../utils/otpUtils';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -31,9 +32,19 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    if (isDailyOtpLimitReached('forgot_pwd')) {
+      toast({
+        type: 'error',
+        title: 'Daily OTP Limit Reached',
+        message: 'You have reached the maximum allowed 3 OTP requests for today. Please try again tomorrow.',
+      });
+      return;
+    }
+
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
+      recordOtpAttempt('forgot_pwd');
       setStep('OTP');
       toast({
         type: 'info',

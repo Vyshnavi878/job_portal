@@ -9,6 +9,7 @@ import OtpVerificationModal from '../../components/ui/OtpVerificationModal';
 import { useToast } from '../../context/ToastContext';
 import { useCandidate } from '../../context/CandidateContext';
 import { LOCATIONS } from '../../data/mockData';
+import { isDailyOtpLimitReached, recordOtpAttempt } from '../../utils/otpUtils';
 
 export default function RegisterCandidatePage() {
   const navigate = useNavigate();
@@ -49,6 +50,18 @@ export default function RegisterCandidatePage() {
       });
       return;
     }
+
+    if (isDailyOtpLimitReached('candidate_reg')) {
+      toast({
+        type: 'error',
+        title: 'Daily OTP Limit Reached',
+        message: 'You have reached the maximum allowed 3 OTP requests for today. Please try again tomorrow.',
+      });
+      return;
+    }
+
+    // Record OTP request attempt
+    recordOtpAttempt('candidate_reg');
 
     // Trigger email OTP verification
     setOtpModalOpen(true);

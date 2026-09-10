@@ -12,10 +12,13 @@ import Select from '../../components/ui/Select';
 import Textarea from '../../components/ui/Textarea';
 import { useToast } from '../../context/ToastContext';
 import { useCandidate } from '../../context/CandidateContext';
+import { useNotifications } from '../../context/NotificationContext';
+import { dispatchCandidateEvent, NOTIFICATION_EVENTS } from '../../services/notificationEventService';
 
 export default function CandidateHelpSupportPage() {
   const { candidate } = useCandidate();
   const { toast } = useToast();
+  const { addNotification } = useNotifications();
 
   // Contact Support Ticket State
   const [issueType, setIssueType] = useState('Application Status & Tracker');
@@ -33,12 +36,37 @@ export default function CandidateHelpSupportPage() {
     setSubmitting(true);
     setTimeout(() => {
       setSubmitting(false);
+      const ticketNum = Math.floor(100000 + Math.random() * 900000);
       setSubject('');
       setDescription('');
+
+      // Dispatch Candidate Notification Event
+      dispatchCandidateEvent({
+        eventType: NOTIFICATION_EVENTS.SUPPORT_TICKET_CREATED,
+        candidateEmail: candidate.email,
+        recipientName: candidate.name,
+        addNotification,
+        notification: {
+          category: 'SUPPORT',
+          title: `Support Ticket #${ticketNum} Created`,
+          message: `Your support ticket for "${issueType}" has been logged successfully. The candidate support desk will respond within 24 hours.`,
+          time: 'Just now',
+          link: '/candidate/help-support',
+          meta: {
+            ticketId: String(ticketNum),
+            status: 'Open',
+          }
+        },
+        meta: {
+          ticketId: String(ticketNum),
+          issueType,
+        }
+      });
+
       toast({
         type: 'success',
         title: 'Support Ticket Submitted',
-        message: `Ticket #${Math.floor(100000 + Math.random() * 900000)} created. Our candidate support team will respond within 24 hours.`
+        message: `Ticket #${ticketNum} created. Our candidate support team will respond within 24 hours.`
       });
     }, 800);
   };

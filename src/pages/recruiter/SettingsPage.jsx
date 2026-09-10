@@ -11,6 +11,8 @@ import { Modal } from '../../components/ui/Modal';
 import { Toggle } from '../../components/ui/FormControls';
 import { useRecruiter } from '../../context/RecruiterContext';
 import { useToast } from '../../context/ToastContext';
+import { useNotifications } from '../../context/NotificationContext';
+import { dispatchRecruiterEvent, RECRUITER_NOTIFICATION_EVENTS } from '../../services/notificationEventService';
 
 const SUPPORTED_ROLES = [
   'Technical Recruiter',
@@ -30,6 +32,7 @@ export default function RecruiterSettingsPage() {
     removeTeamMember,
   } = useRecruiter();
   const { addToast } = useToast();
+  const { addNotification } = useNotifications();
 
   // Profile state
   const [profile, setProfile] = useState({
@@ -114,6 +117,21 @@ export default function RecruiterSettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
       addToast('Your account password has been updated securely.', 'success');
+
+      dispatchRecruiterEvent({
+        eventType: RECRUITER_NOTIFICATION_EVENTS.RECRUITER_PASSWORD_CHANGED,
+        recruiterEmail: currentUser?.email || recruiter?.email || profile.email,
+        recipientName: currentUser?.name || recruiter?.name || profile.name,
+        addNotification,
+        notification: {
+          category: 'ACCOUNT',
+          title: 'Security Alert: Password Changed',
+          message: 'Your recruiter portal login credentials were updated successfully.',
+          link: '/recruiter/settings',
+          meta: { action: 'Password Update' }
+        },
+        meta: { action: 'Password Update' }
+      });
     }, 600);
   };
 

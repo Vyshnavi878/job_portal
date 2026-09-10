@@ -13,6 +13,8 @@ import { EmptyState } from '../../components/ui/States';
 import Pagination from '../../components/ui/Pagination';
 import { useToast } from '../../context/ToastContext';
 import { useCandidate } from '../../context/CandidateContext';
+import { useNotifications } from '../../context/NotificationContext';
+import { dispatchCandidateEvent, NOTIFICATION_EVENTS } from '../../services/notificationEventService';
 import { MOCK_JOB_MELAS } from '../../data/mockData';
 import ApplicationDetailsModal from '../../components/ui/ApplicationDetailsModal';
 import { formatMelaId, formatJobId, formatRegistrationId } from '../../utils/applicationUtils';
@@ -22,6 +24,7 @@ export default function CandidateJobMelaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { candidate, updateCandidate, isLoggedIn } = useCandidate();
+  const { addNotification } = useNotifications();
 
   // Navigation state: null = Browse/Main Listing, object = Specific Job Mela Details
   const [selectedMela, setSelectedMela] = useState(null);
@@ -283,6 +286,31 @@ export default function CandidateJobMelaPage() {
     setSelectedPass(newPass);
     setPassModalOpen(true);
 
+    // Dispatch real-time candidate notification event
+    dispatchCandidateEvent({
+      eventType: NOTIFICATION_EVENTS.JOB_MELA_REGISTERED,
+      candidateEmail: candidate.email,
+      recipientName: candidate.name,
+      addNotification,
+      notification: {
+        category: 'JOB_MELA',
+        title: `Job Mela Pass Confirmed: ${newPass.passId}`,
+        message: `Your Fast-Track QR pass (${newPass.passId}) is confirmed for ${selectedMelaForReg.title}. Event Date: ${selectedMelaForReg.date || '28 Sept 2026'}. Venue: ${selectedMelaForReg.venue || selectedMelaForReg.city}. Gate: ${newPass.gateNumber}.`,
+        time: 'Just now',
+        link: '/candidate/job-melas',
+        meta: {
+          passId: newPass.passId,
+          melaTitle: selectedMelaForReg.title,
+          date: selectedMelaForReg.date,
+          venue: selectedMelaForReg.venue || selectedMelaForReg.city,
+        }
+      },
+      meta: {
+        passId: newPass.passId,
+        melaTitle: selectedMelaForReg.title,
+      }
+    });
+
     toast({
       type: 'success',
       title: 'Registration Confirmed! 🎉',
@@ -513,6 +541,35 @@ export default function CandidateJobMelaPage() {
         applications: [candidateApp, ...prev.applications.filter(a => a.appNumber !== ntrAppId)]
       }));
     }
+
+    // Dispatch real-time candidate notification event
+    dispatchCandidateEvent({
+      eventType: NOTIFICATION_EVENTS.JOB_MELA_APP_SUBMITTED,
+      candidateEmail: candidate.email,
+      recipientName: candidate.name,
+      addNotification,
+      notification: {
+        category: 'JOB_MELA',
+        title: `Job Mela Application: ${selectedCompanyJob.role}`,
+        message: `Application submitted to ${selectedCompanyJob.companyName} for "${selectedCompanyJob.role}" at ${selectedCompanyJob.melaTitle || 'Job Mela'}. Job Mela Application No: ${ntrAppId}. Status: Applied.`,
+        time: 'Just now',
+        link: '/candidate/applications',
+        meta: {
+          appNumber: ntrAppId,
+          company: selectedCompanyJob.companyName,
+          role: selectedCompanyJob.role,
+          melaTitle: selectedCompanyJob.melaTitle,
+          status: 'Applied',
+          applicationType: 'Job Mela Application',
+        }
+      },
+      meta: {
+        appNumber: ntrAppId,
+        company: selectedCompanyJob.companyName,
+        role: selectedCompanyJob.role,
+        status: 'Applied',
+      }
+    });
 
     setCompanyApplyModalOpen(false);
     setSubmittedAppInfo(newApplication);

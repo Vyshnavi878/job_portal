@@ -120,25 +120,28 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
         <Bell size={20} />
         {/* Badge displays number of UNREAD notifications only; hidden when unreadCount === 0 */}
         {unreadCount > 0 && (
-          <span style={{
-            position: 'absolute',
-            top: 2,
-            right: 2,
-            minWidth: 18,
-            height: 18,
-            borderRadius: 'var(--radius-full)',
-            background: 'var(--color-primary-600)',
-            color: '#fff',
-            fontSize: '11px',
-            fontWeight: 800,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            lineHeight: 1,
-            border: '2px solid var(--color-surface)',
-            padding: '0 4px',
-            boxShadow: 'var(--shadow-sm)'
-          }}>
+          <span
+            className="notif-badge"
+            style={{
+              position: 'absolute',
+              top: 2,
+              right: 2,
+              minWidth: 18,
+              height: 18,
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--color-primary-600)',
+              color: '#fff',
+              fontSize: '11px',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              lineHeight: 1,
+              border: '2px solid var(--color-surface)',
+              padding: '0 4px',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -146,20 +149,23 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
 
       {/* Dropdown Panel */}
       {open && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 8px)',
-          right: 0,
-          width: 380,
-          maxWidth: 'calc(100vw - 24px)',
-          background: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-2xl)',
-          boxShadow: 'var(--shadow-xl)',
-          zIndex: 1000,
-          overflow: 'hidden',
-          animation: 'fadeIn 0.15s ease',
-        }}>
+        <div
+          className="notif-dropdown-panel"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            right: 0,
+            width: 380,
+            maxWidth: 'calc(100vw - 24px)',
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-2xl)',
+            boxShadow: 'var(--shadow-xl)',
+            zIndex: 1000,
+            overflow: 'hidden',
+            animation: 'fadeIn 0.15s ease',
+          }}
+        >
           {/* Header */}
           <div style={{
             display: 'flex',
@@ -308,7 +314,7 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
                           background: 'var(--color-primary-600)',
                           flexShrink: 0,
                         }} />
-                        <span>{notif.title}</span>
+                        <span style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{notif.title}</span>
                       </p>
                     </div>
 
@@ -321,6 +327,8 @@ export default function NotificationDropdown({ portal = 'candidate', notifPageLi
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
                     }}>
                       {notif.message}
                     </p>

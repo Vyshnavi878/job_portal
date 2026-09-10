@@ -38,9 +38,8 @@ export default function Sidebar({ navItems = [], user, footerItems = [], portalN
           </Link>
           {/* Mobile close button */}
           <button
-            className="hide-desktop"
+            className="sidebar-close-btn hide-desktop"
             onClick={close}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', marginLeft: 'auto' }}
             aria-label="Close sidebar"
           >
             <X size={18} />
@@ -50,7 +49,7 @@ export default function Sidebar({ navItems = [], user, footerItems = [], portalN
         {/* Nav */}
         <nav className="sidebar-nav" aria-label={`${portalName || ''} navigation`}>
           {Object.entries(sections).map(([section, items]) => (
-            <div key={section}>
+            <div key={section} className={items.length > 0 && items.every(i => i.hideOnMobile) ? 'hide-mobile' : ''}>
               {section && (
                 <p className="sidebar-section-title">{section}</p>
               )}
@@ -60,7 +59,7 @@ export default function Sidebar({ navItems = [], user, footerItems = [], portalN
                   to={item.href}
                   end={item.end}
                   className={({ isActive }) =>
-                    `sidebar-item ${isActive ? 'active' : ''}`
+                    `sidebar-item ${isActive ? 'active' : ''}${item.hideOnMobile ? ' hide-mobile' : ''}${item.className ? ` ${item.className}` : ''}`
                   }
                   onClick={close}
                   aria-label={item.label}
@@ -68,7 +67,7 @@ export default function Sidebar({ navItems = [], user, footerItems = [], portalN
                   {item.icon && (
                     <span className="sidebar-item-icon">{item.icon}</span>
                   )}
-                  <span>{item.label}</span>
+                  <span className="sidebar-item-label">{item.label}</span>
                   {item.badge !== undefined && (
                     <span className="sidebar-item-badge">{item.badge}</span>
                   )}

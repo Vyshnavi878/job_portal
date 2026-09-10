@@ -242,14 +242,7 @@ export default function CandidateInternshipsPage() {
             </div>
 
             {/* Quick Search */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(200px, 2fr) minmax(150px, 1fr) auto',
-              gap: '0.45rem',
-              background: 'rgba(255,255,255,0.12)',
-              padding: '0.35rem',
-              borderRadius: 'var(--radius-lg)'
-            }}>
+            <div className="candidate-search-grid">
               <div className="input-wrapper" style={{ background: '#fff', borderRadius: 'var(--radius-md)' }}>
                 <span className="input-icon-left"><Search size={15} style={{ color: 'var(--color-primary-600)' }} /></span>
                 <input
@@ -279,7 +272,7 @@ export default function CandidateInternshipsPage() {
           </div>
 
           {/* Results Header with Count and Sort */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+          <div className="candidate-results-header">
             <div>
               <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, margin: 0 }}>
                 {filteredInternships.length} Internships Found
@@ -289,8 +282,8 @@ export default function CandidateInternshipsPage() {
               </p>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 600 }}>Sort by:</span>
+            <div className="candidate-sort-container">
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>Sort by:</span>
               <select
                 className="select"
                 style={{ padding: '6px 12px', fontSize: 'var(--text-xs)', width: 'auto', height: '34px' }}
@@ -314,14 +307,7 @@ export default function CandidateInternshipsPage() {
               />
             </div>
           ) : (
-            <div
-              className="recruiter-jobs-grid"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                gap: '1rem'
-              }}
-            >
+            <div className="recruiter-jobs-grid">
               {paginated.map((item) => {
                 const isSaved = isJobSaved(item.id);
                 return (
@@ -419,6 +405,7 @@ export default function CandidateInternshipsPage() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         gap: '0.35rem',
+                        flexWrap: 'wrap',
                         background: 'var(--color-gray-50)',
                         padding: '0.35rem 0.5rem',
                         borderRadius: '6px',
@@ -477,10 +464,9 @@ export default function CandidateInternshipsPage() {
                           </span>
                         )}
                       </div>
-
                       {/* Metadata: Location, Stipend, Duration, Mode */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--color-gray-600)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem', flexWrap: 'wrap' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             <MapPin size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
                             <span>{item.location}</span>
@@ -491,12 +477,12 @@ export default function CandidateInternshipsPage() {
                           </span>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem', color: 'var(--color-gray-500)', fontSize: '0.72rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem', flexWrap: 'wrap', color: 'var(--color-gray-500)', fontSize: '0.72rem' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             <Clock size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
                             <span>{item.duration}</span>
                           </span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             <Briefcase size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
                             <span>Internship ({item.mode})</span>
                           </span>

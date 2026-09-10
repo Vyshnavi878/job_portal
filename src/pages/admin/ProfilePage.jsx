@@ -175,15 +175,15 @@ export default function AdminProfilePage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 'var(--space-6)' }}>
+      <div className="admin-profile-grid">
         {/* ── 1. Profile Information ── */}
         <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
-          <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="card-header admin-profile-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <ShieldCheck size={18} style={{ color: 'var(--color-primary-600)' }} />
-              <h2 className="card-title">Profile Information</h2>
+              <h2 className="card-title" style={{ margin: 0 }}>Profile Information</h2>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <div className="admin-profile-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
               {!isEditing && (
                 <Button
                   type="button"
@@ -191,6 +191,7 @@ export default function AdminProfilePage() {
                   size="sm"
                   leftIcon={<Edit2 size={14} />}
                   onClick={handleStartEdit}
+                  className="admin-edit-profile-btn"
                 >
                   Edit Profile
                 </Button>
@@ -203,14 +204,15 @@ export default function AdminProfilePage() {
 
           <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
             {/* Identity Summary Card */}
-            <div style={{
+            <div className="admin-identity-card" style={{
               display: 'flex',
               alignItems: 'center',
               gap: 'var(--space-4)',
               padding: 'var(--space-4)',
               backgroundColor: 'var(--color-gray-50)',
               borderRadius: 'var(--radius-xl)',
-              border: '1px solid var(--color-gray-200)'
+              border: '1px solid var(--color-gray-200)',
+              flexWrap: 'wrap'
             }}>
               <div
                 className="sidebar-user-avatar"
@@ -233,27 +235,27 @@ export default function AdminProfilePage() {
                   initialLetter
                 )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, margin: 0, color: 'var(--color-gray-900)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, margin: 0, color: 'var(--color-gray-900)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                     {adminName}
                   </h3>
-                  <span className="badge badge-primary" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                  <span className="badge badge-primary" style={{ fontSize: '11px', padding: '2px 8px', flexShrink: 0 }}>
                     {adminRole}
                   </span>
                 </div>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                   {adminDesignation}
                 </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray-500)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                  <Mail size={12} /> {adminEmail}
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray-500)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                  <Mail size={12} style={{ flexShrink: 0 }} /> {adminEmail}
                 </span>
               </div>
             </div>
 
             {/* Profile Form Fields */}
             <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div className="admin-form-row">
                 <FormField label="Full Name" required={isEditing} error={formErrors.name}>
                   <Input
                     value={isEditing ? formData.name : adminName}
@@ -272,7 +274,7 @@ export default function AdminProfilePage() {
                 </FormField>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div className="admin-form-row">
                 <FormField label="Official Email Address" required={isEditing} error={formErrors.email}>
                   <Input
                     value={isEditing ? formData.email : adminEmail}
@@ -291,7 +293,7 @@ export default function AdminProfilePage() {
                 </FormField>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+              <div className="admin-form-row">
                 <FormField label="Contact Phone">
                   <Input
                     value={isEditing ? formData.phone : profileData.phone}
@@ -422,12 +424,12 @@ export default function AdminProfilePage() {
                 id="admin-profile-photo-input"
               />
 
-              <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', width: '100%' }}>
                 <Button
                   type="button"
                   variant="primary"
                   size="md"
-                  style={{ flex: 1 }}
+                  style={{ flex: '1 1 140px' }}
                   leftIcon={<UploadCloud size={16} />}
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -439,6 +441,7 @@ export default function AdminProfilePage() {
                     type="button"
                     variant="outline-danger"
                     size="md"
+                    style={{ flex: '1 1 120px' }}
                     leftIcon={<Trash2 size={16} />}
                     onClick={handleRemoveImage}
                   >

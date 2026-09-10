@@ -109,11 +109,11 @@ export default function PortalHeader({ title, breadcrumb, user, actions }) {
         >
           <Menu size={20} />
         </button>
-        <div>
+        <div style={{ minWidth: 0, flex: 1 }}>
           {breadcrumb && breadcrumb.length > 0 && (
             <Breadcrumb items={breadcrumb} showHome={false} />
           )}
-          {title && <h1 className="portal-header-title">{title}</h1>}
+          {title && <h1 className="portal-header-title" title={title}>{title}</h1>}
         </div>
       </div>
 

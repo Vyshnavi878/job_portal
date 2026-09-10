@@ -240,15 +240,15 @@ export default function RecruiterInterviewsPage() {
             Coordinate candidate rounds, join meeting links, and manage interview schedules.
           </p>
         </div>
-        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setIsNewModalOpen(true)}>
+        <Button variant="primary" icon={<Plus size={16} />} onClick={() => setIsNewModalOpen(true)} className="schedule-interview-btn">
           Schedule New Interview
         </Button>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+      <div className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem', maxWidth: '100%', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem', justifyContent: 'space-between' }}>
-          <div style={{ flex: '1 1 300px', position: 'relative' }}>
+          <div style={{ flex: '1 1 240px', position: 'relative', minWidth: 0, width: '100%' }}>
             <Search size={18} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
             <input
               type="text"
@@ -256,15 +256,17 @@ export default function RecruiterInterviewsPage() {
               placeholder="Search by candidate name, job title, or interviewer..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px' }}
+              style={{ paddingLeft: '2.5rem', width: '100%', height: '42px', borderRadius: '8px', boxSizing: 'border-box' }}
             />
           </div>
 
-          <ExportDropdown
-            onExportExcel={handleExportExcel}
-            onExportPdf={handleExportPdf}
-            disabled={filteredInterviews.length === 0}
-          />
+          <div style={{ flexShrink: 0 }}>
+            <ExportDropdown
+              onExportExcel={handleExportExcel}
+              onExportPdf={handleExportPdf}
+              disabled={filteredInterviews.length === 0}
+            />
+          </div>
         </div>
 
         {/* Status Tabs */}
@@ -273,7 +275,10 @@ export default function RecruiterInterviewsPage() {
           gap: '0.5rem',
           borderTop: '1px solid var(--color-gray-100)',
           paddingTop: '0.85rem',
-          overflowX: 'auto'
+          overflowX: 'auto',
+          maxWidth: '100%',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'thin'
         }}>
           {[
             { id: 'ALL', label: 'All Interviews', count: tabCounts.all },
@@ -341,11 +346,12 @@ export default function RecruiterInterviewsPage() {
                 <div
                   key={item.id}
                   className={`card recruiter-job-card ${isUpcoming ? 'is-published' : ''}`}
+                  style={{ minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}
                 >
                   {/* Top: Candidate Avatar, Name, Email, Status */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.45rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.45rem', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', minWidth: 0, flex: 1 }}>
                         <div style={{
                           width: '36px',
                           height: '36px',
@@ -357,11 +363,12 @@ export default function RecruiterInterviewsPage() {
                           justifyContent: 'center',
                           fontWeight: 700,
                           fontSize: '0.9rem',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          marginTop: '2px'
                         }}>
                           {item.candidateName?.[0]?.toUpperCase() || 'C'}
                         </div>
-                        <div style={{ minWidth: 0 }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
                           <h3
                             title={item.candidateName}
                             style={{
@@ -369,19 +376,29 @@ export default function RecruiterInterviewsPage() {
                               fontSize: '0.98rem',
                               fontWeight: 700,
                               color: 'var(--color-gray-900)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
+                              overflowWrap: 'anywhere',
+                              wordBreak: 'break-word',
+                              lineHeight: 1.3
                             }}
                           >
                             {item.candidateName}
                           </h3>
-                          <span style={{ fontSize: '0.74rem', color: 'var(--color-gray-500)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{
+                            fontSize: '0.74rem',
+                            color: 'var(--color-gray-500)',
+                            display: 'block',
+                            overflowWrap: 'anywhere',
+                            wordBreak: 'break-word',
+                            lineHeight: 1.3,
+                            marginTop: '2px'
+                          }}>
                             {item.candidateEmail || 'Candidate'}
                           </span>
                         </div>
                       </div>
-                      <StatusBadge status={item.status} />
+                      <div style={{ flexShrink: 0 }}>
+                        <StatusBadge status={item.status} />
+                      </div>
                     </div>
 
                     {/* Applied Job Role Box */}
@@ -390,31 +407,32 @@ export default function RecruiterInterviewsPage() {
                       padding: '0.4rem 0.55rem',
                       borderRadius: '6px',
                       border: '1px solid var(--color-gray-200)',
-                      marginBottom: '0.45rem'
+                      marginBottom: '0.45rem',
+                      minWidth: 0
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--color-gray-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', minWidth: 0 }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--color-gray-600)', overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0 }}>
                           Role: <strong style={{ color: 'var(--color-primary-700)', fontWeight: 600 }}>{item.jobTitle}</strong>
                         </span>
                       </div>
                     </div>
 
                     {/* Interview Schedule Details: Date, Time, Mode, Interviewer */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.76rem', color: 'var(--color-gray-600)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600, color: 'var(--color-gray-900)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.76rem', color: 'var(--color-gray-600)', minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.4rem', flexWrap: 'wrap', minWidth: 0 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600, color: 'var(--color-gray-900)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                           <Calendar size={12} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
                           <span>{item.date} • {item.time}</span>
                         </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflowWrap: 'anywhere', wordBreak: 'break-word', flexShrink: 0 }}>
                           <Video size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
                           <span>{item.type || item.mode || 'Video Call'}</span>
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--color-gray-600)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--color-gray-600)', overflowWrap: 'anywhere', wordBreak: 'break-word', minWidth: 0 }}>
                         <User size={12} style={{ color: 'var(--color-gray-400)', flexShrink: 0 }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Panel: {item.interviewer}</span>
+                        <span>Panel: {item.interviewer}</span>
                       </div>
                     </div>
                   </div>
@@ -428,22 +446,24 @@ export default function RecruiterInterviewsPage() {
                       padding: '0.35rem 0.5rem',
                       borderRadius: '4px',
                       borderLeft: '2px solid var(--color-primary-400)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                      lineHeight: 1.35,
+                      minWidth: 0
                     }}>
                       <strong>Notes:</strong> {item.notes}
                     </div>
                   )}
 
                   {/* Action Buttons Footer */}
-                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.65rem', marginTop: 'auto', flexWrap: 'wrap' }}>
+                  <div className="interview-card-actions" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', borderTop: '1px solid var(--color-gray-100)', paddingTop: '0.65rem', marginTop: 'auto', flexWrap: 'wrap', minWidth: 0 }}>
                     {item.meetingLink && isUpcoming && (
                       <a
                         href={item.meetingLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{ textDecoration: 'none', flex: 1, minWidth: '70px' }}
+                        className="interview-join-link"
+                        style={{ textDecoration: 'none', flex: '1 1 auto', minWidth: '70px' }}
                       >
                         <Button
                           variant="primary"
@@ -457,7 +477,7 @@ export default function RecruiterInterviewsPage() {
                     )}
 
                     {isUpcoming && (
-                      <>
+                      <div className="interview-actions-group" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <Button
                           variant="outline"
                           size="sm"
@@ -486,7 +506,7 @@ export default function RecruiterInterviewsPage() {
                           onClick={() => setCancelTarget(item)}
                           title="Cancel Interview"
                         />
-                      </>
+                      </div>
                     )}
 
                     {isCompleted && (

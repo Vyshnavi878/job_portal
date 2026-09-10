@@ -93,7 +93,7 @@ export default function AdminChangePasswordPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(0, 1fr)', gap: 'var(--space-6)' }}>
+      <div className="admin-password-grid">
         {/* ── Password Change Form ── */}
         <div className="card" style={{ borderRadius: 'var(--radius-2xl)' }}>
           <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -102,7 +102,7 @@ export default function AdminChangePasswordPage() {
           </div>
 
           <div className="card-body">
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', maxWidth: 540 }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', maxWidth: 540, width: '100%', boxSizing: 'border-box' }}>
               {submittedMessage && (
                 <div style={{
                   display: 'flex',
@@ -172,6 +172,7 @@ export default function AdminChangePasswordPage() {
                   variant="primary"
                   size="md"
                   leftIcon={<Key size={16} />}
+                  className="admin-change-password-btn"
                 >
                   Change Password
                 </Button>
@@ -181,7 +182,7 @@ export default function AdminChangePasswordPage() {
         </div>
 
         {/* ── Security Guidelines / Requirements ── */}
-        <div className="card" style={{ borderRadius: 'var(--radius-2xl)', alignSelf: 'start' }}>
+        <div className="card" style={{ borderRadius: 'var(--radius-2xl)', alignSelf: 'start', width: '100%', boxSizing: 'border-box' }}>
           <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
             <ShieldCheck size={18} style={{ color: 'var(--color-primary-600)' }} />
             <h2 className="card-title">Password Security Policy</h2>

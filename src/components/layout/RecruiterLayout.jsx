@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   { label: 'Hiring Analytics', href: '/recruiter/analytics',      icon: <BarChart3 size={18} />,      section: 'ANALYTICS' },
 
   // 4. SUPPORT
-  { label: 'Help & Support',   href: '/recruiter/help-support',   icon: <HelpCircle size={18} />,     section: 'SUPPORT' },
+  { label: 'Help & Support',   href: '/recruiter/help-support',   icon: <HelpCircle size={18} />,     section: 'SUPPORT', hideOnMobile: true },
 ];
 
 function getPageTitle(pathname) {

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import {
   Briefcase, FileText, Bookmark, CalendarDays, TrendingUp, Clock,
   ArrowRight, Search, User, ShieldCheck, Sparkles, CheckCircle2,
-  Video, BookmarkCheck, MapPin, DollarSign, Layers, Zap, ExternalLink
+  Video, BookmarkCheck, MapPin, DollarSign, Layers, Zap, ExternalLink,
+  Settings, BookOpen, GraduationCap, FileCheck
 } from 'lucide-react';
 import StatCard from '../../components/ui/StatCard';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
@@ -58,7 +59,7 @@ export default function CandidateDashboard() {
       <div style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)',
         borderRadius: 'var(--radius-2xl)',
-        padding: 'var(--space-8)',
+        padding: 'clamp(1.25rem, 3vw, 2rem)',
         color: '#ffffff',
         display: 'flex',
         justifyContent: 'space-between',
@@ -95,14 +96,48 @@ export default function CandidateDashboard() {
       </div>
 
       {/* ── 2. Statistics Grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 150px), 1fr))', gap: 'var(--space-4)' }}>
         {statItems.map((s) => (
           <StatCard key={s.label} {...s} />
         ))}
       </div>
 
-      {/* ── 3. Main Split Grid: Recent Applications & Profile Strength ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 'var(--space-6)' }}>
+      {/* ── 3. Quick Links (Mobile & Desktop Shortcuts - Settings included, Help & Support excluded) ── */}
+      <Card style={{ borderRadius: 'var(--radius-xl)' }}>
+        <CardBody style={{ padding: 'var(--space-4) var(--space-6)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Quick Links:
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              <Link to="/candidate/jobs" style={{ textDecoration: 'none' }}>
+                <Button size="xs" variant="outline" leftIcon={<Search size={13} />}>Find Jobs</Button>
+              </Link>
+              <Link to="/candidate/internships" style={{ textDecoration: 'none' }}>
+                <Button size="xs" variant="outline" leftIcon={<BookOpen size={13} />}>Internships</Button>
+              </Link>
+              <Link to="/candidate/applications" style={{ textDecoration: 'none' }}>
+                <Button size="xs" variant="outline" leftIcon={<FileText size={13} />}>Applied Jobs</Button>
+              </Link>
+              <Link to="/candidate/saved-jobs" style={{ textDecoration: 'none' }}>
+                <Button size="xs" variant="outline" leftIcon={<Bookmark size={13} />}>Saved Jobs</Button>
+              </Link>
+              <Link to="/candidate/profile" style={{ textDecoration: 'none' }}>
+                <Button size="xs" variant="outline" leftIcon={<FileCheck size={13} />}>Resume Builder</Button>
+              </Link>
+              <Link to="/skill-development" style={{ textDecoration: 'none' }}>
+                <Button size="xs" variant="outline" leftIcon={<GraduationCap size={13} />}>Career Resources</Button>
+              </Link>
+              <Link to="/candidate/settings" style={{ textDecoration: 'none' }}>
+                <Button size="xs" variant="outline" leftIcon={<Settings size={13} />}>Settings</Button>
+              </Link>
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* ── 4. Main Split Grid: Recent Applications & Profile Strength ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: 'var(--space-6)' }}>
         
         {/* Left Column: Recent Applications */}
         <Card style={{ borderRadius: 'var(--radius-2xl)' }}>
@@ -232,7 +267,7 @@ export default function CandidateDashboard() {
         </CardHeader>
 
         <CardBody>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: 'var(--space-4)' }}>
             {recommendedJobs.map((job) => {
               const saved = isJobSaved(job.id);
               return (
@@ -332,7 +367,7 @@ export default function CandidateDashboard() {
           </CardHeader>
 
           <CardBody>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-4)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 'var(--space-4)' }}>
               {upcomingInterviews.map((interview) => (
                 <div
                   key={interview.id}

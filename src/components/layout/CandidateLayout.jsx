@@ -27,7 +27,7 @@ const NAV_ITEMS = [
   { section: 'ACTIVITY', label: 'Interviews',       href: '/candidate/interviews',        icon: <Video size={18} /> },
 
   // ── SUPPORT ──
-  { section: 'SUPPORT', label: 'Help & Support',    href: '/candidate/help-support',      icon: <HelpCircle size={18} /> },
+  { section: 'SUPPORT', label: 'Help & Support',    href: '/candidate/help-support',      icon: <HelpCircle size={18} />, hideOnMobile: true },
   { section: 'SUPPORT', label: 'Settings',          href: '/candidate/settings',          icon: <Settings size={18} /> },
 ];
 

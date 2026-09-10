@@ -955,6 +955,27 @@
 .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .pagination-btn.dots { cursor: default; border-color: transparent; background: transparent; }
 
+@media (max-width: 640px) {
+  .pagination {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-3);
+    width: 100%;
+  }
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+  }
+  .pagination-btn {
+    width: 32px;
+    height: 32px;
+    font-size: var(--text-xs);
+  }
+}
+
 
 /* ══════════════════════════════════════════
    MODAL / DIALOG

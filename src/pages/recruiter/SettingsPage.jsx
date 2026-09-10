@@ -316,7 +316,7 @@ export default function RecruiterSettingsPage() {
           </FormField>
 
           <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-            <Button variant="primary" type="submit" icon={<Save size={14} />}>
+            <Button variant="primary" type="submit" icon={<Save size={14} />} className="save-profile-btn">
               Save Profile
             </Button>
           </div>
@@ -340,14 +340,15 @@ export default function RecruiterSettingsPage() {
             variant="primary"
             icon={<Plus size={16} />}
             onClick={handleOpenInviteModal}
+            className="invite-member-btn"
           >
             Invite Member
           </Button>
         </div>
 
         {/* Search & Filter Toolbar */}
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.25rem', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 0, width: '100%' }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-gray-400)' }} />
             <input
               type="text"
@@ -363,6 +364,7 @@ export default function RecruiterSettingsPage() {
                 borderRadius: '8px',
                 border: '1px solid var(--color-border)',
                 fontSize: '0.9rem',
+                boxSizing: 'border-box'
               }}
             />
             {searchTerm && (
@@ -433,6 +435,7 @@ export default function RecruiterSettingsPage() {
             {filteredTeamMembers.map((member) => (
               <div
                 key={member.id}
+                className="team-member-card"
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -443,10 +446,13 @@ export default function RecruiterSettingsPage() {
                   border: '1px solid var(--color-gray-200)',
                   flexWrap: 'wrap',
                   gap: '0.75rem',
-                  transition: 'border-color 0.15s ease'
+                  transition: 'border-color 0.15s ease',
+                  minWidth: 0,
+                  maxWidth: '100%',
+                  boxSizing: 'border-box'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div className="team-member-info" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', minWidth: 0, flex: '1 1 240px' }}>
                   <div style={{
                     width: '38px',
                     height: '38px',
@@ -457,22 +463,28 @@ export default function RecruiterSettingsPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 700,
-                    fontSize: '0.95rem'
+                    fontSize: '0.95rem',
+                    flexShrink: 0,
+                    marginTop: '2px'
                   }}>
                     {member.name?.[0]?.toUpperCase() || 'M'}
                   </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <strong style={{ fontSize: '0.95rem', color: 'var(--color-gray-900)' }}>{member.name}</strong>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)' }}>({member.email})</span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div className="team-member-name-row" style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: '0.95rem', color: 'var(--color-gray-900)', display: 'block', overflowWrap: 'anywhere', wordBreak: 'break-word', lineHeight: 1.3 }}>
+                        {member.name}
+                      </strong>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', display: 'block', overflowWrap: 'anywhere', wordBreak: 'break-word', lineHeight: 1.3, marginTop: '2px' }}>
+                        {member.email}
+                      </span>
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--color-primary-700)', fontWeight: 600, marginTop: '2px' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--color-primary-700)', fontWeight: 600, marginTop: '4px', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
                       {member.role}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div className="team-member-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
                   {member.status === 'ACTIVE' ? (
                     <span style={{
                       fontSize: '0.75rem',
@@ -486,7 +498,7 @@ export default function RecruiterSettingsPage() {
                       ACTIVE
                     </span>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <span style={{
                         fontSize: '0.75rem',
                         background: '#eff6ff',
